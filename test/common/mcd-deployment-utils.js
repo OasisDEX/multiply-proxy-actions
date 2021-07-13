@@ -6,7 +6,7 @@ const Erc20Abi = require('../../abi/IERC20.json')
 const { default: BigNumber } = require('bignumber.js');
 const getCdpsAbi = require('../../abi/external/get-cdps.json')
 const _ = require('lodash');
-const {amountToWei, addressRegistryFactory, MAINNET_ADRESSES} = require('./params-calculation-utils');
+const {amountToWei, addressRegistryFactory, MAINNET_ADRESSES, ensureWeiFormat} = require('./params-calculation-utils');
 
 const UniswapRouterV3Abi = require('../../abi/external/IUniswapRouter.json')
 
@@ -19,7 +19,7 @@ const {
   getVaultInfo
 } = require('../utils-mcd.js');
 
-const FEE = 3;
+const FEE = 2;
 const FEE_BASE = 10000;
 
 const dsproxyExecuteAction =  async function(proxyActions, dsProxy, fromAddress, method, params, value=new BigNumber(0),debug = false) {
@@ -32,38 +32,18 @@ const dsproxyExecuteAction =  async function(proxyActions, dsProxy, fromAddress,
     )
     var tx = await dsProxy['execute(address,bytes)'](proxyActions.address, calldata, {
       from: fromAddress,
-      value: value.toFixed(0),
+      value: ensureWeiFormat(value),
       gasLimit: 8500000,
       gasPrice:"1000000000"
       })
           
       var retVal = await tx.wait();
-      console.log(`dsproxyExecuteAction : ${method} executed`);
+      console.log(`${method} completed`)
       return [true,retVal];
   }catch(ex){
-    console.log(`dsproxyExecuteAction : ${method} failed`,ex);
-    
-      /*
-    if(ex.toString().indexOf("txHash")!=-1){
-      ex = ex.toString().substr(ex.toString().indexOf("txHash"));
-      ex = ex.substr(ex.indexOf("0x"));
-      ex = ex.substr(0,66);
-      console.log(`ex is:${ex}`);
-        var res = await network.provider.send("debug_traceTransaction", [ex]);
-      
-      fs = require('fs');
-      var crap = await fs.writeFile(`test\\trace\\debug_traceTransaction_${ex}.js`,JSON.stringify(res), function (err) {
-        console.log(`debug_traceTransaction of ${ex}`);
-        
-      });
-      console.log("write result",crap);
-      await fs.close(crap,function (err) {
-        console.log(`closing  of ${crap}`);
-        
-      })
-      */
-
-      return [false,ex];
+    console.log(`${method} failed`)
+    console.log(params);
+    return [false,ex];
   }
 
   
@@ -88,6 +68,7 @@ const getOrCreateProxy = async function getOrCreateProxy(
   return proxyAddress
 }
 
+
 const addFundsDummyExchange = async function(provider, signer, WETH_ADDRESS, DAI_ADDRESS, exchange) {
   const UNISWAP_ROUTER_V3 = "0xe592427a0aece92de3edee1f18e0157c05861564";
   const uniswapV3 = new ethers.Contract(UNISWAP_ROUTER_V3, UniswapRouterV3Abi, provider).connect(signer);
@@ -105,11 +86,14 @@ const addFundsDummyExchange = async function(provider, signer, WETH_ADDRESS, DAI
     sqrtPriceLimitX96: 0
   }
   await uniswapV3.exactInputSingle(swapParams, {value:  amountToWei(new BigNumber(200)).toFixed(0)});
+  var address = await signer.getAddress();
   await WETH.deposit({
     value: amountToWei(new BigNumber(1000)).toFixed(0)
   });
   await WETH.transfer(exchange.address, amountToWei(new BigNumber(500)).toFixed(0));
-  await DAI.transfer(exchange.address, await DAI.balanceOf(await signer.getAddress()));
+  var balance = await DAI.balanceOf(address);
+  console.log(balance.toString());
+  await DAI.transfer(exchange.address, (new BigNumber(balance.toString())).dividedBy(2).toFixed(0));
   return{
     daiC:DAI,
     ethC:WETH
@@ -158,7 +142,7 @@ const deploySystem = async function(provider, signer, isExchangeDummy = false, d
     exchange = await Exchange.deploy();
     deployedContracts.exchangeInstance = await exchange.deployed();
     await exchange.setFee(FEE);
-    await exchange.setSlippage(800);//8%
+    //await exchange.setSlippage(800);//8%
     let {daiC,ethC} = await addFundsDummyExchange(provider, signer,MAINNET_ADRESSES.WETH_ADDRESS,MAINNET_ADRESSES.MCD_DAI,exchange);
     deployedContracts.gems.wethTokenInstance = ethC;
     deployedContracts.daiTokenInstance = daiC;

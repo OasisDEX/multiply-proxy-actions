@@ -141,30 +141,44 @@ const validateDelta = function(debtDelta,collateralDelta){
   }
 }
 
+
+const getPayload = async function(exchangeData, beneficiary, testParam){
+  let retVal, url ;
+  if(exchangeData.fromTokenAddress == MAINNET_ADRESSES.MCD_DAI){
+    [url,retVal] = await exchangeFromDAI(exchangeData.toTokenAddress,
+      div(convertToBigNumber(exchangeData.fromTokenAmount),TEN.pow(18)),
+      mul(testParam.slippage,100),
+      beneficiary,
+      OUR_FEE
+      );
+  }else{
+    [url,retVal] = await exchangeToDAI(exchangeData.fromTokenAddress,
+      div(convertToBigNumber(exchangeData.fromTokenAmount),TEN.pow(18)),
+      mul(testParam.slippage,100),
+      beneficiary);
+  }
+  var tmp = JSON.parse(JSON.stringify(retVal));
+  tmp.data = undefined;
+  return retVal;
+}
+
+
+const fillExchangeData= async function(_testParams, exchangeData, exchange){
+
+  if(_testParams.useMockExchange == false){
+    if(_testParams.debug==true){
+    }
+    var _1inchPayload = await getPayload(exchangeData,exchange.address,_testParams);
+    exchangeData._exchangeCalldata = _1inchPayload.data;
+    exchangeData.exchangeAddress = _1inchPayload.to;
+
+  }
+}
+
+
  async function runTestCase(testCase,testParam){
     return new Promise((res,rej)=>{ //to run several in runner, one after another
 
-
-      const getPayload = async function(exchangeData, beneficiary){
-        let retVal, url ;
-        if(exchangeData.fromTokenAddress == MAINNET_ADRESSES.MCD_DAI){
-          [url,retVal] = await exchangeFromDAI(exchangeData.toTokenAddress,
-            div(convertToBigNumber(exchangeData.fromTokenAmount),TEN.pow(18)),
-            mul(testParam.slippage,100),
-            beneficiary,
-            OUR_FEE
-            );
-        }else{
-          [url,retVal] = await exchangeToDAI(exchangeData.toTokenAddress,
-            div(convertToBigNumber(exchangeData.fromTokenAmount),TEN.pow(18)),
-            mul(testParam.slippage,100),
-            beneficiary);
-        }
-        console.log("1inch queried, url:",url );
-        var tmp = JSON.parse(JSON.stringify(retVal));
-        tmp.data = undefined;
-        return retVal;
-      }
 
       describe(`Proxy Action, oracleDivergence = ${testParam.useMockExchange?testParam.oraclePriceDivergence*100:0} %`, async function() {
 
@@ -221,7 +235,7 @@ const validateDelta = function(debtDelta,collateralDelta){
         provider.send("hardhat_reset", [{
           forking: {
             jsonRpcUrl: process.env.ALCHEMY_NODE,
-            blockNumber: blockNumber-6
+            blockNumber: 12827203
           }
         }])
       }
@@ -236,20 +250,20 @@ const validateDelta = function(debtDelta,collateralDelta){
         let debtDelta;
         let exchangeMinAmount;
         let currentColl = sub(add( existingCDP?existingCDP.coll:0,desiredCDPState.providedCollateral),withdrawColl);
-        let currentDebt = add(existingCDP?existingCDP.debt:0,daiAmount);
+        let currentDebt = existingCDP?existingCDP.debt:0;
         let targetColRatio = convertToBigNumber(desiredCDPState.desiredCollRatio);
         if(operation == 'mul'){
           [debtDelta, exchangeMinAmount] = calculateParamsIncreaseMP(oraclePrice,marketPrice, 
             convertToBigNumber(OUR_FEE), 
             convertToBigNumber(AAVE_FEE), 
             currentColl, currentDebt, 
-            targetColRatio, slippage, 0, debug)
+            targetColRatio, slippage, daiAmount, debug)
         }else{
           [debtDelta, exchangeMinAmount] = calculateParamsDecreaseMP(oraclePrice,marketPrice, 
             convertToBigNumber(OUR_FEE), 
             convertToBigNumber(AAVE_FEE), 
             currentColl, currentDebt, 
-            targetColRatio, slippage, 0, debug);
+            targetColRatio, slippage, daiAmount, debug);
         }
 
         if(debtDelta == undefined || exchangeMinAmount == undefined || 
@@ -304,8 +318,6 @@ const validateDelta = function(debtDelta,collateralDelta){
         
         describe(`opening Multiply Vault with collateralisation ratio of ${testCase.desiredCDPState.desiredCollRatio}`, async function(){
           var txResult ;
-          var lastCDP;
-          var vaultInfo;
           var startBalance;
           
           this.beforeEach(async function(){
@@ -321,7 +333,7 @@ const validateDelta = function(debtDelta,collateralDelta){
 
           this.beforeAll(async function(){
             startBalance = await deployedContracts.daiTokenInstance.balanceOf(ADDRESS_REGISTRY.feeRecepient);
-
+            console.log(testCase.existingCDP,testCase.desiredCDPState);
             const [debtDelta, collateralDelta ]= calculateRequiredDebt('mul',
               testCase.existingCDP,
               testCase.desiredCDPState, 
@@ -339,14 +351,8 @@ const validateDelta = function(debtDelta,collateralDelta){
                 testCase.existingCDP,
                 primarySignerAddress,false,MAINNET_ADRESSES);
 
-            if(testParam.useMockExchange == false){
-              if(testParam.debug==true){
-                console.log("GETTING PAYLOAD FROM 1inch");
-              }
-              var _1inchPayload = await getPayload(exchangeData,deployedContracts.exchangeInstance.address);
-              exchangeData._exchangeCalldata = _1inchPayload.data;
-              exchangeData.exchangeAddress = _1inchPayload.to;
-            }
+            await fillExchangeData(testParam, exchangeData, deployedContracts.exchangeInstance);
+
 
             const params = packMPAParams(cdpData, exchangeData, ADDRESS_REGISTRY);
             
@@ -457,7 +463,8 @@ const validateDelta = function(debtDelta,collateralDelta){
                 testCase.existingCDP,
                 primarySignerAddress,true,MAINNET_ADRESSES);
 
-            const params = packMPAParams(cdpData, exchangeData, ADDRESS_REGISTRY);
+                await fillExchangeData(testParam, exchangeData, deployedContracts.exchangeInstance);
+              const params = packMPAParams(cdpData, exchangeData, ADDRESS_REGISTRY);
 
               let status;
               [status,inTxResult] = await dsproxyExecuteAction(deployedContracts.multiplyProxyActionsInstance,
@@ -469,7 +476,6 @@ const validateDelta = function(debtDelta,collateralDelta){
               if(!status){
                 restoreSnapshot.lock = true;
                 throw "Tx failed";
-                throw inTxResult;
               }
 
                 await updateLastCDPInfo(testCase,primarySigner,provider,userProxyAddr);
@@ -542,7 +548,7 @@ const validateDelta = function(debtDelta,collateralDelta){
               marketPrice,
               testParam.slippage,
               testParam.debug,
-              -1*testParam.desiredDAI)
+              testParam.desiredDAI)
 
               validateDelta(debtDelta, collateralDelta);
 
@@ -555,6 +561,9 @@ const validateDelta = function(debtDelta,collateralDelta){
 
               cdpData.withdrawCollateral = 0;
               cdpData.withdrawDai = amountToWei(testParam.desiredDAI).toFixed(0);
+
+
+              await fillExchangeData(testParam, exchangeData, deployedContracts.exchangeInstance);
 
               const params = packMPAParams(cdpData, exchangeData, ADDRESS_REGISTRY);
 
@@ -661,6 +670,7 @@ const validateDelta = function(debtDelta,collateralDelta){
 
               const params = packMPAParams(cdpData, exchangeData, ADDRESS_REGISTRY);
 
+              await fillExchangeData(testParam, exchangeData, deployedContracts.exchangeInstance);
               let status;
               [status,inTxResult] = await dsproxyExecuteAction(deployedContracts.multiplyProxyActionsInstance,
                   deployedContracts.dsProxyInstance, 
@@ -699,7 +709,7 @@ const validateDelta = function(debtDelta,collateralDelta){
               
               var balanceIncrease = sub( daiAfter.toString(),daiBefore.toString()).toNumber();
 
-              console.warn(`\x1b[33m${positiveMargin}% margin of DAI returned compared to Vault debt ${testCase.existingCDP.debt}\x1b[0m`)
+              console.warn(`\x1b[33m${positiveMargin}% margin applied, ${balanceIncrease/Math.pow(10,18)} returned, compared to Vault debt ${testCase.existingCDP.debt}\x1b[0m`)
             
               expect(balanceIncrease).to.be.lessThan(amountToWei(testCase.existingCDP.debt*(positiveMargin/100)).toNumber());
 
@@ -783,6 +793,7 @@ const validateDelta = function(debtDelta,collateralDelta){
               cdpData.borrowCollateral = 0;
               cdpData.requiredDebt = exchangeData.minToTokenAmount;
 
+              await fillExchangeData(testParam, exchangeData, deployedContracts.exchangeInstance);
               const params = packMPAParams(cdpData, exchangeData, ADDRESS_REGISTRY);
               beneficiaryBefore =await  deployedContracts.daiTokenInstance.balanceOf("0x79d7176aE8F93A04bC73b9BC710d4b44f9e362Ce");
             
@@ -828,7 +839,7 @@ const validateDelta = function(debtDelta,collateralDelta){
                     marketPrice));
               expectedReturnedAmount = amountToWei(expectedReturnedAmount);
               var ratio = div(reminder,expectedReturnedAmount);
-              console.log("Expected to actual Ratio:",ratio.toString());
+              console.log("Expected to actual Ratio:",ratio.toString(),", Expected amount", expectedReturnedAmount.toFixed(0));
               expect(ratio.toNumber()).to.be.lessThanOrEqual(1.02);
               expect(ratio.toNumber()).to.be.greaterThanOrEqual(0.98);
             })

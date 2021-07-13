@@ -58,7 +58,6 @@ const exchangeToDAI = async function(fromTokenAddress, sourceAmount, slippagePer
     if(txData == undefined)
       console.log("incorrect response from 1inch ",_1inchResponse,"original request",url)
     else{
-      console.log("_1inch correct process",url);
     }
     return  [url,txData];
 }

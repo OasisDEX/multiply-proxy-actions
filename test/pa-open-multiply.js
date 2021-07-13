@@ -7,6 +7,7 @@ const { ethers } = require("hardhat");
   
   describe("Proxy Action", async function() {
     var primaryAddress;
+    var primaryAddressAdr;
     var secondaryAddress;
     var provider;
     var revertBlockNumber;
@@ -52,16 +53,16 @@ const { ethers } = require("hardhat");
       provider.send("hardhat_reset", [{
         forking: {
           jsonRpcUrl: process.env.ALCHEMY_NODE,
-          blockNumber: blockNumber-6
+          blockNumber: 12763570
         }
-      }])
+      }]);
       primaryAddress = await provider.getSigner(0);
-       let { mcdView, exchange, multiplyProxyActions, dsProxy, userProxyAddress } = await deploySystem(provider, primaryAddress); 
-       mcdViewInstance = mcdView;
-       exchangeInstance = exchange;
-       multiplyProxyActionsInstance = multiplyProxyActions;
-       dsProxyInstance = dsProxy;
-       userProxyAddr = userProxyAddress;
+       let deployedContracts  = await deploySystem(provider, primaryAddress,true); 
+       mcdViewInstance = deployedContracts.mcdViewInstance;
+       exchangeInstance = deployedContracts.exchangeInstance;
+       multiplyProxyActionsInstance = deployedContracts.multiplyProxyActionsInstance;
+       dsProxyInstance = deployedContracts.dsProxyInstance;
+       userProxyAddr = deployedContracts.userProxyAddr;
        oraclePrice = await getOraclePrice(provider);
        marketPrice = await getMarketPrice(MAINNET_ADRESSES.WETH_ADDRESS, MAINNET_ADRESSES.MCD_DAI);
        ADDRESS_REGISTRY = addressRegistryFactory(multiplyProxyActionsInstance.address,exchangeInstance.address);
@@ -96,20 +97,12 @@ const { ethers } = require("hardhat");
       })
       this.beforeAll(async function(){
         startBalance = await balanceOf(MAINNET_ADRESSES.MCD_DAI, ADDRESS_REGISTRY.feeRecepient);
-        /*
-        const {onchainData} = require('./common/cdpData');
-        txResult = onchainData.txResult;
-        lastCDP = onchainData.lastCDP;
-        vaultInfo = onchainData.vaultInfo;
-        oraclePrice = onchainData.oraclePrice;
-        marketPrice = onchainData.marketPrice;
-        testCases = onchainData.testCases;
-*/
+        var {params} = prepareMultiplyParameters(testCases[1]._1inchPayload, testCases[1].desiredCDPState, multiplyProxyActionsInstance.address, exchangeInstance.address, await primaryAddress.getAddress(), false,0);
         
-        var openMultParameters = prepareMultiplyParameters(MAINNET_ADRESSES.MCD_DAI, MAINNET_ADRESSES.ETH, testCases[1]._1inchPayload, 0, testCases[1].desiredCDPState, multiplyProxyActionsInstance.address, exchangeInstance.address);
-        let status;
-        [status,txResult] =  await dsproxyExecuteAction(multiplyProxyActionsInstance, 
-          dsProxyInstance, primaryAddress.address, 'openMultiplyVault', openMultParameters, 
+        var primaryAddressAdr = await primaryAddress.getAddress();
+        console.log(primaryAddressAdr);
+        let [status,txResult] =  await dsproxyExecuteAction(multiplyProxyActionsInstance, 
+          dsProxyInstance,primaryAddressAdr, 'openMultiplyVault', params, 
           amountToWei(baseCollateralAmountInETH, 'ETH').toFixed(0));  
           lastCDP = await getLastCDP(provider,primaryAddress,userProxyAddr);
           vaultInfo = await getVaultInfo(mcdViewInstance, lastCDP.id, lastCDP.ilk);
@@ -193,10 +186,10 @@ const { ethers } = require("hardhat");
         testCases = onchainData.testCases;
 */
         startBalance = await balanceOf(MAINNET_ADRESSES.MCD_DAI, ADDRESS_REGISTRY.feeRecepient);
-        var openMultParameters = prepareMultiplyParameters(testCases[0]._1inchPayload,testCases[0].desiredCDPState, multiplyProxyActionsInstance.address, exchangeInstance.address);
+        var {params} = prepareMultiplyParameters(testCases[0]._1inchPayload,testCases[0].desiredCDPState, multiplyProxyActionsInstance.address, exchangeInstance.address, await primaryAddress.getAddress(),false,0);
         let status;
         [status,txResult] =  await dsproxyExecuteAction(multiplyProxyActionsInstance, 
-          dsProxyInstance, primaryAddress.address, 'openMultiplyVault', openMultParameters, 
+          dsProxyInstance, await primaryAddress.getAddress(), 'openMultiplyVault', params, 
           amountToWei(baseCollateralAmountInETH).toFixed(0));  
           lastCDP = await getLastCDP(provider,primaryAddress,userProxyAddr);
           vaultInfo = await getVaultInfo(mcdViewInstance, lastCDP.id, lastCDP.ilk);

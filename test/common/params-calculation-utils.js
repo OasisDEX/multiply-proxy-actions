@@ -2,6 +2,7 @@ const { default: BigNumber } = require('bignumber.js');
 let MAINNET_ADRESSES  = require('../../addresses/mainnet.json');
 const {WETH_ADDRESS,
   one,
+  zero,
   TEN,
   balanceOf} = require('../utils');
 
@@ -22,6 +23,9 @@ const addressRegistryFactory = function (multiplyProxyActionsInstanceAddress,exc
 }
 
 function amountToWei(amount, precision = 18) {
+  if(!amount){
+    amount = 0;
+  }
   if(BigNumber.isBigNumber(amount)==false){
     amount = new BigNumber(amount);
   }
@@ -209,7 +213,7 @@ const sub = function(a,b){
   }
 
 const prepareMultiplyParameters = function(oneInchPayload,desiredCdpState, multiplyProxyActionsInstanceAddress, 
-  exchangeInstanceAddress, fundsReceiver, toDAI=false){
+  exchangeInstanceAddress, fundsReceiver, toDAI=false, cdpId = 0){
   
   let exchangeData = {
     fromTokenAddress: toDAI?MAINNET_ADRESSES.WETH_ADDRESS:MAINNET_ADRESSES.MCD_DAI,
@@ -224,24 +228,27 @@ const prepareMultiplyParameters = function(oneInchPayload,desiredCdpState, multi
   
   let cdpData =  {
     gemJoin: MAINNET_ADRESSES.MCD_JOIN_ETH_A,
-    cdpId: 0,
+    cdpId: cdpId,
     ilk: "0x0000000000000000000000000000000000000000000000000000000000000000",
+    fundsReceiver:fundsReceiver,
     borrowCollateral: amountToWei(desiredCdpState.toBorrowCollateralAmount).toFixed(0),
     requiredDebt: amountToWei(desiredCdpState.requiredDebt).toFixed(0),
-    depositDai: 0,
+    depositDai: amountToWei(desiredCdpState.providedDai).toFixed(0),
     depositCollateral: amountToWei(desiredCdpState.providedCollateral).toFixed(0),
-    withdrawDai: 0,
-    withdrawCollateral: 0,
-    fundsReceiver:fundsReceiver
+    withdrawDai: amountToWei(desiredCdpState.withdrawDai).toFixed(0),
+    withdrawCollateral: amountToWei(desiredCdpState.withdrawCollateral).toFixed(0),
   }
 
 
+  let params = packMPAParams(cdpData, exchangeData, addressRegistryFactory( multiplyProxyActionsInstanceAddress
+    ,exchangeInstanceAddress)) ;
 
   return { params,
     exchangeData,
     cdpData
     
   };
+
 }
   
 
