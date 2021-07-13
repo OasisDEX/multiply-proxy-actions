@@ -26,14 +26,13 @@ const exchangeFromDAI = async function(toTokenAddress, sourceAmount, slippagePer
       ).toFixed(0)}&fromAddress=${
         beneficiary
       }&slippage=${slippagePercentage.toNumber()}&disableEstimate=true&allowPartial=false`;
-
     var _1inchResponse = (await(await fetch(url)).json());
     var txData = _1inchResponse.tx;
    
     if(txData == undefined)
       console.log("incorrect response from 1inch ",_1inchResponse,"original request",url)
     
-    return txData;
+    return [url,txData];
 }
 
 const getCurrentBlockNumber = async function() {
@@ -58,7 +57,10 @@ const exchangeToDAI = async function(fromTokenAddress, sourceAmount, slippagePer
     var txData = _1inchResponse.tx;
     if(txData == undefined)
       console.log("incorrect response from 1inch ",_1inchResponse,"original request",url)
-    return txData;
+    else{
+      console.log("_1inch correct process",url);
+    }
+    return  [url,txData];
 }
 
 module.exports = {

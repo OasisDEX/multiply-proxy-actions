@@ -69,7 +69,9 @@ const { ethers } = require("hardhat");
        var check_1inch = async function(data){
           let [requiredDebt, toBorrowCollateralAmount] = calculateParamsIncreaseMP(oraclePrice, marketPrice, OUR_FEE, AAVE_FEE,
             baseCollateralAmountInETH, new BigNumber(data.currntDebt), new BigNumber(data.desiredCollRatio), data.slippage);
-          data._1inchPayload = await exchangeFromDAI(MAINNET_ADRESSES.WETH_ADDRESS,requiredDebt,(data.slippage).multipliedBy(100),exchangeInstance.address,OUR_FEE);
+         
+          let [url,payload] = await exchangeFromDAI(MAINNET_ADRESSES.WETH_ADDRESS,requiredDebt,(data.slippage).multipliedBy(100),exchangeInstance.address,OUR_FEE);
+          data._1inchPayload = payload;
           data.toBorrowCollateralAmount = toBorrowCollateralAmount;
           data.desiredCDPState.requiredDebt =requiredDebt;
           data.desiredCDPState.toBorrowCollateralAmount = toBorrowCollateralAmount;
@@ -105,7 +107,8 @@ const { ethers } = require("hardhat");
 */
         
         var openMultParameters = prepareMultiplyParameters(MAINNET_ADRESSES.MCD_DAI, MAINNET_ADRESSES.ETH, testCases[1]._1inchPayload, 0, testCases[1].desiredCDPState, multiplyProxyActionsInstance.address, exchangeInstance.address);
-        txResult =  await dsproxyExecuteAction(multiplyProxyActionsInstance, 
+        let status;
+        [status,txResult] =  await dsproxyExecuteAction(multiplyProxyActionsInstance, 
           dsProxyInstance, primaryAddress.address, 'openMultiplyVault', openMultParameters, 
           amountToWei(baseCollateralAmountInETH, 'ETH').toFixed(0));  
           lastCDP = await getLastCDP(provider,primaryAddress,userProxyAddr);
@@ -191,7 +194,8 @@ const { ethers } = require("hardhat");
 */
         startBalance = await balanceOf(MAINNET_ADRESSES.MCD_DAI, ADDRESS_REGISTRY.feeRecepient);
         var openMultParameters = prepareMultiplyParameters(testCases[0]._1inchPayload,testCases[0].desiredCDPState, multiplyProxyActionsInstance.address, exchangeInstance.address);
-        txResult =  await dsproxyExecuteAction(multiplyProxyActionsInstance, 
+        let status;
+        [status,txResult] =  await dsproxyExecuteAction(multiplyProxyActionsInstance, 
           dsProxyInstance, primaryAddress.address, 'openMultiplyVault', openMultParameters, 
           amountToWei(baseCollateralAmountInETH).toFixed(0));  
           lastCDP = await getLastCDP(provider,primaryAddress,userProxyAddr);
