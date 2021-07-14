@@ -6,12 +6,11 @@ const {
 
 const zero = new BigNumber(0);
 
-function amountToWei(amount) {
-  const precision = 18
-  if(BigNumber.isBigNumber(amount)==false){
+function amountToWei(amount, precision = 18) {
+  if (BigNumber.isBigNumber(amount) == false) {
     amount = new BigNumber(amount);
   }
-  return amount.times(new BigNumber(10).pow(precision))
+  return amount.times(new BigNumber(10).pow(precision));
 }
 
 const calculateParamsIncreaseMP = function(oraclePrice, marketPrice, OF, FF, currentColl, currentDebt, requiredCollRatio, slippage, depositDai = new BigNumber(0)) {

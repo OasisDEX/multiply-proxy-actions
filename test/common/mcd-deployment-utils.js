@@ -110,7 +110,7 @@ const deploySystem = async function(provider, signer) {
 const ONE = one;
 
   
-async function getOraclePrice(provider) {
+async function getOraclePrice(provider, pipAddress = MAINNET_ADRESSES.PIP_ETH) {
   
   const storageHexToBigNumber = (uint256) => {
     const match = uint256.match(/^0x(\w+)$/);
@@ -125,7 +125,7 @@ async function getOraclePrice(provider) {
       ];
   };
   const slotCurrent = 3;
-  const priceHex = await provider.getStorageAt(MAINNET_ADRESSES.PIP_ETH, slotCurrent);
+  const priceHex = await provider.getStorageAt(pipAddress, slotCurrent);
   const p = storageHexToBigNumber(priceHex);
   return p[1].shiftedBy(-18);
 }

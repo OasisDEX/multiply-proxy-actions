@@ -27,6 +27,7 @@ import "../interfaces/mcd/IJug.sol";
 import "../interfaces/mcd/IDaiJoin.sol";
 import "../interfaces/exchange/IExchange.sol";
 import "./ExchangeData.sol";
+import "hardhat/console.sol";
 
 pragma solidity >=0.7.6;
 pragma abicoder v2;
@@ -362,11 +363,10 @@ contract MultiplyProxyActions {
         IDaiJoin(DAIJOIN).join(urn, borrowedDai);
 
         uint256 wadC = convertTo18(gemJoin, collateralDraw);
-
         IManager(manager).frob(cdp, -int256(wadC), _getWipeDart(vat, IVat(vat).dai(urn), urn, ilk));
         
         IManager(manager).flux(cdp, address(this), wadC);
-        IJoin(gemJoin).exit(address(this), wadC);
+        IJoin(gemJoin).exit(address(this), collateralDraw);
     }
 
     function _withdrawGem(address gemJoin,  address payable destination, uint256 amount) private {
