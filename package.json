@@ -13,7 +13,9 @@
     "flatten-all": "sol-merger@3.1.0 \"./contracts/*.sol\" ./build",
     "flatten": "npx sol-merger@3.1.0"
   },
-  "pre-commit": [ "pretty" ],
+  "pre-commit": [
+    "pretty"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/OasisDEX/multiply-proxy-actions"
