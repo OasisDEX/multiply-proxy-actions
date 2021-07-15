@@ -67,7 +67,7 @@ const getOrCreateProxy = async function getOrCreateProxy(provider, signer) {
     return proxyAddress;
 };
 
-   const deploySystem = async function (provider, signer) {
+ const deploySystem = async function (provider, signer) {
     const userProxyAddress = await getOrCreateProxy(provider, signer);
     const dsProxy = new ethers.Contract(userProxyAddress, dsProxyAbi, provider).connect(signer);
 
