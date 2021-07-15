@@ -16,9 +16,9 @@ require('hardhat-abi-exporter');
 module.exports = {
   networks: {
     local: {
-			url: 'http://127.0.0.1:8545',
+      url: 'http://127.0.0.1:8545',
       timeout: 100000,
-	  },
+    },
     hardhat: {
       forking: {
         url: process.env.ALCHEMY_NODE,
@@ -35,9 +35,9 @@ module.exports = {
       timeout: 100000,
     },
     mainnet: {
-        url: process.env.ALCHEMY_NODE,
-        accounts: [process.env.PRIV_KEY_MAINNET],
-        gasPrice: 40000000000
+      url: process.env.ALCHEMY_NODE,
+      accounts: [process.env.PRIV_KEY_MAINNET],
+      gasPrice: 40000000000
     }
   },
   solidity: "0.7.6",

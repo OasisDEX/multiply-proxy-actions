@@ -13,16 +13,16 @@ const FEE = 3;
 const FEE_BASE = 10000;
 
 
-let MAINNET_ADRESSES  = require('../../addresses/mainnet.json');
+let MAINNET_ADRESSES = require('../../addresses/mainnet.json');
 
-const {WETH_ADDRESS,
+const { WETH_ADDRESS,
   one,
   TEN,
-  balanceOf} = require('../utils');
+  balanceOf } = require('../utils');
 
 MAINNET_ADRESSES.WETH_ADDRESS = WETH_ADDRESS;
 
-const dsproxyExecuteAction =  async function(proxyActions, dsProxy, fromAddress, method, params, value=0) {
+const dsproxyExecuteAction = async function (proxyActions, dsProxy, fromAddress, method, params, value = 0) {
   const calldata = proxyActions.interface.encodeFunctionData(
     method,
     params
@@ -35,16 +35,16 @@ const dsproxyExecuteAction =  async function(proxyActions, dsProxy, fromAddress,
       gasLimit: 2500000,
     })
     retVal = await tx.wait();
-  
+
   } catch (error) {
     retVal = false;
-    
+
   }
   return retVal;
 }
 
 
-const addressRegistryFactory = function (multiplyProxyActionsInstanceAddress,exchangeInstanceAddress){
+const addressRegistryFactory = function (multiplyProxyActionsInstanceAddress, exchangeInstanceAddress) {
 
   return {
     jug: MAINNET_ADRESSES.MCD_JUG,
@@ -54,14 +54,14 @@ const addressRegistryFactory = function (multiplyProxyActionsInstanceAddress,exc
     feeRecepient: '0x79d7176aE8F93A04bC73b9BC710d4b44f9e362Ce',
     exchange: exchangeInstanceAddress,
   }
-  
+
 }
 
 const getOrCreateProxy = async function getOrCreateProxy(
   provider,
   signer,
 ) {
-  
+
   const address = await signer.getAddress()
   const dsProxyRegistry = new ethers.Contract(
     MAINNET_ADRESSES.PROXY_REGISTRY,
@@ -77,20 +77,20 @@ const getOrCreateProxy = async function getOrCreateProxy(
 }
 
 
-const deploySystem = async function(provider, signer) {
+const deploySystem = async function (provider, signer) {
   const userProxyAddress = await getOrCreateProxy(provider, signer)
   const dsProxy = new ethers.Contract(userProxyAddress, dsProxyAbi, provider).connect(signer)
-   
+
   // const multiplyProxyActions = await deploy("MultiplyProxyActions");
   const MPActions = await ethers.getContractFactory("MultiplyProxyActions", signer);
   const multiplyProxyActions = await MPActions.deploy();
   await multiplyProxyActions.deployed();
 
-  const incompleteRegistry = addressRegistryFactory(undefined,undefined);
+  const incompleteRegistry = addressRegistryFactory(undefined, undefined);
 
 
   const Exchange = await ethers.getContractFactory("Exchange", signer);
-  const exchange = await Exchange.deploy(multiplyProxyActions.address,incompleteRegistry.feeRecepient , FEE);
+  const exchange = await Exchange.deploy(multiplyProxyActions.address, incompleteRegistry.feeRecepient, FEE);
   await exchange.deployed();
 
   // const mcdView = await deploy("McdView");
@@ -109,9 +109,9 @@ const deploySystem = async function(provider, signer) {
 
 const ONE = one;
 
-  
+
 async function getOraclePrice(provider) {
-  
+
   const storageHexToBigNumber = (uint256) => {
     const match = uint256.match(/^0x(\w+)$/);
     if (!match) {
@@ -152,8 +152,8 @@ const getLastCDP = async function (
   }
   return cdp
 }
-  
-  
+
+
 module.exports = {
   getOrCreateProxy,
   deploySystem,

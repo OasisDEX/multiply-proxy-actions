@@ -72,10 +72,7 @@ const prepareMultiplyParameters = function(fromTokenAddress, toTokenAddress, one
 
   return params;
 }
-  
 
-  
-  
 module.exports = {
     calculateParamsIncreaseMP,
     calculateParamsDecreaseMP,

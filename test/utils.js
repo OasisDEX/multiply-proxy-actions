@@ -55,51 +55,51 @@ const fetchStandardAmounts = async () => {
 const abiEncodeArgs = (deployed, contractArgs) => {
     // not writing abi encoded args if this does not pass
     if (
-      !contractArgs ||
-      !deployed ||
-      !R.hasPath(["interface", "deploy"], deployed)
+        !contractArgs ||
+        !deployed ||
+        !R.hasPath(["interface", "deploy"], deployed)
     ) {
-      return "";
+        return "";
     }
     const encoded = utils.defaultAbiCoder.encode(
-      deployed.interface.deploy.inputs,
-      contractArgs
+        deployed.interface.deploy.inputs,
+        contractArgs
     );
     return encoded;
-  };
+};
 
-const deploy = async (contractName, _args = [], overrides = {}, libraries = {},silent) => {
-    if(silent==false)
-    console.log(` 🛰  Deploying: ${contractName}`);
-  
+const deploy = async (contractName, _args = [], overrides = {}, libraries = {}, silent) => {
+    if (silent == false)
+        console.log(` 🛰  Deploying: ${contractName}`);
+
     const contractArgs = _args || [];
-    const contractArtifacts = await ethers.getContractFactory(contractName,{libraries: libraries});
+    const contractArtifacts = await ethers.getContractFactory(contractName, { libraries: libraries });
     const deployed = await contractArtifacts.deploy(...contractArgs, overrides);
     const encoded = abiEncodeArgs(deployed, contractArgs);
     fs.writeFileSync(`artifacts/${contractName}.address`, deployed.address);
-  
+
     let extraGasInfo = ""
-    if(deployed&&deployed.deployTransaction){
-      const gasUsed = deployed.deployTransaction.gasLimit.mul(deployed.deployTransaction.gasPrice)
-      extraGasInfo = "("+utils.formatEther(gasUsed)+" ETH)"
+    if (deployed && deployed.deployTransaction) {
+        const gasUsed = deployed.deployTransaction.gasLimit.mul(deployed.deployTransaction.gasPrice)
+        extraGasInfo = "(" + utils.formatEther(gasUsed) + " ETH)"
     }
-  if(silent == false){
-    console.log(
-      " 📄",
-      chalk.cyan(contractName),
-      "deployed to:",
-      chalk.magenta(deployed.address),
-      chalk.grey(extraGasInfo),
-      "in block",
-      chalk.yellow(deployed.deployTransaction.blockNumber)
-    );
-  }
-  
+    if (silent == false) {
+        console.log(
+            " 📄",
+            chalk.cyan(contractName),
+            "deployed to:",
+            chalk.magenta(deployed.address),
+            chalk.grey(extraGasInfo),
+            "in block",
+            chalk.yellow(deployed.deployTransaction.blockNumber)
+        );
+    }
+
     if (!encoded || encoded.length <= 2) return deployed;
     fs.writeFileSync(`artifacts/${contractName}.args`, encoded.slice(2));
-  
+
     return deployed;
-  };
+};
 
 const send = async (tokenAddr, to, amount) => {
     const tokenContract = await hre.ethers.getContractAt("IERC20", tokenAddr);
@@ -113,7 +113,7 @@ const approve = async (tokenAddr, to) => {
     const allowance = await tokenContract.allowance(tokenContract.signer.address, to);
 
     if (allowance.toString() == '0') {
-        await tokenContract.approve(to, MAX_UINT, {gasLimit: 1000000});
+        await tokenContract.approve(to, MAX_UINT, { gasLimit: 1000000 });
     }
 };
 
@@ -142,7 +142,7 @@ const balanceOf = async (tokenAddr, addr) => {
 
 const isEth = (tokenAddr) => {
     if (tokenAddr.toLowerCase() === ETH_ADDR.toLowerCase() ||
-    tokenAddr.toLowerCase() === WETH_ADDRESS.toLowerCase()
+        tokenAddr.toLowerCase() === WETH_ADDRESS.toLowerCase()
     ) {
         return true;
     }
@@ -161,14 +161,16 @@ const convertToWeth = (tokenAddr) => {
 const impersonateAccount = async (account) => {
     await hre.network.provider.request({
         method: "hardhat_impersonateAccount",
-        params: [account]}
+        params: [account]
+    }
     );
 };
 
 const stopImpersonatingAccount = async (account) => {
     await hre.network.provider.request({
         method: "hardhat_stopImpersonatingAccount",
-        params: [account]}
+        params: [account]
+    }
     );
 };
 
