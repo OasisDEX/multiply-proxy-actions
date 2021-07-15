@@ -234,15 +234,6 @@ describe('Proxy Action', async function () {
       console.log('snapshot restored', initialSetupSnapshotId, reVertedBlock)
     })
     this.beforeAll(async function () {
-      /*
-        const {onchainData} = require('./common/cdpData');
-        txResult = onchainData.txResult;
-        lastCDP = onchainData.lastCDP;
-        vaultInfo = onchainData.vaultInfo;
-        oraclePrice = onchainData.oraclePrice;
-        marketPrice = onchainData.marketPrice;
-        testCases = onchainData.testCases;
-*/
       startBalance = await balanceOf(MAINNET_ADRESSES.MCD_DAI, ADDRESS_REGISTRY.feeRecepient)
       var { params } = prepareMultiplyParameters(
         testCases[0]._1inchPayload,

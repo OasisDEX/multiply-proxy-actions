@@ -40,6 +40,7 @@
     "hardhat-gas-reporter": "^1.0.1",
     "hardhat-log-remover": "^2.0.0",
     "husky": "^4.3.0",
+    "pre-commit": "^1.2.2",
     "prettier": "^2.1.2",
     "prettier-plugin-solidity": "^1.0.0-alpha.59",
     "solhint": "^3.2.2",
