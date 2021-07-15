@@ -24,7 +24,7 @@ contract McdView is DSMath {
         address urn = manager.urns(_vaultId);
 
         (uint256 collateral, uint256 debt) = vat.urns(_ilk, urn);
-        (,uint256 rate,,,) = vat.ilks(_ilk);
+        (, uint256 rate, , , ) = vat.ilks(_ilk);
 
         return (collateral, rmul(debt, rate));
     }
@@ -33,7 +33,7 @@ contract McdView is DSMath {
     /// @param _ilk Ilk of the Vault
     function getPrice(bytes32 _ilk) public view returns (uint256) {
         (, uint256 mat) = spotter.ilks(_ilk);
-        (,,uint256 spot,,) = vat.ilks(_ilk);
+        (, , uint256 spot, , ) = vat.ilks(_ilk);
 
         return rmul(rmul(spot, spotter.par()), mat);
     }
@@ -48,6 +48,6 @@ contract McdView is DSMath {
 
         if (debt == 0) return 0;
 
-        return rdiv(wmul(collateral, price), debt) / (10 ** 18);
+        return rdiv(wmul(collateral, price), debt) / (10**18);
     }
 }

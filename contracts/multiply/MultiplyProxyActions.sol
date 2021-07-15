@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { IERC20 } from "../interfaces/IERC20.sol";
+import {IERC20} from "../interfaces/IERC20.sol";
 import "../interfaces/aaveV2/ILendingPoolAddressesProviderV2.sol";
 import "../interfaces/aaveV2/ILendingPoolV2.sol";
 import "../utils/SafeMath.sol";
@@ -60,15 +60,17 @@ struct AddressRegistry {
 contract MultiplyProxyActions {
     using SafeMath for uint256;
 
-    uint256 constant RAY = 10 ** 27;
+    uint256 constant RAY = 10**27;
 
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
     address public constant DAIJOIN = 0x9759A6Ac90977b93B58547b4A71c78317f391A28;
-    address public constant ETH_ADDR = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE; 
+    address public constant ETH_ADDR = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
     function getAaveLendingPool(address lendingPoolProvider) private view returns (ILendingPoolV2) {
-        ILendingPoolAddressesProviderV2 provider = ILendingPoolAddressesProviderV2(lendingPoolProvider);
+        ILendingPoolAddressesProviderV2 provider = ILendingPoolAddressesProviderV2(
+            lendingPoolProvider
+        );
         ILendingPoolV2 lendingPool = ILendingPoolV2(provider.getLendingPool());
         return lendingPool;
     }
@@ -81,7 +83,7 @@ contract MultiplyProxyActions {
     function convertTo18(address gemJoin, uint256 amt) internal returns (uint256 wad) {
         // For those collaterals that have less than 18 decimals precision we need to do the conversion before passing to frob function
         // Adapters will automatically handle the difference of precision
-        wad = amt.mul(10 ** (18 - IJoin(gemJoin).dec()));
+        wad = amt.mul(10**(18 - IJoin(gemJoin).dec()));
     }
 
     function _getDrawDart(
@@ -106,33 +108,57 @@ contract MultiplyProxyActions {
         }
     }
 
-    function openMultiplyVault(ExchangeData calldata exchangeData, CdpData memory cdpData, AddressRegistry calldata addressRegistry) public payable {
+    function openMultiplyVault(
+        ExchangeData calldata exchangeData,
+        CdpData memory cdpData,
+        AddressRegistry calldata addressRegistry
+    ) public payable {
         cdpData.ilk = IJoin(cdpData.gemJoin).ilk();
         cdpData.cdpId = IManager(addressRegistry.manager).open(cdpData.ilk, address(this));
 
         increaseMultipleDepositCollateral(exchangeData, cdpData, addressRegistry);
     }
 
-    function increaseMultipleDepositCollateral(ExchangeData calldata exchangeData, CdpData memory cdpData, AddressRegistry calldata addressRegistry) public payable {
+    function increaseMultipleDepositCollateral(
+        ExchangeData calldata exchangeData,
+        CdpData memory cdpData,
+        AddressRegistry calldata addressRegistry
+    ) public payable {
         IGem gem = IJoin(cdpData.gemJoin).gem();
-        
+
         if (address(gem) == WETH) {
             gem.deposit{value: msg.value}();
             gem.transfer(addressRegistry.multiplyProxyActions, msg.value);
         } else {
-            gem.transferFrom(msg.sender, addressRegistry.multiplyProxyActions, cdpData.depositCollateral);
+            gem.transferFrom(
+                msg.sender,
+                addressRegistry.multiplyProxyActions,
+                cdpData.depositCollateral
+            );
         }
 
         increaseMultiple(exchangeData, cdpData, addressRegistry);
     }
 
-    function increaseMultipleDepositDai(ExchangeData calldata exchangeData, CdpData memory cdpData, AddressRegistry calldata addressRegistry) public payable {
-        IERC20(DAI).transferFrom(msg.sender, addressRegistry.multiplyProxyActions, cdpData.depositDai);
+    function increaseMultipleDepositDai(
+        ExchangeData calldata exchangeData,
+        CdpData memory cdpData,
+        AddressRegistry calldata addressRegistry
+    ) public payable {
+        IERC20(DAI).transferFrom(
+            msg.sender,
+            addressRegistry.multiplyProxyActions,
+            cdpData.depositDai
+        );
 
         increaseMultiple(exchangeData, cdpData, addressRegistry);
     }
 
-    function increaseMultiple(ExchangeData calldata exchangeData, CdpData memory cdpData, AddressRegistry calldata addressRegistry) public {
+    function increaseMultiple(
+        ExchangeData calldata exchangeData,
+        CdpData memory cdpData,
+        AddressRegistry calldata addressRegistry
+    ) public {
         cdpData.ilk = IJoin(cdpData.gemJoin).ilk();
 
         address[] memory assets = new address[](1);
@@ -142,7 +168,11 @@ contract MultiplyProxyActions {
         uint256[] memory modes = new uint256[](1);
         modes[0] = 0;
 
-        IManager(addressRegistry.manager).cdpAllow(cdpData.cdpId, addressRegistry.multiplyProxyActions, 1);
+        IManager(addressRegistry.manager).cdpAllow(
+            cdpData.cdpId,
+            addressRegistry.multiplyProxyActions,
+            1
+        );
         bytes memory paramsData = abi.encode(1, exchangeData, cdpData, addressRegistry);
 
         ILendingPoolV2 lendingPool = getAaveLendingPool(addressRegistry.aaveLendingPoolProvider);
@@ -156,10 +186,18 @@ contract MultiplyProxyActions {
             0
         );
 
-        IManager(addressRegistry.manager).cdpAllow(cdpData.cdpId, addressRegistry.multiplyProxyActions, 0);
+        IManager(addressRegistry.manager).cdpAllow(
+            cdpData.cdpId,
+            addressRegistry.multiplyProxyActions,
+            0
+        );
     }
 
-    function decreaseMultiple(ExchangeData calldata exchangeData, CdpData memory cdpData, AddressRegistry calldata addressRegistry) public {
+    function decreaseMultiple(
+        ExchangeData calldata exchangeData,
+        CdpData memory cdpData,
+        AddressRegistry calldata addressRegistry
+    ) public {
         cdpData.ilk = IJoin(cdpData.gemJoin).ilk();
 
         address[] memory assets = new address[](1);
@@ -171,7 +209,11 @@ contract MultiplyProxyActions {
         uint256[] memory modes = new uint256[](1);
         modes[0] = 0;
 
-        IManager(addressRegistry.manager).cdpAllow(cdpData.cdpId, addressRegistry.multiplyProxyActions, 1);
+        IManager(addressRegistry.manager).cdpAllow(
+            cdpData.cdpId,
+            addressRegistry.multiplyProxyActions,
+            1
+        );
 
         bytes memory paramsData = abi.encode(0, exchangeData, cdpData, addressRegistry);
         ILendingPoolV2 lendingPool = getAaveLendingPool(addressRegistry.aaveLendingPoolProvider);
@@ -185,10 +227,18 @@ contract MultiplyProxyActions {
             0
         );
 
-        IManager(addressRegistry.manager).cdpAllow(cdpData.cdpId, addressRegistry.multiplyProxyActions, 0);
+        IManager(addressRegistry.manager).cdpAllow(
+            cdpData.cdpId,
+            addressRegistry.multiplyProxyActions,
+            0
+        );
     }
 
-    function decreaseMultipleWithdrawCollateral(ExchangeData calldata exchangeData, CdpData memory cdpData, AddressRegistry calldata addressRegistry) public {
+    function decreaseMultipleWithdrawCollateral(
+        ExchangeData calldata exchangeData,
+        CdpData memory cdpData,
+        AddressRegistry calldata addressRegistry
+    ) public {
         cdpData.ilk = IJoin(cdpData.gemJoin).ilk();
 
         address[] memory assets = new address[](1);
@@ -199,8 +249,12 @@ contract MultiplyProxyActions {
 
         uint256[] memory modes = new uint256[](1);
         modes[0] = 0;
-        
-        IManager(addressRegistry.manager).cdpAllow(cdpData.cdpId, addressRegistry.multiplyProxyActions, 1);
+
+        IManager(addressRegistry.manager).cdpAllow(
+            cdpData.cdpId,
+            addressRegistry.multiplyProxyActions,
+            1
+        );
 
         bytes memory paramsData = abi.encode(0, exchangeData, cdpData, addressRegistry);
 
@@ -215,10 +269,18 @@ contract MultiplyProxyActions {
             0
         );
 
-        IManager(addressRegistry.manager).cdpAllow(cdpData.cdpId, addressRegistry.multiplyProxyActions, 0);
+        IManager(addressRegistry.manager).cdpAllow(
+            cdpData.cdpId,
+            addressRegistry.multiplyProxyActions,
+            0
+        );
     }
 
-    function decreaseMultipleWithdrawDai(ExchangeData calldata exchangeData, CdpData memory cdpData, AddressRegistry calldata addressRegistry) public {
+    function decreaseMultipleWithdrawDai(
+        ExchangeData calldata exchangeData,
+        CdpData memory cdpData,
+        AddressRegistry calldata addressRegistry
+    ) public {
         cdpData.ilk = IJoin(cdpData.gemJoin).ilk();
 
         address[] memory assets = new address[](1);
@@ -230,10 +292,14 @@ contract MultiplyProxyActions {
         uint256[] memory modes = new uint256[](1);
         modes[0] = 0;
 
-        IManager(addressRegistry.manager).cdpAllow(cdpData.cdpId, addressRegistry.multiplyProxyActions, 1);
+        IManager(addressRegistry.manager).cdpAllow(
+            cdpData.cdpId,
+            addressRegistry.multiplyProxyActions,
+            1
+        );
 
         bytes memory paramsData = abi.encode(0, exchangeData, cdpData, addressRegistry);
-        
+
         ILendingPoolV2 lendingPool = getAaveLendingPool(addressRegistry.aaveLendingPoolProvider);
         lendingPool.flashLoan(
             addressRegistry.multiplyProxyActions,
@@ -245,10 +311,19 @@ contract MultiplyProxyActions {
             0
         );
 
-        IManager(addressRegistry.manager).cdpAllow(cdpData.cdpId, addressRegistry.multiplyProxyActions, 0);
+        IManager(addressRegistry.manager).cdpAllow(
+            cdpData.cdpId,
+            addressRegistry.multiplyProxyActions,
+            0
+        );
     }
 
-    function closeVaultExitGeneric(ExchangeData calldata exchangeData, CdpData memory cdpData, AddressRegistry calldata addressRegistry, uint8 mode) private {
+    function closeVaultExitGeneric(
+        ExchangeData calldata exchangeData,
+        CdpData memory cdpData,
+        AddressRegistry calldata addressRegistry,
+        uint8 mode
+    ) private {
         cdpData.ilk = IJoin(cdpData.gemJoin).ilk();
         address urn = IManager(addressRegistry.manager).urns(cdpData.cdpId);
         address vat = IManager(addressRegistry.manager).vat();
@@ -267,8 +342,12 @@ contract MultiplyProxyActions {
 
         bytes memory paramsData = abi.encode(mode, exchangeData, cdpData, addressRegistry);
 
-        IManager(addressRegistry.manager).cdpAllow(cdpData.cdpId, addressRegistry.multiplyProxyActions, 1);
-        
+        IManager(addressRegistry.manager).cdpAllow(
+            cdpData.cdpId,
+            addressRegistry.multiplyProxyActions,
+            1
+        );
+
         ILendingPoolV2 lendingPool = getAaveLendingPool(addressRegistry.aaveLendingPoolProvider);
         lendingPool.flashLoan(
             addressRegistry.multiplyProxyActions,
@@ -280,18 +359,35 @@ contract MultiplyProxyActions {
             0
         );
 
-        IManager(addressRegistry.manager).cdpAllow(cdpData.cdpId, addressRegistry.multiplyProxyActions, 0);
+        IManager(addressRegistry.manager).cdpAllow(
+            cdpData.cdpId,
+            addressRegistry.multiplyProxyActions,
+            0
+        );
     }
 
-    function closeVaultExitCollateral(ExchangeData calldata exchangeData, CdpData memory cdpData, AddressRegistry calldata addressRegistry) public {
-        closeVaultExitGeneric(exchangeData,cdpData,addressRegistry,2);
+    function closeVaultExitCollateral(
+        ExchangeData calldata exchangeData,
+        CdpData memory cdpData,
+        AddressRegistry calldata addressRegistry
+    ) public {
+        closeVaultExitGeneric(exchangeData, cdpData, addressRegistry, 2);
     }
 
-    function closeVaultExitDai(ExchangeData calldata exchangeData, CdpData memory cdpData, AddressRegistry calldata addressRegistry) public {
-        closeVaultExitGeneric(exchangeData,cdpData,addressRegistry,3);
+    function closeVaultExitDai(
+        ExchangeData calldata exchangeData,
+        CdpData memory cdpData,
+        AddressRegistry calldata addressRegistry
+    ) public {
+        closeVaultExitGeneric(exchangeData, cdpData, addressRegistry, 3);
     }
 
-    function joinDrawDebt(CdpData memory cdpData, uint256 borrowedDai, address manager, address jug) private {
+    function joinDrawDebt(
+        CdpData memory cdpData,
+        uint256 borrowedDai,
+        address manager,
+        address jug
+    ) private {
         IGem gem = IJoin(cdpData.gemJoin).gem();
 
         uint256 balance = IERC20(address(gem)).balanceOf(address(this));
@@ -301,11 +397,15 @@ contract MultiplyProxyActions {
         address urn = IManager(manager).urns(cdpData.cdpId);
         address vat = IManager(manager).vat();
 
-        IManager(manager).frob(cdpData.cdpId, toInt256(convertTo18(cdpData.gemJoin, balance)), _getDrawDart(vat, jug, urn, cdpData.ilk, borrowedDai));
+        IManager(manager).frob(
+            cdpData.cdpId,
+            toInt256(convertTo18(cdpData.gemJoin, balance)),
+            _getDrawDart(vat, jug, urn, cdpData.ilk, borrowedDai)
+        );
         IManager(manager).move(cdpData.cdpId, address(this), borrowedDai.mul(RAY));
-         
-        IVat(vat).hope(DAIJOIN);       
-        
+
+        IVat(vat).hope(DAIJOIN);
+
         IJoin(DAIJOIN).exit(address(this), borrowedDai);
     }
 
@@ -316,14 +416,14 @@ contract MultiplyProxyActions {
         bytes32 ilk
     ) internal view returns (int256 dart) {
         // Gets actual rate from the vat
-        (, uint256 rate,,,) = IVat(vat).ilks(ilk);
+        (, uint256 rate, , , ) = IVat(vat).ilks(ilk);
         // Gets actual art value of the urn
         (, uint256 art) = IVat(vat).urns(ilk, urn);
 
         // Uses the whole dai balance in the vat to reduce the debt
         dart = toInt256(dai / rate);
         // Checks the calculated dart is not higher than urn.art (total debt), otherwise uses its value
-        dart = uint256(dart) <= art ? - dart : - toInt256(art);
+        dart = uint256(dart) <= art ? -dart : -toInt256(art);
     }
 
     function _getWipeAllWad(
@@ -333,7 +433,7 @@ contract MultiplyProxyActions {
         bytes32 ilk
     ) internal view returns (uint256 wad) {
         // Gets actual rate from the vat
-        (, uint256 rate,,,) = IVat(vat).ilks(ilk);
+        (, uint256 rate, , , ) = IVat(vat).ilks(ilk);
         // Gets actual art value of the urn
         (, uint256 art) = IVat(vat).urns(ilk, urn);
         // Gets actual dai amount in the urn
@@ -364,97 +464,186 @@ contract MultiplyProxyActions {
         uint256 wadC = convertTo18(gemJoin, collateralDraw);
 
         IManager(manager).frob(cdp, -int256(wadC), _getWipeDart(vat, IVat(vat).dai(urn), urn, ilk));
-        
+
         IManager(manager).flux(cdp, address(this), wadC);
         IJoin(gemJoin).exit(address(this), wadC);
     }
 
-    function _withdrawGem(address gemJoin,  address payable destination, uint256 amount) private {
+    function _withdrawGem(
+        address gemJoin,
+        address payable destination,
+        uint256 amount
+    ) private {
         IGem gem = IJoin(gemJoin).gem();
-        
+
         if (address(gem) == WETH) {
             gem.withdraw(amount);
             destination.transfer(amount);
-        }else {
+        } else {
             IERC20(address(gem)).transfer(destination, amount);
         }
     }
 
-    function _increaseMP(ExchangeData memory exchangeData, CdpData memory cdpData, AddressRegistry memory addressRegistry, uint256 premium) private {
+    function _increaseMP(
+        ExchangeData memory exchangeData,
+        CdpData memory cdpData,
+        AddressRegistry memory addressRegistry,
+        uint256 premium
+    ) private {
         IExchange exchange = IExchange(addressRegistry.exchange);
         uint256 borrowedDai = cdpData.requiredDebt.add(premium);
 
-        require(IERC20(DAI).approve(address(exchange), exchangeData.fromTokenAmount.add(cdpData.depositDai)), "MPA / Could not approve Exchange for DAI");
+        require(
+            IERC20(DAI).approve(
+                address(exchange),
+                exchangeData.fromTokenAmount.add(cdpData.depositDai)
+            ),
+            "MPA / Could not approve Exchange for DAI"
+        );
 
-        exchange.swapDaiForToken(exchangeData.toTokenAddress, exchangeData.fromTokenAmount.add(cdpData.depositDai), exchangeData.minToTokenAmount, exchangeData.exchangeAddress, exchangeData._exchangeCalldata);
+        exchange.swapDaiForToken(
+            exchangeData.toTokenAddress,
+            exchangeData.fromTokenAmount.add(cdpData.depositDai),
+            exchangeData.minToTokenAmount,
+            exchangeData.exchangeAddress,
+            exchangeData._exchangeCalldata
+        );
 
         joinDrawDebt(cdpData, borrowedDai, addressRegistry.manager, addressRegistry.jug);
 
         uint256 daiLeft = IERC20(DAI).balanceOf(address(this)).sub(borrowedDai);
 
-        if( daiLeft > 0) {
+        if (daiLeft > 0) {
             IERC20(DAI).transfer(cdpData.fundsReceiver, daiLeft);
         }
     }
 
-    function _decreaseMP(ExchangeData memory exchangeData, CdpData memory cdpData, AddressRegistry memory addressRegistry, uint256 premium) private {
+    function _decreaseMP(
+        ExchangeData memory exchangeData,
+        CdpData memory cdpData,
+        AddressRegistry memory addressRegistry,
+        uint256 premium
+    ) private {
         IExchange exchange = IExchange(addressRegistry.exchange);
 
-        wipeAndFreeGem(addressRegistry.manager, cdpData.gemJoin, cdpData.cdpId, cdpData.requiredDebt.sub(cdpData.withdrawDai), cdpData.borrowCollateral.add(cdpData.withdrawCollateral));
+        wipeAndFreeGem(
+            addressRegistry.manager,
+            cdpData.gemJoin,
+            cdpData.cdpId,
+            cdpData.requiredDebt.sub(cdpData.withdrawDai),
+            cdpData.borrowCollateral.add(cdpData.withdrawCollateral)
+        );
 
-        require(IERC20(exchangeData.fromTokenAddress).approve(address(exchange), exchangeData.fromTokenAmount), "MPA / Could not approve Exchange for Token");
-      
-        exchange.swapTokenForDai(exchangeData.fromTokenAddress, exchangeData.fromTokenAmount, cdpData.requiredDebt.add(premium), exchangeData.exchangeAddress, exchangeData._exchangeCalldata);
+        require(
+            IERC20(exchangeData.fromTokenAddress).approve(
+                address(exchange),
+                exchangeData.fromTokenAmount
+            ),
+            "MPA / Could not approve Exchange for Token"
+        );
 
-        uint256 daiLeft = IERC20(DAI).balanceOf(address(this)).sub(cdpData.requiredDebt.add(premium));
+        exchange.swapTokenForDai(
+            exchangeData.fromTokenAddress,
+            exchangeData.fromTokenAmount,
+            cdpData.requiredDebt.add(premium),
+            exchangeData.exchangeAddress,
+            exchangeData._exchangeCalldata
+        );
+
+        uint256 daiLeft = IERC20(DAI).balanceOf(address(this)).sub(
+            cdpData.requiredDebt.add(premium)
+        );
         uint256 collateralLeft = IERC20(exchangeData.fromTokenAddress).balanceOf(address(this));
 
-        if( daiLeft > 0) {
+        if (daiLeft > 0) {
             IERC20(DAI).transfer(cdpData.fundsReceiver, daiLeft);
         }
-        if( collateralLeft > 0) {
+        if (collateralLeft > 0) {
             _withdrawGem(cdpData.gemJoin, cdpData.fundsReceiver, collateralLeft);
         }
     }
 
-    function _closeWithdrawCollateral(ExchangeData memory exchangeData, CdpData memory cdpData, AddressRegistry memory addressRegistry, uint256 borrowedDaiAmount) private {
+    function _closeWithdrawCollateral(
+        ExchangeData memory exchangeData,
+        CdpData memory cdpData,
+        AddressRegistry memory addressRegistry,
+        uint256 borrowedDaiAmount
+    ) private {
         IExchange exchange = IExchange(addressRegistry.exchange);
         address gemAddress = address(IJoin(cdpData.gemJoin).gem());
         address urn = IManager(addressRegistry.manager).urns(cdpData.cdpId);
         address vat = IManager(addressRegistry.manager).vat();
         (uint256 ink, ) = IVat(vat).urns(cdpData.ilk, urn);
 
-        wipeAndFreeGem(addressRegistry.manager, cdpData.gemJoin, cdpData.cdpId, cdpData.requiredDebt, ink);
-        
-        require(IERC20(exchangeData.fromTokenAddress).approve(address(exchange), ink), "MPA / Could not approve Exchange for Token");
-        exchange.swapTokenForDai(exchangeData.fromTokenAddress, exchangeData.fromTokenAmount, exchangeData.minToTokenAmount, exchangeData.exchangeAddress, exchangeData._exchangeCalldata);
-        
+        wipeAndFreeGem(
+            addressRegistry.manager,
+            cdpData.gemJoin,
+            cdpData.cdpId,
+            cdpData.requiredDebt,
+            ink
+        );
+
+        require(
+            IERC20(exchangeData.fromTokenAddress).approve(address(exchange), ink),
+            "MPA / Could not approve Exchange for Token"
+        );
+        exchange.swapTokenForDai(
+            exchangeData.fromTokenAddress,
+            exchangeData.fromTokenAmount,
+            exchangeData.minToTokenAmount,
+            exchangeData.exchangeAddress,
+            exchangeData._exchangeCalldata
+        );
+
         uint256 daiLeft = IERC20(DAI).balanceOf(address(this)).sub(borrowedDaiAmount);
         uint256 collateralLeft = IERC20(gemAddress).balanceOf(address(this));
 
-        if( daiLeft > 0) {
+        if (daiLeft > 0) {
             IERC20(DAI).transfer(cdpData.fundsReceiver, daiLeft);
         }
-        if( collateralLeft > 0) {
+        if (collateralLeft > 0) {
             _withdrawGem(cdpData.gemJoin, cdpData.fundsReceiver, collateralLeft);
         }
     }
 
-    function _closeWithdrawDai(ExchangeData memory exchangeData, CdpData memory cdpData, AddressRegistry memory addressRegistry, uint256 borrowedDaiAmount) private {
+    function _closeWithdrawDai(
+        ExchangeData memory exchangeData,
+        CdpData memory cdpData,
+        AddressRegistry memory addressRegistry,
+        uint256 borrowedDaiAmount
+    ) private {
         IExchange exchange = IExchange(addressRegistry.exchange);
         address gemAddress = address(IJoin(cdpData.gemJoin).gem());
         address urn = IManager(addressRegistry.manager).urns(cdpData.cdpId);
         address vat = IManager(addressRegistry.manager).vat();
         (uint256 ink, ) = IVat(vat).urns(cdpData.ilk, urn);
 
-        wipeAndFreeGem(addressRegistry.manager, cdpData.gemJoin, cdpData.cdpId, cdpData.requiredDebt, ink);
+        wipeAndFreeGem(
+            addressRegistry.manager,
+            cdpData.gemJoin,
+            cdpData.cdpId,
+            cdpData.requiredDebt,
+            ink
+        );
 
-        require(IERC20(exchangeData.fromTokenAddress).approve(address(exchange), IERC20(gemAddress).balanceOf(address(this))), "MPA / Could not approve Exchange for Token");
-        exchange.swapTokenForDai(exchangeData.fromTokenAddress, ink, exchangeData.minToTokenAmount, exchangeData.exchangeAddress, exchangeData._exchangeCalldata);
+        require(
+            IERC20(exchangeData.fromTokenAddress).approve(
+                address(exchange),
+                IERC20(gemAddress).balanceOf(address(this))
+            ),
+            "MPA / Could not approve Exchange for Token"
+        );
+        exchange.swapTokenForDai(
+            exchangeData.fromTokenAddress,
+            ink,
+            exchangeData.minToTokenAmount,
+            exchangeData.exchangeAddress,
+            exchangeData._exchangeCalldata
+        );
 
         uint256 daiLeft = IERC20(DAI).balanceOf(address(this)).sub(borrowedDaiAmount);
-        
-        if( daiLeft > 0) {
+
+        if (daiLeft > 0) {
             IERC20(DAI).transfer(cdpData.fundsReceiver, daiLeft);
         }
     }
@@ -465,16 +654,18 @@ contract MultiplyProxyActions {
         uint256[] calldata premiums,
         address initiator,
         bytes calldata params
-    )
-        external
-        returns (bool)
-    {
-        (uint8 mode, ExchangeData memory exchangeData, CdpData memory cdpData, AddressRegistry memory addressRegistry) = abi.decode(params, (uint8, ExchangeData, CdpData, AddressRegistry));
+    ) external returns (bool) {
+        (
+            uint8 mode,
+            ExchangeData memory exchangeData,
+            CdpData memory cdpData,
+            AddressRegistry memory addressRegistry
+        ) = abi.decode(params, (uint8, ExchangeData, CdpData, AddressRegistry));
         uint256 borrowedDaiAmount = amounts[0].add(premiums[0]);
-        emit FLData(IERC20(DAI).balanceOf(address(this)),borrowedDaiAmount);
-        
+        emit FLData(IERC20(DAI).balanceOf(address(this)), borrowedDaiAmount);
+
         if (mode == 0) {
-            _decreaseMP(exchangeData, cdpData,addressRegistry, premiums[0]);
+            _decreaseMP(exchangeData, cdpData, addressRegistry, premiums[0]);
         }
         if (mode == 1) {
             _increaseMP(exchangeData, cdpData, addressRegistry, premiums[0]);
@@ -495,5 +686,5 @@ contract MultiplyProxyActions {
 
     event FLData(uint256 indexed borrowed, uint256 indexed due);
 
-    fallback () external payable {}
+    fallback() external payable {}
 }
