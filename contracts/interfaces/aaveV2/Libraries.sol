@@ -1,6 +1,6 @@
 pragma experimental ABIEncoderV2;
 
-import { IERC20 } from "../IERC20.sol";
+import {IERC20} from '../IERC20.sol';
 
 library SafeMath {
   /**
@@ -206,8 +206,6 @@ library Address {
   }
 }
 
-
-
 /**
  * @title SafeERC20
  * @dev Wrappers around ERC20 operations that throw on failure (when the token
@@ -309,5 +307,9 @@ library DataTypes {
     uint256 data;
   }
 
-  enum InterestRateMode {NONE, STABLE, VARIABLE}
+  enum InterestRateMode {
+    NONE,
+    STABLE,
+    VARIABLE
+  }
 }
