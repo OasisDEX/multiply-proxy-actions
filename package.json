@@ -9,7 +9,7 @@
     "test": "cmd/run_test",
     "verify": "cmd/run_verify",
     "lint": "./node_modules/.bin/solhint -f table contracts/**/*.sol",
-    "pretty": "./node_modules/.bin/prettier --write contracts/**/*.sol",
+    "pretty": "./node_modules/.bin/prettier --write contracts/**/*.sol test/**/*.js scripts/**/*.js",
     "flatten-all": "sol-merger@3.1.0 \"./contracts/*.sol\" ./build",
     "flatten": "npx sol-merger@3.1.0"
   },
