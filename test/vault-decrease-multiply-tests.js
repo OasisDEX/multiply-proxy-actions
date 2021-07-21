@@ -428,7 +428,7 @@ async function runTestCase(testCase, testParam) {
         })
 
         this.beforeAll(async function () {
-          startBalance = await deployedContracts.daiTokenInstance.balanceOf(
+          startBalance = await balanceOf(deployedContracts.daiTokenInstance.address,
             ADDRESS_REGISTRY.feeRecepient,
           )
           const [debtDelta, collateralDelta] = calculateRequiredDebt(
@@ -535,7 +535,7 @@ async function runTestCase(testCase, testParam) {
           expect(feePaidEvents.length).to.be.deep.equal(1)
           var feeAmount = new BigNumber(feePaidEvents[0].data, 16)
           var expected = amountToWei(testCase.existingCDP.debt * OUR_FEE)
-          endBalance = await deployedContracts.daiTokenInstance.balanceOf(
+          endBalance = await balanceOf(deployedContracts.daiTokenInstance.address,
             ADDRESS_REGISTRY.feeRecepient,
           )
           var balanceDifference = endBalance.sub(startBalance).toString()
@@ -647,7 +647,7 @@ async function runTestCase(testCase, testParam) {
             restore(testCase)
           })
           this.beforeAll(async function () {
-            daiBefore = await deployedContracts.daiTokenInstance.balanceOf(
+            daiBefore = await balanceOf(deployedContracts.daiTokenInstance.address,
               await primarySigner.getAddress(),
             )
             internalSnapshotId = await createSnapshot(provider)
@@ -722,7 +722,7 @@ async function runTestCase(testCase, testParam) {
             )
           })
           it(`should change primaryAddress DAI balance by exacly ${testParam.desiredDAI} DAI`, async function () {
-            var balanceAfter = await deployedContracts.daiTokenInstance.balanceOf(
+            var balanceAfter = await balanceOf(deployedContracts.daiTokenInstance.address,
               await primarySigner.getAddress(),
             )
 
@@ -748,7 +748,7 @@ async function runTestCase(testCase, testParam) {
             restore(testCase)
           })
           this.beforeAll(async function () {
-            daiBefore = await deployedContracts.daiTokenInstance.balanceOf(
+            daiBefore = await balanceOf(deployedContracts.daiTokenInstance.address,
               await primarySigner.getAddress(),
             )
 
@@ -834,7 +834,7 @@ async function runTestCase(testCase, testParam) {
           it(`should not change primaryAddress DAI balance`, async function () {
             var positiveMargin = 0.1
 
-            var daiAfter = await deployedContracts.daiTokenInstance.balanceOf(
+            var daiAfter = await balanceOf(deployedContracts.daiTokenInstance.address,
               await primarySigner.getAddress(),
             )
 
@@ -870,7 +870,7 @@ async function runTestCase(testCase, testParam) {
             console.log("closing CDP state 1",closingVaultInfo);
             beforeTxBalance = await provider.getBalance(await primarySigner.getAddress())
 
-            daiBefore = await deployedContracts.daiTokenInstance.balanceOf(
+            daiBefore = await balanceOf(deployedContracts.daiTokenInstance.address,
               await primarySigner.getAddress(),
             )
 
@@ -925,7 +925,7 @@ async function runTestCase(testCase, testParam) {
 
             await fillExchangeData(testParam, exchangeData, deployedContracts.exchangeInstance)
             const params = packMPAParams(cdpData, exchangeData, ADDRESS_REGISTRY)
-            beneficiaryBefore = await deployedContracts.daiTokenInstance.balanceOf(
+            beneficiaryBefore = await balanceOf(deployedContracts.daiTokenInstance.address,
               '0x79d7176aE8F93A04bC73b9BC710d4b44f9e362Ce',
             )
 
@@ -946,7 +946,7 @@ async function runTestCase(testCase, testParam) {
 
             await updateLastCDPInfo(testCase, primarySigner, provider, userProxyAddr)
 
-            daiAfter = await deployedContracts.daiTokenInstance.balanceOf(
+            daiAfter = await balanceOf(deployedContracts.daiTokenInstance.address,
               await primarySigner.getAddress(),
             )
 
@@ -1038,7 +1038,7 @@ async function runTestCase(testCase, testParam) {
               closingVaultInfo = testCase.existingCDP;
               beforeTxBalance = await provider.getBalance(await primarySigner.getAddress());
               
-              daiBefore = await  deployedContracts.daiTokenInstance.balanceOf(await primarySigner.getAddress());
+              daiBefore = await  balanceOf(deployedContracts.daiTokenInstance.address,await primarySigner.getAddress());
               console.log("Before DAI Balance", daiBefore.toString())
               
               internalSnapshotId = await createSnapshot(provider);
@@ -1109,7 +1109,7 @@ async function runTestCase(testCase, testParam) {
   
               await updateLastCDPInfo(testCase, primarySigner, provider, userProxyAddr)
   
-              daiAfter = await deployedContracts.daiTokenInstance.balanceOf(
+              daiAfter = await balanceOf(deployedContracts.daiTokenInstance.address,
                 await primarySigner.getAddress(),
               )
   
@@ -1126,7 +1126,7 @@ async function runTestCase(testCase, testParam) {
               expect(reminder).to.be.equal(0);
             })
             it("should send to user all DAI",async function(){
-              let daiAfter = await  deployedContracts.daiTokenInstance.balanceOf(await primarySigner.getAddress());
+              let daiAfter = await balanceOf(deployedContracts.daiTokenInstance.address,await primarySigner.getAddress());
               var actual =  sub(daiAfter,daiBefore);
 
               expected = amountToWei(sub(mul(closingVaultInfo.coll,marketPrice),closingVaultInfo.debt));

@@ -99,7 +99,7 @@ const addFundsDummyExchange = async function (
     value: amountToWei(new BigNumber(1000)).toFixed(0),
   })
   await WETH.transfer(exchange.address, amountToWei(new BigNumber(500)).toFixed(0))
-  var balance = await DAI.balanceOf(address)
+  var balance = await balanceOf(DAI.address,address)
   console.log(balance.toString())
   await DAI.transfer(exchange.address, new BigNumber(balance.toString()).dividedBy(2).toFixed(0))
   return {
