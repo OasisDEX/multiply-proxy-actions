@@ -4,6 +4,7 @@ const dsProxyAbi = require('../../abi/external/ds-proxy.json')
 const { default: BigNumber } = require('bignumber.js');
 const getCdpsAbi = require('../../abi/external/get-cdps.json')
 const _ = require('lodash');
+const UniswapRouterV3Abi = require('../../abi/external/IUniswapRouter.json')
 
 const {
   getVaultInfo
@@ -21,6 +22,52 @@ const {WETH_ADDRESS,
   balanceOf} = require('../utils');
 
 MAINNET_ADRESSES.WETH_ADDRESS = WETH_ADDRESS;
+
+const init = async function(blockNumber = 'latest') {
+  provider = new hre.ethers.providers.JsonRpcProvider()
+  signer = provider.getSigner(0)
+  
+  await provider.send("hardhat_reset", [{
+    forking: {
+      jsonRpcUrl: process.env.ALCHEMY_NODE,
+      blockNumber
+    }
+  }]);
+
+  return [provider, signer];
+}
+
+/**
+ * tokenIn: string - asset address
+ * tokenOut: string - asset address
+ * amountIn: BigNumber - already formatted to wei
+ * amountOutMinimum: BigNumber - already fromatted to wei. The least amount to receive.
+ * recipient: string - wallet's addrees that's going to receive the funds
+ */
+
+const swapTokens = async function(tokenIn, tokenOut, amountIn, amountOutMinimum, recipient, provider, signer){
+  let value = 0
+
+  if(tokenIn === MAINNET_ADRESSES.ETH) {
+     value = amountIn
+  }
+
+  const UNISWAP_ROUTER_V3 = "0xe592427a0aece92de3edee1f18e0157c05861564";
+  const uniswapV3 = new ethers.Contract(UNISWAP_ROUTER_V3, UniswapRouterV3Abi, provider).connect(signer);
+
+  let swapParams = {
+    tokenIn,
+    tokenOut,
+    fee: 3000,
+    recipient,
+    deadline: new Date().getTime(),
+    amountIn,
+    amountOutMinimum,
+    sqrtPriceLimitX96: 0
+  }
+
+  await uniswapV3.exactInputSingle(swapParams, {value});
+}
 
 const dsproxyExecuteAction =  async function(proxyActions, dsProxy, fromAddress, method, params, value=0) {
   const calldata = proxyActions.interface.encodeFunctionData(
@@ -155,6 +202,8 @@ const getLastCDP = async function (
   
   
 module.exports = {
+  init,
+  swapTokens,
   getOrCreateProxy,
   deploySystem,
   dsproxyExecuteAction,

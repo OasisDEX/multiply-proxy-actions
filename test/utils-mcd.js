@@ -38,8 +38,8 @@ const getVaultInfoRaw = async (mcdView, vaultId, ilk) => {
 const getVaultInfo = async (mcdView, vaultId, ilk) => {
     const info = await mcdView.getVaultInfo(vaultId, ilk);
     return {
-        coll: parseFloat(ethers.utils.formatUnits(info[0].toString(), 18).toString()),
-        debt: parseFloat(ethers.utils.formatUnits(info[1].toString(), 18).toString())
+        coll: parseFloat(ethers.utils.formatUnits(info[0].toString()).toString()),
+        debt: parseFloat(ethers.utils.formatUnits(info[1].toString()).toString())
     };
 };
 

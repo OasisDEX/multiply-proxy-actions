@@ -107,7 +107,7 @@ const { ethers } = require("hardhat");
         var openMultParameters = prepareMultiplyParameters(MAINNET_ADRESSES.MCD_DAI, MAINNET_ADRESSES.ETH, testCases[1]._1inchPayload, 0, testCases[1].desiredCDPState, multiplyProxyActionsInstance.address, exchangeInstance.address);
         txResult =  await dsproxyExecuteAction(multiplyProxyActionsInstance, 
           dsProxyInstance, primaryAddress.address, 'openMultiplyVault', openMultParameters, 
-          amountToWei(baseCollateralAmountInETH, 'ETH').toFixed(0));  
+          amountToWei(baseCollateralAmountInETH).toFixed(0));  
           lastCDP = await getLastCDP(provider,primaryAddress,userProxyAddr);
           vaultInfo = await getVaultInfo(mcdViewInstance, lastCDP.id, lastCDP.ilk);
       });

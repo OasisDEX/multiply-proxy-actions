@@ -1,37 +1,30 @@
-const { deploySystem, getOraclePrice, dsproxyExecuteAction, getLastCDP, getVaultInfo, balanceOf, MAINNET_ADRESSES } = require('./common/mcd-deployment-utils');
+const { deploySystem, getOraclePrice, dsproxyExecuteAction, getLastCDP, getVaultInfo, balanceOf, MAINNET_ADRESSES, swapTokens } = require('./common/mcd-deployment-utils');
 const { default: BigNumber } = require('bignumber.js');
 const { amountToWei, calculateParamsIncreaseMP, calculateParamsDecreaseMP, prepareMultiplyParameters } = require('./common/params-calculation-utils');
 const { expect } = require("chai");
 const { one } = require('./utils');
 
-const UniswapRouterV3Abi = require('../abi/external/IUniswapRouter.json')
 const wethAbi = require('../abi/IWETH.json')
 const erc20Abi = require('../abi/IERC20.json')
 
 const ethers = hre.ethers
 
-async function addFundsDummyExchange(provider, signer, address, WETH, DAI, exchange) {
-  const UNISWAP_ROUTER_V3 = "0xe592427a0aece92de3edee1f18e0157c05861564";
-  const uniswapV3 = new ethers.Contract(UNISWAP_ROUTER_V3, UniswapRouterV3Abi, provider).connect(signer);
+async function addFundsDummyExchange(provider, signer, address, WETH, DAI, exchange) {  
+  await swapTokens(
+      MAINNET_ADRESSES.ETH,
+      MAINNET_ADRESSES.MCD_DAI,
+      amountToWei(new BigNumber(200)).toFixed(0),
+      amountToWei(new BigNumber(400000)).toFixed(0),
+      address,
+      provider,
+      signer
+  );
 
-  let swapParams = {
-    tokenIn:MAINNET_ADRESSES.ETH,
-    tokenOut: MAINNET_ADRESSES.MCD_DAI,
-    fee: 3000,
-    recipient: address,
-    deadline: 1751366148,
-    amountIn: amountToWei(new BigNumber(200), 'ETH').toFixed(0),
-    amountOutMinimum: amountToWei(new BigNumber(400000), 'ETH').toFixed(0),
-    sqrtPriceLimitX96: 0
-  }
-  await uniswapV3.exactInputSingle(swapParams, {value:  amountToWei(new BigNumber(200), 'ETH').toFixed(0)});
-  
   await WETH.deposit({
-    value: amountToWei(new BigNumber(1000), 'ETH').toFixed(0)
+    value: amountToWei(new BigNumber(1000)).toFixed(0)
   });
-
-  await WETH.transfer(exchange.address, amountToWei(new BigNumber(500), 'ETH').toFixed(0));
-  await DAI.transfer(exchange.address, amountToWei(new BigNumber(400000), 'ETH').toFixed(0));
+  await WETH.transfer(exchange.address, amountToWei(new BigNumber(500)).toFixed(0));
+  await DAI.transfer(exchange.address, amountToWei(new BigNumber(400000)).toFixed(0));
 }
 
 async function checkMPAPostState(tokenAddress, mpaAddress) {
@@ -92,7 +85,7 @@ describe("Multiply Proxy Action with Mocked Exchange", async function() {
     await exchange.setFee(OazoFee);
   });
 
-  describe(`opening Multiply Vault`, async function() {
+  describe(`Opening Multiply Vault`, async function() {
     let marketPrice, oraclePrice, currentColl, currentDebt, requiredCollRatio;
 
     this.beforeAll(async function() {
@@ -116,7 +109,7 @@ describe("Multiply Proxy Action with Mocked Exchange", async function() {
         toTokenAmount: toBorrowCollateralAmount,
       };
       let params = prepareMultiplyParameters(MAINNET_ADRESSES.MCD_DAI, MAINNET_ADRESSES.ETH, exchangeDataMock, 0, desiredCdpState, multiplyProxyActions.address, exchange.address, address);
-      await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'openMultiplyVault', params, amountToWei(currentColl, 'ETH').toFixed(0));
+      await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'openMultiplyVault', params, amountToWei(currentColl).toFixed(0));
       const lastCDP = await getLastCDP(provider, signer, userProxyAddress);
       let info = await getVaultInfo(mcdView, lastCDP.id, lastCDP.ilk);
       CDP_ID = lastCDP.id;
@@ -145,7 +138,7 @@ describe("Multiply Proxy Action with Mocked Exchange", async function() {
         toTokenAmount: toBorrowCollateralAmount,
       };
       let params = prepareMultiplyParameters(MAINNET_ADRESSES.MCD_DAI, MAINNET_ADRESSES.ETH, exchangeDataMock, 0, desiredCdpState, multiplyProxyActions.address, exchange.address, address);
-      const result = await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'openMultiplyVault', params, amountToWei(currentColl, 'ETH').toFixed(0));
+      const result = await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'openMultiplyVault', params, amountToWei(currentColl).toFixed(0));
           
       expect(result).to.be.false;
     });
@@ -154,7 +147,7 @@ describe("Multiply Proxy Action with Mocked Exchange", async function() {
   describe(`Increasing Multiple`, async function() {
     let marketPrice, oraclePrice, currentColl, currentDebt, requiredCollRatio;
 
-    this.beforeAll(async function() {
+    this.beforeEach(async function() {
       marketPrice = await new BigNumber(2380);
       oraclePrice = await getOraclePrice(provider);
     
@@ -188,27 +181,12 @@ describe("Multiply Proxy Action with Mocked Exchange", async function() {
       expect(collateralBalance.toFixed(0)).to.be.equal('0');
       expect(currentCollRatio.toFixed(3)).to.be.equal(requiredCollRatio.toFixed(3));
     });
-  });
-
-  describe(`Increasing Multiple deposit Dai`, async function() {
-    let marketPrice, oraclePrice, currentColl, currentDebt, requiredCollRatio;
-
-    this.beforeAll(async function() {
-      marketPrice = await new BigNumber(2380);
-      oraclePrice = await getOraclePrice(provider);
-    
-      await exchange.setPrice(amountToWei(marketPrice).toFixed(0));
-    
-      info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK);
-      currentColl = new BigNumber(info.coll);
-      currentDebt = new BigNumber(info.debt);
-    });
 
     it(`should increase vault's multiple to required collateralization ratio with additional Dai deposited`, async function() {
       requiredCollRatio = new BigNumber(2.2);
       const daiDeposit = new BigNumber(300);
 
-      await DAI.approve(userProxyAddress, amountToWei(daiDeposit, 'ETH').toFixed(0));
+      await DAI.approve(userProxyAddress, amountToWei(daiDeposit).toFixed(0));
 
       [requiredDebt, toBorrowCollateralAmount] = calculateParamsIncreaseMP(oraclePrice, marketPrice, OF, FF, currentColl, currentDebt, requiredCollRatio, slippage, daiDeposit)
 
@@ -232,22 +210,6 @@ describe("Multiply Proxy Action with Mocked Exchange", async function() {
       expect(currentCollRatio.toFixed(3)).to.be.equal(requiredCollRatio.toFixed(3));
     });
 
-  });
-
-  describe(`Increasing Multiple deposit collateral`, async function() {
-    let marketPrice, oraclePrice, currentColl, currentDebt, requiredCollRatio;
-
-    this.beforeAll(async function() {
-      marketPrice = await new BigNumber(2380);
-      oraclePrice = await getOraclePrice(provider);
-    
-      await exchange.setPrice(amountToWei(marketPrice).toFixed(0));
-    
-      info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK);
-      currentColl = new BigNumber(info.coll);
-      currentDebt = new BigNumber(info.debt);
-    });
-
     it(`should increase vault's multiple to required collateralization ratio with additional collateral deposited`, async function() {
       requiredCollRatio = new BigNumber(1.9);
       const collateralDeposit = new BigNumber(5);
@@ -263,7 +225,7 @@ describe("Multiply Proxy Action with Mocked Exchange", async function() {
 
       params = prepareMultiplyParameters(MAINNET_ADRESSES.MCD_DAI, MAINNET_ADRESSES.ETH, exchangeDataMock, CDP_ID, desiredCdpState, multiplyProxyActions.address, exchange.address, address);
 
-      await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'increaseMultipleDepositCollateral', params, amountToWei(collateralDeposit, 'ETH').toFixed(0));    
+      await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'increaseMultipleDepositCollateral', params, amountToWei(collateralDeposit).toFixed(0));    
       info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK);
       const currentCollRatio = new BigNumber(info.coll).times(oraclePrice).div(new BigNumber(info.debt));
       const { daiBalance, collateralBalance } = await checkMPAPostState(MAINNET_ADRESSES.ETH, multiplyProxyActions.address);
@@ -274,10 +236,10 @@ describe("Multiply Proxy Action with Mocked Exchange", async function() {
     });
   });
 
-  describe(`Decrease Multiple`, async function() {
+  describe(`Decreasing Multiple`, async function() {
     let marketPrice, oraclePrice, currentColl, currentDebt, requiredCollRatio;
 
-    this.beforeAll(async function() {
+    this.beforeEach(async function() {
       marketPrice = await new BigNumber(2380);
       oraclePrice = await getOraclePrice(provider);
     
@@ -311,21 +273,6 @@ describe("Multiply Proxy Action with Mocked Exchange", async function() {
       expect(collateralBalance.toFixed(0)).to.be.equal('0');
       expect(currentCollRatio.toFixed(3)).to.be.equal(requiredCollRatio.toFixed(3));
     });
-  });
-
-  describe(`Decrease Multiple withdraw Dai`, async function() {
-    let marketPrice, oraclePrice, currentColl, currentDebt, requiredCollRatio;
-
-    this.beforeAll(async function() {
-      marketPrice = await new BigNumber(2380);
-      oraclePrice = await getOraclePrice(provider);
-    
-      await exchange.setPrice(amountToWei(marketPrice).toFixed(0));
-    
-      info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK);
-      currentColl = new BigNumber(info.coll);
-      currentDebt = new BigNumber(info.debt);
-    });
 
     it(`should decrease vault's multiple to required collateralization ratio with additional Dai withdrawn`, async function() {
       requiredCollRatio = new BigNumber(3.2);
@@ -352,22 +299,6 @@ describe("Multiply Proxy Action with Mocked Exchange", async function() {
       expect(daiBalance.toFixed(0)).to.be.equal('0');
       expect(collateralBalance.toFixed(0)).to.be.equal('0');
       expect(currentCollRatio.toFixed(3)).to.be.equal(requiredCollRatio.toFixed(3));
-    });
-
-  });
-
-  describe(`Decrease Multiple withdraw collateral`, async function() {
-    let marketPrice, oraclePrice, currentColl, currentDebt, requiredCollRatio;
-
-    this.beforeAll(async function() {
-      marketPrice = await new BigNumber(2380);
-      oraclePrice = await getOraclePrice(provider);
-    
-      await exchange.setPrice(amountToWei(marketPrice).toFixed(0));
-    
-      info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK);
-      currentColl = new BigNumber(info.coll);
-      currentDebt = new BigNumber(info.debt);
     });
 
     it(`should decrease vault's multiple to required collateralization ratio with additional collateral withdrawn`, async function() {
@@ -397,47 +328,6 @@ describe("Multiply Proxy Action with Mocked Exchange", async function() {
       expect(currentCollRatio.toFixed(3)).to.be.equal(requiredCollRatio.toFixed(3));
     });
   });
-
-  // To use this test comment out 'Close vault and exit all collateral' as there cannot be two closing actions together
-  
-  // describe(`Close vault and exit all Dai`, async function() {
-
-  //   let marketPrice, oraclePrice, currentColl, currentDebt, requiredCollRatio;
-
-  //   this.beforeAll(async function() {
-  //     marketPrice = await new BigNumber(2380);
-  //     oraclePrice = await getOraclePrice(provider);
-    
-  //     await exchange.setPrice(amountToWei(marketPrice).toFixed(0));
-    
-  //     info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK);
-  //     currentColl = new BigNumber(info.coll);
-  //     currentDebt = new BigNumber(info.debt);
-  //   });
-
-  //   it(`should close vault and return Dai`, async function() {
-  //     const minToTokenAmount = currentDebt.times(one.plus(OF).plus(FF));
-      
-  //     desiredCdpState = {
-  //       requiredDebt: 0,
-  //       toBorrowCollateralAmount: 0,
-  //       fromTokenAmount: amountToWei(currentColl).toFixed(0),
-  //       toTokenAmount: minToTokenAmount,
-  //     };
-
-  //     params = prepareMultiplyParameters(MAINNET_ADRESSES.ETH, MAINNET_ADRESSES.MCD_DAI, exchangeDataMock, CDP_ID, desiredCdpState, multiplyProxyActions.address, exchange.address, address);  
-
-  //     await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'closeVaultExitDai', params);
-
-  //     info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK);
-  //     const { daiBalance, collateralBalance } = await checkMPAPostState(MAINNET_ADRESSES.ETH, multiplyProxyActions.address);
-
-  //     expect(daiBalance.toFixed(0)).to.be.equal('0');
-  //     expect(collateralBalance.toFixed(0)).to.be.equal('0');
-  //     expect(info.debt.toString()).to.be.equal('0');
-  //     expect(info.coll.toString()).to.be.equal('0');
-  //   });
-  // });
 
   describe(`Close vault and exit all collateral`, async function() {
 
@@ -480,5 +370,5 @@ describe("Multiply Proxy Action with Mocked Exchange", async function() {
       expect(info.debt.toString()).to.be.equal('0');
       expect(info.coll.toString()).to.be.equal('0');
     });
-  });
+  }); 
 });
