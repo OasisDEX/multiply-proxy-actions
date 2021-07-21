@@ -67,7 +67,7 @@ testParams = [
     desiredDAI: 1100, //amount of dai withdrawn in decreaseMultipleWithdrawDai
     desiredETH: 0.7, //amount of dai  withdrawn in decreaseMultipleWithdrawCollateral
     useMockExchange: false,
-    debug: false,
+    debug: true,
     desiredCollRatio: 2.5, //collateralisation ratio after Multiply decrease
     desiredCollRatioDAI: 3.5, //collateralisation ratio after Multiply decrease with DAI withdraw
     desiredCollRatioETH: 3.5, //collateralisation ratio after Multiply decrease with ETH withdraw
@@ -89,7 +89,7 @@ runner([
 
 const createSnapshot = async function (provider) {
   var id = await provider.send('evm_snapshot', [])
- // console.log('snapshot created', id)
+  console.log('snapshot created', id)
   return id
 }
 
@@ -99,7 +99,7 @@ const restoreSnapshot = async function (provider, id) {
     delete restoreSnapshot.lock
   } else {
     await provider.send('evm_revert', [id])
-  //  console.log('snapshot restored', id)
+    console.log('snapshot restored', id)
   }
 }
 
@@ -235,7 +235,7 @@ async function runTestCase(testCase, testParam) {
       const resetNetworkToLatest = async function () {
         provider = new ethers.providers.JsonRpcProvider()
         let blockNumber = await getCurrentBlockNumber();
-        console.log("Reseting network to:",blockNumber)
+        console.log("Reseting network to:",blockNumber-6)
         provider.send('hardhat_reset', [
           {
             forking: {
@@ -335,7 +335,7 @@ async function runTestCase(testCase, testParam) {
         await resetNetworkToLatest()
         await getSignerWithDetails()
 
-        deployedContracts = await deploySystem(provider, primarySigner, testParam.useMockExchange)
+        deployedContracts = await deploySystem(provider, primarySigner, testParam.useMockExchange, true)
         userProxyAddr = deployedContracts.dsProxyInstance.address
         ADDRESS_REGISTRY = addressRegistryFactory(
           deployedContracts.multiplyProxyActionsInstance.address,
@@ -593,6 +593,16 @@ async function runTestCase(testCase, testParam) {
             var balance = await provider.getBalance(dsProxyAddress)
             expect(balance.toString()).to.be.equal('0')
           })
+          it('exchange should have no DAI', async function () {
+            let dsProxyAddress = deployedContracts.exchangeInstance.address
+            var balance = await deployedContracts.daiTokenInstance.balanceOf(dsProxyAddress)
+            expect(balance.toString()).to.be.equal('0')
+          })
+          it('exchange should have no ETH', async function () {
+            let dsProxyAddress = deployedContracts.exchangeInstance.address
+            var balance = await provider.getBalance(dsProxyAddress)
+            expect(balance.toString()).to.be.equal('0')
+          })
           it('ProxyAction should have no ETH', async function () {
             let mpaAddress = deployedContracts.multiplyProxyActionsInstance.address
             var balance = await provider.getBalance(mpaAddress)
@@ -708,6 +718,16 @@ async function runTestCase(testCase, testParam) {
           })
           it('dsProxy should have no ETH', async function () {
             let dsProxyAddress = deployedContracts.dsProxyInstance.address
+            var balance = await provider.getBalance(dsProxyAddress)
+            expect(balance.toString()).to.be.equal('0')
+          })
+          it('exchange should have no DAI', async function () {
+            let dsProxyAddress = deployedContracts.exchangeInstance.address
+            var balance = await deployedContracts.daiTokenInstance.balanceOf(dsProxyAddress)
+            expect(balance.toString()).to.be.equal('0')
+          })
+          it('exchange should have no ETH', async function () {
+            let dsProxyAddress = deployedContracts.exchangeInstance.address
             var balance = await provider.getBalance(dsProxyAddress)
             expect(balance.toString()).to.be.equal('0')
           })
@@ -848,6 +868,16 @@ async function runTestCase(testCase, testParam) {
           })
           it('dsProxy should have no ETH', async function () {
             let dsProxyAddress = deployedContracts.dsProxyInstance.address
+            var balance = await provider.getBalance(dsProxyAddress)
+            expect(balance.toString()).to.be.equal('0')
+          })
+          it('exchange should have no DAI', async function () {
+            let dsProxyAddress = deployedContracts.exchangeInstance.address
+            var balance = await deployedContracts.daiTokenInstance.balanceOf(dsProxyAddress)
+            expect(balance.toString()).to.be.equal('0')
+          })
+          it('exchange should have no ETH', async function () {
+            let dsProxyAddress = deployedContracts.exchangeInstance.address
             var balance = await provider.getBalance(dsProxyAddress)
             expect(balance.toString()).to.be.equal('0')
           })
@@ -1008,6 +1038,16 @@ async function runTestCase(testCase, testParam) {
             var balance = await provider.getBalance(dsProxyAddress)
             expect(balance.toString()).to.be.equal('0')
           })
+          it('exchange should have no DAI', async function () {
+            let dsProxyAddress = deployedContracts.exchangeInstance.address
+            var balance = await deployedContracts.daiTokenInstance.balanceOf(dsProxyAddress)
+            expect(balance.toString()).to.be.equal('0')
+          })
+          it('exchange should have no ETH', async function () {
+            let dsProxyAddress = deployedContracts.exchangeInstance.address
+            var balance = await provider.getBalance(dsProxyAddress)
+            expect(balance.toString()).to.be.equal('0')
+          })
           it('ProxyAction should have no ETH', async function () {
             let mpaAddress = deployedContracts.multiplyProxyActionsInstance.address
             var balance = await provider.getBalance(mpaAddress)
@@ -1063,7 +1103,7 @@ async function runTestCase(testCase, testParam) {
               beforeTxBalance = await provider.getBalance(await primarySigner.getAddress());
               
               daiBefore = await  deployedContracts.daiTokenInstance.balanceOf(await primarySigner.getAddress());
-              console.log("Before DAI Balance")
+              console.log("Before DAI Balance", daiBefore.toString())
               
               internalSnapshotId = await createSnapshot(provider);
 
@@ -1117,8 +1157,8 @@ async function runTestCase(testCase, testParam) {
                 '0x79d7176aE8F93A04bC73b9BC710d4b44f9e362Ce',
               )
   
-              let status
-              ;[status, inTxResult] = await dsproxyExecuteAction(
+              let status;
+              [status, inTxResult] = await dsproxyExecuteAction(
                 deployedContracts.multiplyProxyActionsInstance,
                 deployedContracts.dsProxyInstance,
                 primarySignerAddress,
@@ -1156,6 +1196,18 @@ async function runTestCase(testCase, testParam) {
               expected = amountToWei(sub(mul(closingVaultInfo.coll,marketPrice),closingVaultInfo.debt));
               console.log("closing CDP state",closedVaultInfo);
               console.log("Users DAI change:",actual.toFixed(0),"Vault amount:",expected.toFixed(0), "Market Price:",marketPrice.toFixed());
+              var events = inTxResult.events.filter(x=>x.topics[0] == "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef");
+              packedEvents = []
+              for(var i =0;i<events.length;i++){
+                var item = {
+                  AmountAsNumber :(new BigNumber(events[i].data,16)).dividedBy((new BigNumber(10)).exponentiatedBy(18)).toFixed(5),
+                  Token : events[i].address == '0x6B175474E89094C44Da98b954EedeAC495271d0F'?"DAI":( events[i].address ==  '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'?"WETH":"OTHER"),
+                  From : events[i].topics[1],
+                  To: events[i].topics[2]
+                }
+                packedEvents.push(item);
+              };
+              console.log("tx",packedEvents);
               expect(actual.toNumber()).to.be.equal(expected.toNumber());
             })
             it('ProxyAction should have no DAI', async function () {
@@ -1166,6 +1218,16 @@ async function runTestCase(testCase, testParam) {
             it('dsProxy should have no DAI', async function () {
               let dsProxyAddress = deployedContracts.dsProxyInstance.address
               var balance = await deployedContracts.daiTokenInstance.balanceOf(dsProxyAddress)
+              expect(balance.toString()).to.be.equal('0')
+            })
+            it('exchange should have no DAI', async function () {
+              let dsProxyAddress = deployedContracts.exchangeInstance.address
+              var balance = await deployedContracts.daiTokenInstance.balanceOf(dsProxyAddress)
+              expect(balance.toString()).to.be.equal('0')
+            })
+            it('exchange should have no ETH', async function () {
+              let dsProxyAddress = deployedContracts.exchangeInstance.address
+              var balance = await provider.getBalance(dsProxyAddress)
               expect(balance.toString()).to.be.equal('0')
             })
             it('dsProxy should have no ETH', async function () {

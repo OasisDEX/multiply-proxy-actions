@@ -41,7 +41,7 @@ const dsproxyExecuteAction = async function (
       gasPrice: '1000000000',
     })
 
-    var retVal = await tx.wait()
+    var retVal = await tx.wait();
     console.log(`${method} completed`)
 
     return [true, retVal]
@@ -175,13 +175,14 @@ const deploySystem = async function (provider, signer, isExchangeDummy = false, 
   const mcdView = await McdView.deploy()
   deployedContracts.mcdViewInstance = await mcdView.deployed()
   if (debug) {
+    console.log('Signer:',await signer.getAddress());
     console.log('Exchange:', deployedContracts.exchangeInstance.address)
     console.log('userProxyAddress:', deployedContracts.userProxyAddress)
     console.log('dsProxy:', deployedContracts.dsProxyInstance.address)
     console.log('multiplyProxyActions:', deployedContracts.multiplyProxyActionsInstance.address)
     console.log('mcdView:', deployedContracts.mcdViewInstance.address)
     console.log('daiToken:', deployedContracts.daiTokenInstance.address)
-    console.log('daiToken:', deployedContracts.gems.wethTokenInstance.address)
+    console.log('wethToken:', deployedContracts.gems.wethTokenInstance.address)
   }
 
   return deployedContracts

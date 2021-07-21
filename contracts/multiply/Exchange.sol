@@ -4,6 +4,7 @@ pragma solidity >=0.7.6;
 import '../interfaces/IERC20.sol';
 import '../utils/SafeMath.sol';
 import '../utils/SafeERC20.sol';
+import 'hardhat/console.sol';
 
 contract Exchange {
   using SafeMath for uint256;
@@ -64,6 +65,8 @@ contract Exchange {
     require(success, 'Exchange / Could not swap');
     uint256 balance = IERC20(toAsset).balanceOf(address(this));
     require(balance >= receiveAtLeast, 'Exchange / Received less');
+    console.log("_swap",fromAsset,toAsset);
+    console.log("_swap",amount,receiveAtLeast,balance);
     emit AssetSwap(fromAsset, toAsset, amount, balance);
     return balance;
   }
