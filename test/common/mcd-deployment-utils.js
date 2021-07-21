@@ -148,8 +148,7 @@ const deploySystem = async function (provider, signer, isExchangeDummy = false, 
     deployedContracts.exchangeInstance = await exchange.deployed()
 
     const WETH = new ethers.Contract(MAINNET_ADRESSES.WETH_ADDRESS, WethAbi, provider).connect(
-      signer,
-    )
+      signer)
     const DAI = new ethers.Contract(MAINNET_ADRESSES.MCD_DAI, Erc20Abi, provider).connect(signer)
     deployedContracts.gems.wethTokenInstance = WETH
     deployedContracts.daiTokenInstance = DAI
