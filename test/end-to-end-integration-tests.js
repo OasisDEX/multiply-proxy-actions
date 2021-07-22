@@ -60,7 +60,7 @@ testParams = [
     desiredETH: 0.7,
     useMockExchange: false,
     debug: false,
-    printERC20Transfers:true,
+    printERC20Transfers:false,
     desiredCollRatio: 2.5,
     desiredCollRatioDAI: 3.5,
     desiredCollRatioETH: 3.5,
@@ -72,7 +72,7 @@ testParams = [
     desiredETH: 0.7, //amount of dai  withdrawn in decreaseMultipleWithdrawCollateral
     useMockExchange: false,
     debug: false,
-    printERC20Transfers:true,
+    printERC20Transfers:false,
     desiredCollRatio: 2.5, //collateralisation ratio after Multiply decrease
     desiredCollRatioDAI: 3.5, //collateralisation ratio after Multiply decrease with DAI withdraw
     desiredCollRatioETH: 3.5, //collateralisation ratio after Multiply decrease with ETH withdraw
@@ -94,17 +94,17 @@ runner([
 
 const createSnapshot = async function (provider) {
   var id = await provider.send('evm_snapshot', [])
-  console.log('snapshot created', id, new Date())
+  //console.log('snapshot created', id, new Date())
   return id
 }
 
 const restoreSnapshot = async function (provider, id) {
   if (restoreSnapshot.lock) {
-    console.log('Skiping restore', restoreSnapshot.lock)
+    //console.log('Skiping restore', restoreSnapshot.lock)
     delete restoreSnapshot.lock
   } else {
     await provider.send('evm_revert', [id])
-    console.log('snapshot restored', id, new Date())
+    //console.log('snapshot restored', id, new Date())
   }
 }
 
@@ -212,7 +212,7 @@ const fillExchangeData = async function (_testParams, exchangeData, exchange) {
           await new Promise((res, rej) => {
             setTimeout(() => {
               res(true)
-            }, 1000)
+            }, 2000)
           })
         }
       }
@@ -252,6 +252,19 @@ const getAddressesLabels = function(deployedContracts, address_registry, mainnet
   return labels;
 }
 
+const findExchangeTransferEvent = function (source,dest,txResult) {
+
+  var events = txResult.events.filter(
+    (x) => x.topics[0] == '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef')
+    
+  console.log(source,dest,events.length);
+  events = events.filter(
+      x=> x.topics[1].toLowerCase().indexOf(source.toLowerCase().substr(2))!=-1 && 
+        x.topics[2].toLowerCase().indexOf(dest.toLowerCase().substr(2))!=-1 
+  )
+  return new BigNumber(events[0].data, 16);
+}
+
 const printAllERC20Transfers = function (txResult, labels) {
 
   function tryUseLabels(value){
@@ -280,6 +293,37 @@ const printAllERC20Transfers = function (txResult, labels) {
           : events[i].address,
       From: tryUseLabels(events[i].topics[1]),
       To:  tryUseLabels(events[i].topics[2]),
+    }
+    packedEvents.push(item)
+  }
+
+  events = txResult.events.filter( //Deposit of WETH
+    (x) => x.topics[0] == '0xe1fffcc4923d04b559f4d29a8bfc6cda04eb5b0d3c460751c2402c5c5cc9109c',
+  )
+  
+  for (var i = 0; i < events.length; i++) {
+    var item = {
+      AmountAsNumber: new BigNumber(events[i].data, 16)
+        .dividedBy(new BigNumber(10).exponentiatedBy(18))
+        .toFixed(5),
+      Token:"WETH",
+      From: "0x0000000000000000000000000000000000000000",
+      To:  tryUseLabels(events[i].topics[1]),
+    }
+    packedEvents.push(item)
+  }
+  events = txResult.events.filter( //Withdraw of WETH
+    (x) => x.topics[0] == '0x7fcf532c15f0a6db0bd6d0e038bea71d30d808c7d98cb3bf7268a95bf5081b65',
+  )
+  
+  for (var i = 0; i < events.length; i++) {
+    var item = {
+      AmountAsNumber: new BigNumber(events[i].data, 16)
+        .dividedBy(new BigNumber(10).exponentiatedBy(18))
+        .toFixed(5),
+      Token:"WETH",
+      From: tryUseLabels(events[i].topics[1]),
+      To: "0x0000000000000000000000000000000000000000" ,
     }
     packedEvents.push(item)
   }
@@ -335,7 +379,6 @@ async function runTestCase(testCase, testParam) {
             deployedContracts.gems.wethTokenInstance.address,
             mpaAddress,
           )
-          console.log('Checking weth', balance.toString())
           expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
         })
         _it('dsProxy should have no DAI', async function () {
@@ -354,7 +397,6 @@ async function runTestCase(testCase, testParam) {
             deployedContracts.gems.wethTokenInstance.address,
             dsProxyAddress,
           )
-          console.log('Checking weth', balance.toString())
           expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
         })
         _it('exchange should have no DAI', async function () {
@@ -373,7 +415,6 @@ async function runTestCase(testCase, testParam) {
             deployedContracts.gems.wethTokenInstance.address,
             addressToCheck,
           )
-          console.log('Checking weth', balance.toString())
           expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
         })
       }
@@ -994,6 +1035,8 @@ async function runTestCase(testCase, testParam) {
           let beneficiaryBefore
           let daiBefore
           let daiAfter
+          let minTokenAmount;
+          let actualSwappedAmount;
           this.beforeAll(async function () {
             await updateLastCDPInfo(testCase, primarySigner, provider, userProxyAddr)
             closingVaultInfo = testCase.existingCDP
@@ -1051,7 +1094,8 @@ async function runTestCase(testCase, testParam) {
             )
 
             cdpData.borrowCollateral = 0
-            cdpData.requiredDebt = exchangeData.minToTokenAmount
+            minTokenAmount = exchangeData.minToTokenAmount;
+            cdpData.requiredDebt = exchangeData.minToTokenAmount;
 
             await fillExchangeData(testParam, exchangeData, deployedContracts.exchangeInstance)
             const params = packMPAParams(cdpData, exchangeData, ADDRESS_REGISTRY)
@@ -1068,6 +1112,11 @@ async function runTestCase(testCase, testParam) {
               'closeVaultExitCollateral',
               params,
             )
+
+            actualSwappedAmount = findExchangeTransferEvent(deployedContracts.exchangeInstance.address,
+              deployedContracts.multiplyProxyActionsInstance.address,
+              inTxResult);
+
             if(testParam.printERC20Transfers){
               var labels = getAddressesLabels(deployedContracts,ADDRESS_REGISTRY,MAINNET_ADRESSES, primarySignerAddress);
               printAllERC20Transfers(inTxResult, labels);
@@ -1092,13 +1141,7 @@ async function runTestCase(testCase, testParam) {
 
             var gasPrice = 1000000000
             var reminder = afterTxBalance.sub(beforeTxBalance).add(gasUsed * gasPrice)
-            console.log(
-              'balances',
-              closingVaultInfo.coll.toFixed(4),
-              closedVaultInfo.coll.toFixed(4),
-              closingVaultInfo.debt.toFixed(4),
-              closedVaultInfo.debt.toFixed(4),
-            )
+            
             var expectedReturnedAmount = sub(
               closingVaultInfo.coll,
               div(
@@ -1108,19 +1151,16 @@ async function runTestCase(testCase, testParam) {
             )
             expectedReturnedAmount = amountToWei(expectedReturnedAmount)
             var ratio = div(reminder, expectedReturnedAmount)
-            console.log(
-              'Expected to actual Ratio:',
-              ratio.toString(),
-              ', Expected amount',
-              expectedReturnedAmount.toFixed(0),
-            )
             expect(ratio.toNumber()).to.be.lessThanOrEqual(1.02)
             expect(ratio.toNumber()).to.be.greaterThanOrEqual(0.98)
           })
-          it('should send to user no DAI', async function () {
-            expect(convertToBigNumber(daiBefore).toFixed(0)).to.be.equal(
-              convertToBigNumber(daiAfter).toFixed(0),
-            )
+          it('should send to user no more DAI than positive slippage', async function () {
+
+
+            var expected = sub(add(daiBefore,actualSwappedAmount),minTokenAmount).toFixed(0);
+            var ratio = div(sub(daiAfter,daiBefore),sub(expected,daiBefore));
+            expect(ratio.toNumber()).to.be.lessThan(1.01);
+            expect(ratio.toNumber()).to.be.greaterThan(0.99);
           })
           addBalanceCheckingAssertions(it)
           it('should collect fee', async function () {
@@ -1128,12 +1168,12 @@ async function runTestCase(testCase, testParam) {
               deployedContracts.daiTokenInstance.address,
               '0x79d7176aE8F93A04bC73b9BC710d4b44f9e362Ce',
             )
-            console.log(OUR_FEE, closingVaultInfo.debt)
+     //       console.log(OUR_FEE, closingVaultInfo.debt)
             var expectedFee = amountToWei(
               //TODO: review that calculation
               mul(
                 OUR_FEE,
-                mul(mul(closingVaultInfo.debt, add(1, AAVE_FEE)), add(1, testParam.slippage)),
+                mul(closingVaultInfo.debt, add(1, AAVE_FEE)),
               ),
             )
             var allEvents = inTxResult.events.map((x) => {
@@ -1151,10 +1191,11 @@ async function runTestCase(testCase, testParam) {
             )
             expect(feePaidEvents.length).to.be.deep.equal(1)
             var feeAmount = new BigNumber(feePaidEvents[0].data, 16)
-            console.log('beneficiary diff', beneficiaryAfter.sub(beneficiaryBefore).toString()) //
+        //    console.log('beneficiary diff', beneficiaryAfter.sub(beneficiaryBefore).toString()) //
             var diff = beneficiaryAfter.sub(beneficiaryBefore).toString()
             expect(diff).to.be.equal(feeAmount.toString())
-            expect(expectedFee.toNumber()).to.be.equal(feeAmount.toNumber())
+            expect(expectedFee.toNumber()).to.be.lessThan(1.01*feeAmount.toNumber())
+            expect(expectedFee.toNumber()).to.be.greaterThan(0.99*feeAmount.toNumber())
           })
           this.afterAll(async function () {
             await restoreSnapshot(provider, internalSnapshotId)
@@ -1190,8 +1231,8 @@ async function runTestCase(testCase, testParam) {
               testCase.desiredCDPState,
               oraclePrice,
               marketPrice,
-              testParams.slippage,
-              testParams.debug,
+              testParam.slippage,
+              testParam.debug,
               0,
               0,
             )
@@ -1277,7 +1318,7 @@ async function runTestCase(testCase, testParam) {
 
             expected = amountToWei(
               sub(mul(closingVaultInfo.coll, marketPrice), closingVaultInfo.debt),
-            )
+            )//do not take fees into account, but assert gives 10% tollerance which is way more than all fees and slippage
             console.log(
               'Users DAI change:',
               actual.toFixed(0),
@@ -1285,9 +1326,15 @@ async function runTestCase(testCase, testParam) {
               expected.toFixed(0),
               'Market Price:',
               marketPrice.toFixed(),
+              'Collateral before',
+              closingVaultInfo.coll,
+              'Debt before',
+              closingVaultInfo.debt,
+              'marketPrice',
+              marketPrice.toString(),
             )
 
-            expect(actual.toNumber()).to.be.equal(expected.toNumber())
+            expect(actual.toNumber()).to.be.greaterThan(0.90*expected.toNumber())
           })
           addBalanceCheckingAssertions(it)
           this.afterAll(async function () {

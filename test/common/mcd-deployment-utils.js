@@ -34,7 +34,7 @@ const dsproxyExecuteAction = async function (
   try {
     const calldata = proxyActions.interface.encodeFunctionData(method, params)
 
-    console.log(`${method} started`, new Date())
+    console.log(`\x1b[33m ${method} started \x1b[0m`, new Date())
     var tx = await dsProxy['execute(address,bytes)'](proxyActions.address, calldata, {
       from: fromAddress,
       value: ensureWeiFormat(value),
@@ -43,11 +43,11 @@ const dsproxyExecuteAction = async function (
     })
 
     var retVal = await tx.wait()
-    console.log(`${method} completed`, new Date())
+    console.log(`\x1b[33m  ${method} completed  \x1b[0m`, new Date())
 
     return [true, retVal]
   } catch (ex) {
-    console.log(`${method} failed`)
+    console.log(`\x1b[33m  ${method} failed  \x1b[0m`)
     return [false, ex]
   }
 }
