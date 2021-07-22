@@ -54,11 +54,6 @@ describe(`Manage vault with a collateral with different than 18 precision`, asyn
 
     await exchange.setFee(OazoFee);
 
-
-    snapshotId = await provider.send("evm_snapshot", []);
-  })
-
-  this.beforeEach(async function() {
     oraclePrice = await getOraclePrice(provider, MAINNET_ADRESSES.PIP_WBTC);
     marketPrice = new BigNumber(32000);      
     initialCollRatio = new BigNumber(1.8);
@@ -102,7 +97,9 @@ describe(`Manage vault with a collateral with different than 18 precision`, asyn
     );
 
     vault = await getLastCDP(provider, signer, userProxyAddress);
-  });
+
+    snapshotId = await provider.send("evm_snapshot", []);
+  })
 
   this.afterEach(async function() {
     await provider.send("evm_revert", [snapshotId]);
