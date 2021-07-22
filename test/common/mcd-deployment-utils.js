@@ -34,7 +34,7 @@ const dsproxyExecuteAction = async function (
   try {
     const calldata = proxyActions.interface.encodeFunctionData(method, params)
 
-    console.log(`${method} started`,new Date())
+    console.log(`${method} started`, new Date())
     var tx = await dsProxy['execute(address,bytes)'](proxyActions.address, calldata, {
       from: fromAddress,
       value: ensureWeiFormat(value),
@@ -42,8 +42,8 @@ const dsproxyExecuteAction = async function (
       gasPrice: '1000000000',
     })
 
-    var retVal = await tx.wait();
-    console.log(`${method} completed`,new Date())
+    var retVal = await tx.wait()
+    console.log(`${method} completed`, new Date())
 
     return [true, retVal]
   } catch (ex) {
@@ -99,7 +99,7 @@ const addFundsDummyExchange = async function (
     value: amountToWei(new BigNumber(1000)).toFixed(0),
   })
   await WETH.transfer(exchange.address, amountToWei(new BigNumber(500)).toFixed(0))
-  var balance = await balanceOf(DAI.address,address)
+  var balance = await balanceOf(DAI.address, address)
   console.log(balance.toString())
   await DAI.transfer(exchange.address, new BigNumber(balance.toString()).dividedBy(2).toFixed(0))
   return {
@@ -148,7 +148,8 @@ const deploySystem = async function (provider, signer, isExchangeDummy = false, 
     deployedContracts.exchangeInstance = await exchange.deployed()
 
     const WETH = new ethers.Contract(MAINNET_ADRESSES.WETH_ADDRESS, WethAbi, provider).connect(
-      signer)
+      signer,
+    )
     const DAI = new ethers.Contract(MAINNET_ADRESSES.MCD_DAI, Erc20Abi, provider).connect(signer)
     deployedContracts.gems.wethTokenInstance = WETH
     deployedContracts.daiTokenInstance = DAI
@@ -174,7 +175,7 @@ const deploySystem = async function (provider, signer, isExchangeDummy = false, 
   const mcdView = await McdView.deploy()
   deployedContracts.mcdViewInstance = await mcdView.deployed()
   if (debug) {
-    console.log('Signer:',await signer.getAddress());
+    console.log('Signer:', await signer.getAddress())
     console.log('Exchange:', deployedContracts.exchangeInstance.address)
     console.log('userProxyAddress:', deployedContracts.userProxyAddress)
     console.log('dsProxy:', deployedContracts.dsProxyInstance.address)

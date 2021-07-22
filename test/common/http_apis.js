@@ -67,7 +67,7 @@ const exchangeToDAI = async function (
   )}&fromAddress=${beneficiary}&slippage=${slippagePercentage.toNumber()}&disableEstimate=true&allowPartial=false`
   var _1inchResponse = await (await fetch(url)).json()
   var txData = _1inchResponse.tx
-  if (txData == undefined){
+  if (txData == undefined) {
     console.log('incorrect response from 1inch ', _1inchResponse, 'original request', url)
   }
   return [url, txData]
