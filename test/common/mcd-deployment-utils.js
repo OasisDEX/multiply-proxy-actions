@@ -47,7 +47,6 @@ const dsproxyExecuteAction = async function (
     return [true, retVal]
   } catch (ex) {
     console.log(`${method} failed`)
-    console.log(params)
     return [false, ex]
   }
 }
