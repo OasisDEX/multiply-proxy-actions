@@ -86,13 +86,14 @@ async function runner(tasks) {
 
 runner([
   runTestCase(testVaults[0], testParams[1]),
-  runTestCase(testVaults[0],testParams[0]),
+  //runTestCase(testVaults[0],testParams[0]),
   // runTestCase(testVaults[0],OracleMarketDifference)
 ])
 
 const createSnapshot = async function (provider) {
+  
   var id = await provider.send('evm_snapshot', [])
-  console.log('snapshot created', id)
+  console.log('snapshot created', id, new Date());
   return id
 }
 
@@ -102,7 +103,7 @@ const restoreSnapshot = async function (provider, id) {
     delete restoreSnapshot.lock
   } else {
     await provider.send('evm_revert', [id])
-    console.log('snapshot restored', id)
+    console.log('snapshot restored', id, new Date())
   }
 }
 
@@ -309,7 +310,7 @@ async function runTestCase(testCase, testParam) {
       const resetNetworkToLatest = async function () {
         provider = new ethers.providers.JsonRpcProvider()
         let blockNumber = await getCurrentBlockNumber();
-        console.log("Reseting network to:",blockNumber-6)
+        console.log("Reseting network to:",blockNumber-6, new Date())
         provider.send('hardhat_reset', [
           {
             forking: {
@@ -412,7 +413,7 @@ async function runTestCase(testCase, testParam) {
         await resetNetworkToLatest()
         await getSignerWithDetails()
 
-        deployedContracts = await deploySystem(provider, primarySigner, testParam.useMockExchange, true)
+        deployedContracts = await deploySystem(provider, primarySigner, testParam.useMockExchange, testParam.debug)
         userProxyAddr = deployedContracts.dsProxyInstance.address
         ADDRESS_REGISTRY = addressRegistryFactory(
           deployedContracts.multiplyProxyActionsInstance.address,
@@ -432,7 +433,7 @@ async function runTestCase(testCase, testParam) {
           )
         }
 
-        initialSetupSnapshotId = await createSnapshot(provider)
+      //  initialSetupSnapshotId = await createSnapshot(provider)
         revertBlockNumber = await provider.getBlockNumber()
       })
 
@@ -447,7 +448,7 @@ async function runTestCase(testCase, testParam) {
           restore(testCase)
         })
         this.afterAll(async function () {
-          await restoreSnapshot(provider, initialSetupSnapshotId)
+    //      await restoreSnapshot(provider, initialSetupSnapshotId)
         })
 
         this.beforeAll(async function () {
@@ -492,8 +493,8 @@ async function runTestCase(testCase, testParam) {
             amountToWei(testCase.desiredCDPState.providedCollateral),
           )
           if (!status) {
-            restoreSnapshot.lock = true
-            throw 'Tx failed'
+            restoreSnapshot.lock = true //If tx fails throws immediatelly and prevent snalshot revert in AfterAll hook
+            throw 'Tx failed'  
             //throw txResult;
           }
 
@@ -568,7 +569,7 @@ async function runTestCase(testCase, testParam) {
           expect(feeAmount.toFixed(0)).to.be.equal(balanceDifference)
         })
 
-        describe(`Increasing CollateralisationRatio from ${testCase.desiredCDPState.desiredCollRatio} to ${testParam.desiredCollRatio} without withdrawal`, async function () {
+        describe(`Decrease Multiple to coll ratio of ${testCase.desiredCDPState.desiredCollRatio} to ${testParam.desiredCollRatio} without withdrawal`, async function () {
           var inTxResult = undefined
           var beforeTxBalance = undefined
           var internalSnapshotId
@@ -661,7 +662,7 @@ async function runTestCase(testCase, testParam) {
           })
         })
 
-        describe(`Increasing CollateralisationRatio to ${testParam.desiredCollRatioDAI} with DAI withdrawal (${testParam.desiredDAI} DAI)`, async function () {
+        describe(`Decrease Multiple to coll ratio of ${testParam.desiredCollRatioDAI} with DAI withdrawal (${testParam.desiredDAI} DAI)`, async function () {
           let daiBefore
           this.beforeEach(async function () {
             backup(testCase)
@@ -689,6 +690,7 @@ async function runTestCase(testCase, testParam) {
               testParam.slippage,
               testParam.debug,
               testParam.desiredDAI,
+              0
             )
 
             validateDelta(debtDelta, collateralDelta)
@@ -760,7 +762,7 @@ async function runTestCase(testCase, testParam) {
           })
         })
 
-        describe(`Decrease Multiple to Collateralisation ${testParam.desiredCollRatioETH} with Collateral withdrawal ${testParam.desiredETH} ETH`, async function () {
+        describe(`Decrease Multiple to coll ratio of ${testParam.desiredCollRatioETH} with Collateral withdrawal ${testParam.desiredETH} ETH`, async function () {
           var inTxResult = undefined
           var testCaseBackup = undefined
           var beforeTxBalance = undefined
