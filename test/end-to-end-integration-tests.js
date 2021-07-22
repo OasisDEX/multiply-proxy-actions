@@ -34,8 +34,8 @@ const { zero } = require('./utils')
 fs = require('fs')
 
 const AAVE_FEE = 0.0009
-const BASE_SLIPPAGE = 0.08
-const OUR_FEE = FEE / FEE_BASE
+const BASE_SLIPPAGE = 0.08;
+const OUR_FEE = FEE / FEE_BASE;
 
 var testVaults = [
   {
@@ -221,6 +221,20 @@ const fillExchangeData = async function (_testParams, exchangeData, exchange) {
   }
 }
 
+const printAllERC20Transfers = function(txResult){
+  var events = inTxResult.events.filter(x=>x.topics[0] == "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef");
+              packedEvents = []
+              for(var i =0;i<events.length;i++){
+                var item = {
+                  AmountAsNumber :(new BigNumber(events[i].data,16)).dividedBy((new BigNumber(10)).exponentiatedBy(18)).toFixed(5),
+                  Token : events[i].address == '0x6B175474E89094C44Da98b954EedeAC495271d0F'?"DAI":( events[i].address ==  '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'?"WETH":"OTHER"),
+                  From : events[i].topics[1],
+                  To: events[i].topics[2]
+                }
+                packedEvents.push(item);
+              };
+}
+
 
 
 async function runTestCase(testCase, testParam) {
@@ -334,7 +348,7 @@ async function runTestCase(testCase, testParam) {
         marketPrice,
         slippage,
         debug = false,
-        daiAmount = 0,
+        withdrawDai = 0,
         withdrawColl = 0,
       ) {
         let debtDelta
@@ -346,7 +360,7 @@ async function runTestCase(testCase, testParam) {
         let currentDebt = sub(
           add(existingCDP ? existingCDP.debt : 0,
             desiredCDPState.providedDAI),
-          daiAmount);
+            withdrawDai);
         let targetColRatio = convertToBigNumber(desiredCDPState.desiredCollRatio)
         if (operation == 'mul') {
           ;[debtDelta, exchangeMinAmount] = calculateParamsIncreaseMP(
@@ -358,17 +372,17 @@ async function runTestCase(testCase, testParam) {
             currentDebt,
             targetColRatio,
             slippage,
-            daiAmount,
+            withdrawDai,
             debug,
           )
         } else {
-          ;[debtDelta, exchangeMinAmount] = calculateParamsDecreaseMP(
+          [debtDelta, exchangeMinAmount] = calculateParamsDecreaseMP(
             oraclePrice,
             marketPrice,
             convertToBigNumber(OUR_FEE),
             convertToBigNumber(AAVE_FEE),
             currentColl,
-            convertToBigNumber(currentDebt).plus(daiAmount),
+            currentDebt,
             targetColRatio,
             slippage,
             zero,
@@ -662,7 +676,7 @@ async function runTestCase(testCase, testParam) {
           })
         })
 
-        describe(`Decrease Multiple to coll ratio of ${testParam.desiredCollRatioDAI} with DAI withdrawal (${testParam.desiredDAI} DAI)`, async function () {
+        describe.only(`Decrease Multiple to coll ratio of ${testParam.desiredCollRatioDAI} with DAI withdrawal (${testParam.desiredDAI} DAI)`, async function () {
           let daiBefore
           this.beforeEach(async function () {
             backup(testCase)
@@ -1156,17 +1170,7 @@ async function runTestCase(testCase, testParam) {
 
               expected = amountToWei(sub(mul(closingVaultInfo.coll,marketPrice),closingVaultInfo.debt));
               console.log("Users DAI change:",actual.toFixed(0),"Vault amount:",expected.toFixed(0), "Market Price:",marketPrice.toFixed());
-              var events = inTxResult.events.filter(x=>x.topics[0] == "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef");
-              packedEvents = []
-              for(var i =0;i<events.length;i++){
-                var item = {
-                  AmountAsNumber :(new BigNumber(events[i].data,16)).dividedBy((new BigNumber(10)).exponentiatedBy(18)).toFixed(5),
-                  Token : events[i].address == '0x6B175474E89094C44Da98b954EedeAC495271d0F'?"DAI":( events[i].address ==  '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'?"WETH":"OTHER"),
-                  From : events[i].topics[1],
-                  To: events[i].topics[2]
-                }
-                packedEvents.push(item);
-              };
+              
               expect(actual.toNumber()).to.be.equal(expected.toNumber());
             })
             addBalanceCheckingAssertions(it);
