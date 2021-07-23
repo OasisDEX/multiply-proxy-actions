@@ -1,3 +1,4 @@
+const { default: BigNumber } = require('bignumber.js')
 const {
     exchangeFromDAI,
     exchangeToDAI,
@@ -8,7 +9,10 @@ const {
     convertToBigNumber,
     mul,
     div,
+    MAINNET_ADRESSES,
   } = require('./../params-calculation-utils')
+
+  const TEN = new BigNumber(10);
 
 const getPayload = async function (exchangeData, beneficiary, slippage) {
     let retVal, url

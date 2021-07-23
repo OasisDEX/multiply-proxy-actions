@@ -5,6 +5,7 @@ const {
 const {
   getCurrentBlockNumber
 } = require('./../http_apis')
+const { default: BigNumber } = require('bignumber.js')
 
 
 const createSnapshot = async function (provider) {
@@ -187,8 +188,7 @@ const createSnapshot = async function (provider) {
   }
 
 
-  const resetNetworkToLatest = async function () {
-    provider = new ethers.providers.JsonRpcProvider()
+  const resetNetworkToLatest = async function (provider) {
     let blockNumber = await getCurrentBlockNumber()
     console.log('\x1b[33m Reseting network to:\x1b[0m', blockNumber - 6, new Date())
     provider.send('hardhat_reset', [

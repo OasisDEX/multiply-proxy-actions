@@ -198,11 +198,11 @@ async function testCaseDefinition(testCase, testParam) {
         
         if (
           debtDelta == undefined ||
-          collateralDelta == undefined ||
+          exchangeMinAmount == undefined ||
           !BigNumber.isBigNumber(debtDelta) ||
-          !BigNumber.isBigNumber(collateralDelta)
+          !BigNumber.isBigNumber(exchangeMinAmount)
         ) {
-          console.log(debtDelta, collateralDelta)
+          console.log(debtDelta, exchangeMinAmount)
           throw 'calculateRequiredDebt incorrect'
         }
         return [debtDelta, exchangeMinAmount]
@@ -231,7 +231,8 @@ async function testCaseDefinition(testCase, testParam) {
       })
 
       this.beforeAll(async function () {
-        await resetNetworkToLatest()
+        provider = new ethers.providers.JsonRpcProvider();
+        await resetNetworkToLatest(provider)
         await getSignerWithDetails(provider)
 
         deployedContracts = await deploySystem(
@@ -686,6 +687,10 @@ async function testCaseDefinition(testCase, testParam) {
               params,
             )
 
+            if (!status) {
+              restoreSnapshot.lock = true
+              throw 'Tx failed'
+            }
             
             actualSwappedAmount = findExchangeTransferEvent(deployedContracts.exchangeInstance.address,
               deployedContracts.multiplyProxyActionsInstance.address,
@@ -693,10 +698,6 @@ async function testCaseDefinition(testCase, testParam) {
             if(testParam.printERC20Transfers){
               var labels = getAddressesLabels(deployedContracts,ADDRESS_REGISTRY,MAINNET_ADRESSES, primarySignerAddress);
               printAllERC20Transfers(inTxResult, labels);
-            }
-            if (!status) {
-              restoreSnapshot.lock = true
-              throw 'Tx failed'
             }
             await updateLastCDPInfo(testCase, primarySigner, provider, userProxyAddr)
           })
@@ -830,6 +831,10 @@ async function testCaseDefinition(testCase, testParam) {
               params,
             )
 
+            if (!status) {
+              restoreSnapshot.lock = true
+              throw 'Tx failed'
+            }
             actualSwappedAmount = findExchangeTransferEvent(deployedContracts.exchangeInstance.address,
               deployedContracts.multiplyProxyActionsInstance.address,
               inTxResult);
@@ -837,10 +842,6 @@ async function testCaseDefinition(testCase, testParam) {
             if(testParam.printERC20Transfers){
               var labels = getAddressesLabels(deployedContracts,ADDRESS_REGISTRY,MAINNET_ADRESSES, primarySignerAddress);
               printAllERC20Transfers(inTxResult, labels);
-            }
-            if (!status) {
-              restoreSnapshot.lock = true
-              throw 'Tx failed'
             }
 
             await updateLastCDPInfo(testCase, primarySigner, provider, userProxyAddr)
