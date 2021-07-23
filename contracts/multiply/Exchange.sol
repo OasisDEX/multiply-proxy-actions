@@ -27,6 +27,7 @@ contract Exchange {
   }
 
   event AssetSwap(address assetIn, address assetOut, uint256 amountIn, uint256 amountOut);
+  event FeePaid(uint256 amount);
 
   // Notes: So  I have to transfer the `amount` to the exchange contract, from the msg.sender
   // After that I have to setup allowance of the destination caller for fromAsset on the behalf of the exchange
@@ -112,5 +113,4 @@ contract Exchange {
     _transferOut(DAI_ADDRESS, msg.sender, _balance);
   }
 
-  event FeePaid(uint256 amount);
 }
