@@ -14,7 +14,7 @@ const {
 
   const TEN = new BigNumber(10);
 
-const getPayload = async function (exchangeData, beneficiary, slippage) {
+const getPayload = async function (exchangeData, beneficiary, slippage,fee) {
     let retVal, url
     if (exchangeData.fromTokenAddress == MAINNET_ADRESSES.MCD_DAI) {
       ;[url, retVal] = await exchangeFromDAI(
@@ -22,7 +22,7 @@ const getPayload = async function (exchangeData, beneficiary, slippage) {
         div(convertToBigNumber(exchangeData.fromTokenAmount), TEN.pow(18)),
         mul(slippage, 100),
         beneficiary,
-        OUR_FEE,
+        fee,
       )
     } else {
       ;[url, retVal] = await exchangeToDAI(

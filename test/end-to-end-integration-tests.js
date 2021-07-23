@@ -104,7 +104,7 @@ async function runner(tasks) {
 
 runner([
   testCaseDefinition(testVaults[0], testParams[0]),
-  testCaseDefinition(testVaults[0],testParams[1])
+  //testCaseDefinition(testVaults[0],testParams[1])
   // runTestCase(testVaults[0],OracleMarketDifference)
 ])
 
@@ -310,7 +310,7 @@ async function testCaseDefinition(testCase, testParam) {
             MAINNET_ADRESSES,
           )
 
-          await fillExchangeData(testParam, exchangeData, deployedContracts.exchangeInstance)
+          await fillExchangeData(testParam, exchangeData, deployedContracts.exchangeInstance, OUR_FEE)
 
           const params = packMPAParams(cdpData, exchangeData, ADDRESS_REGISTRY)
 
