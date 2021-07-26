@@ -141,6 +141,66 @@ async function testCaseDefinition(testCase, testParam) {
       var oraclePrice
       var marketPrice
 
+      
+      function addBalanceCheckingAssertions(_it,isMockExchange) {
+        _it('ProxyAction should have no DAI', async function () {
+          let mpaAddress = await deployedContracts.multiplyProxyActionsInstance.address
+          var balance = await balanceOf(deployedContracts.daiTokenInstance.address, mpaAddress)
+          expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
+        })
+        _it('ProxyAction should have no ETH', async function () {
+          let mpaAddress = await deployedContracts.multiplyProxyActionsInstance.address
+          var balance = await provider.getBalance(mpaAddress)
+          expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
+        })
+        _it('ProxyAction should have no WETH', async function () {
+          let mpaAddress = await deployedContracts.multiplyProxyActionsInstance.address
+          var balance = await balanceOf(
+            deployedContracts.gems.wethTokenInstance.address,
+            mpaAddress,
+          )
+          expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
+        })
+        _it('dsProxy should have no DAI', async function () {
+          let dsProxyAddress = await deployedContracts.dsProxyInstance.address
+          var balance = await balanceOf(deployedContracts.daiTokenInstance.address, dsProxyAddress)
+          expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
+        })
+        _it('dsProxy should have no ETH', async function () {
+          let dsProxyAddress = await deployedContracts.dsProxyInstance.address
+          var balance = await provider.getBalance(dsProxyAddress)
+          expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
+        })
+        _it('dsProxy should have no WETH', async function () {
+          let dsProxyAddress = await deployedContracts.dsProxyInstance.address
+          var balance = await balanceOf(
+            deployedContracts.gems.wethTokenInstance.address,
+            dsProxyAddress,
+          )
+          expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
+        })
+        if(isMockExchange==false){
+          _it('exchange should have no DAI', async function () {
+            let addressToCheck = await deployedContracts.exchangeInstance.address
+            var balance = await balanceOf(deployedContracts.daiTokenInstance.address, addressToCheck)
+            expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
+          })
+          _it('exchange should have no ETH', async function () {
+            let addressToCheck = deployedContracts.exchangeInstance.address
+            var balance = await provider.getBalance(addressToCheck)
+            expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
+          })
+          _it('exchange should have no WETH', async function () {
+            let addressToCheck = deployedContracts.exchangeInstance.address
+            var balance = await balanceOf(
+              deployedContracts.gems.wethTokenInstance.address,
+              addressToCheck,
+            )
+            expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
+          })
+        }
+      }
+
       const getSignerWithDetails = async function (provider) {
         primarySigner = await provider.getSigner(0)
         primarySignerAddress = await primarySigner.getAddress()
@@ -492,7 +552,7 @@ async function testCaseDefinition(testCase, testParam) {
             expect(reminder).to.be.equal(0)
           })
 
-          addBalanceCheckingAssertions(it, testParam.isMockExchange)
+          addBalanceCheckingAssertions(it, testParam.isMockExchange, deployedContracts)
           this.afterAll(async function () {
             await restoreSnapshot(provider, internalSnapshotId)
           })
@@ -614,7 +674,7 @@ async function testCaseDefinition(testCase, testParam) {
 
             expect(balanceIncrease).to.be.equal(amountToWei(testParam.desiredDAI).toFixed(0))
           })
-          addBalanceCheckingAssertions(it, testParam.isMockExchange)
+          addBalanceCheckingAssertions(it, testParam.isMockExchange, deployedContracts)
           this.afterAll(async function () {
             await restoreSnapshot(provider, internalSnapshotId)
           })
@@ -741,7 +801,7 @@ async function testCaseDefinition(testCase, testParam) {
             expect(balanceIncrease/swapDifference).to.be.lessThan(1.0+precision/100);
             expect(balanceIncrease/swapDifference).to.be.greaterThan(1.0-precision/100);
           })
-          addBalanceCheckingAssertions(it, testParam.isMockExchange)
+          addBalanceCheckingAssertions(it, testParam.isMockExchange, deployedContracts)
           this.afterAll(async function () {
             await restoreSnapshot(provider, internalSnapshotId)
           })
@@ -880,7 +940,7 @@ async function testCaseDefinition(testCase, testParam) {
             expect(ratio.toNumber()).to.be.lessThan(1.01);
             expect(ratio.toNumber()).to.be.greaterThan(0.99);
           })
-          addBalanceCheckingAssertions(it, testParam.isMockExchange)
+          addBalanceCheckingAssertions(it, testParam.isMockExchange, deployedContracts)
           it('should collect fee', async function () {
             var beneficiaryAfter = await balanceOf(
               deployedContracts.daiTokenInstance.address,
@@ -1055,7 +1115,7 @@ async function testCaseDefinition(testCase, testParam) {
 
             expect(actual.toNumber()).to.be.greaterThan(0.90*expected.toNumber())
           })
-          addBalanceCheckingAssertions(it, testParam.isMockExchange)
+          addBalanceCheckingAssertions(it, testParam.isMockExchange, deployedContracts)
           this.afterAll(async function () {
             await restoreSnapshot(provider, internalSnapshotId)
           })
@@ -1066,62 +1126,4 @@ async function testCaseDefinition(testCase, testParam) {
 }
 
 
-const addBalanceCheckingAssertions = function (_it,isMockExchange) {
-  _it('ProxyAction should have no DAI', async function () {
-    let mpaAddress = await deployedContracts.multiplyProxyActionsInstance.address
-    var balance = await balanceOf(deployedContracts.daiTokenInstance.address, mpaAddress)
-    expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
-  })
-  _it('ProxyAction should have no ETH', async function () {
-    let mpaAddress = await deployedContracts.multiplyProxyActionsInstance.address
-    var balance = await provider.getBalance(mpaAddress)
-    expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
-  })
-  _it('ProxyAction should have no WETH', async function () {
-    let mpaAddress = await deployedContracts.multiplyProxyActionsInstance.address
-    var balance = await balanceOf(
-      deployedContracts.gems.wethTokenInstance.address,
-      mpaAddress,
-    )
-    expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
-  })
-  _it('dsProxy should have no DAI', async function () {
-    let dsProxyAddress = await deployedContracts.dsProxyInstance.address
-    var balance = await balanceOf(deployedContracts.daiTokenInstance.address, dsProxyAddress)
-    expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
-  })
-  _it('dsProxy should have no ETH', async function () {
-    let dsProxyAddress = await deployedContracts.dsProxyInstance.address
-    var balance = await provider.getBalance(dsProxyAddress)
-    expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
-  })
-  _it('dsProxy should have no WETH', async function () {
-    let dsProxyAddress = await deployedContracts.dsProxyInstance.address
-    var balance = await balanceOf(
-      deployedContracts.gems.wethTokenInstance.address,
-      dsProxyAddress,
-    )
-    expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
-  })
-  if(isMockExchange==false){
-    _it('exchange should have no DAI', async function () {
-      let addressToCheck = await deployedContracts.exchangeInstance.address
-      var balance = await balanceOf(deployedContracts.daiTokenInstance.address, addressToCheck)
-      expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
-    })
-    _it('exchange should have no ETH', async function () {
-      let addressToCheck = deployedContracts.exchangeInstance.address
-      var balance = await provider.getBalance(addressToCheck)
-      expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
-    })
-    _it('exchange should have no WETH', async function () {
-      let addressToCheck = deployedContracts.exchangeInstance.address
-      var balance = await balanceOf(
-        deployedContracts.gems.wethTokenInstance.address,
-        addressToCheck,
-      )
-      expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
-    })
-  }
-}
 
