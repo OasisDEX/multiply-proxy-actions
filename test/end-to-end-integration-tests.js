@@ -24,8 +24,6 @@ const {
   fillExchangeData,
   createSnapshot,
   restoreSnapshot,
-  backup,
-  restore,
   resetNetworkToLatest
 } = require('./common/integration/utils')
 
@@ -104,12 +102,19 @@ async function runner(tasks) {
 
 runner([
   testCaseDefinition(testVaults[0], testParams[0]),
-  //testCaseDefinition(testVaults[0],testParams[1])
+  testCaseDefinition(testVaults[0], testParams[1]),
+  //testCaseDefinition(testVaults[0],testParams[0])
   // runTestCase(testVaults[0],OracleMarketDifference)
 ])
 
 
 async function testCaseDefinition(testCase, testParam) {
+  var provider;
+  provider = new ethers.providers.JsonRpcProvider();
+  
+  testCase = JSON.parse(JSON.stringify(testCase));//break reference
+  testParam = JSON.parse(JSON.stringify(testParam));
+
   return new Promise((res, rej) => {
     //to run several in runner, one after another
 
@@ -122,7 +127,6 @@ async function testCaseDefinition(testCase, testParam) {
 
       var primarySigner
       var primarySignerAddress
-      var provider
 
       let deployedContracts = {
         // defined during system deployment
@@ -142,7 +146,7 @@ async function testCaseDefinition(testCase, testParam) {
       var marketPrice
 
       
-      function addBalanceCheckingAssertions(_it,isMockExchange) {
+      function addBalanceCheckingAssertions(_it,useMockExchange) {
         _it('ProxyAction should have no DAI', async function () {
           let mpaAddress = await deployedContracts.multiplyProxyActionsInstance.address
           var balance = await balanceOf(deployedContracts.daiTokenInstance.address, mpaAddress)
@@ -179,7 +183,7 @@ async function testCaseDefinition(testCase, testParam) {
           )
           expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
         })
-        if(isMockExchange==false){
+        if(useMockExchange==false){
           _it('exchange should have no DAI', async function () {
             let addressToCheck = await deployedContracts.exchangeInstance.address
             var balance = await balanceOf(deployedContracts.daiTokenInstance.address, addressToCheck)
@@ -283,15 +287,7 @@ async function testCaseDefinition(testCase, testParam) {
         }
       }
 
-      this.beforeEach(async function () {
-        backup(testCase)
-      })
-      this.afterEach(async function () {
-        restore(testCase)
-      })
-
       this.beforeAll(async function () {
-        provider = new ethers.providers.JsonRpcProvider();
         await resetNetworkToLatest(provider)
         await getSignerWithDetails(provider)
 
@@ -324,6 +320,7 @@ async function testCaseDefinition(testCase, testParam) {
           )
         }
 
+        console.log("initialSetupSnapshotId");
         initialSetupSnapshotId = await createSnapshot(provider)
         revertBlockNumber = await provider.getBlockNumber()
       })
@@ -332,14 +329,8 @@ async function testCaseDefinition(testCase, testParam) {
         var txResult
         var startBalance
 
-        this.beforeEach(async function () {
-          backup(testCase)
-        })
-        this.afterEach(async function () {
-          restore(testCase)
-        })
-        this.afterAll(async function () {
-          await restoreSnapshot(provider, initialSetupSnapshotId)
+        this.afterAll(async function(){
+          await restoreSnapshot(provider, initialSetupSnapshotId);
         })
 
         this.beforeAll(async function () {
@@ -467,25 +458,24 @@ async function testCaseDefinition(testCase, testParam) {
         describe(`Decrease Multiple to coll ratio of ${testCase.desiredCDPState.desiredCollRatio} to ${testParam.desiredCollRatio} without withdrawal`, async function () {
           var inTxResult = undefined
           var beforeTxBalance = undefined
-          var internalSnapshotId
-          this.beforeEach(async function () {
-            backup(testCase)
-          })
-          this.afterEach(async function () {
-            restore(testCase)
-          })
+          var internalSnapshotId;
+          var testCaseCopy;
           this.beforeAll(async function () {
-            internalSnapshotId = await createSnapshot(provider)
+            console.log("internalSnapshotId");
+            internalSnapshotId = await createSnapshot(provider);
 
-            testCase.desiredCDPState.desiredCollRatio = testParam.desiredCollRatio
-            testCase.desiredCDPState.providedCollateral = 0
+            testCaseCopy = JSON.parse(JSON.stringify(testCase));
+
+            testCaseCopy.desiredCDPState.desiredCollRatio = testParam.desiredCollRatio;
+            console.log("clearing providedCollateral");
+            testCaseCopy.desiredCDPState.providedCollateral = 0
 
             beforeTxBalance = await provider.getBalance(await primarySigner.getAddress())
 
             const [debtDelta, collateralDelta] = calculateRequiredDebt(
               'demul',
-              testCase.existingCDP,
-              testCase.desiredCDPState,
+              testCaseCopy.existingCDP,
+              testCaseCopy.desiredCDPState,
               oraclePrice,
               marketPrice,
               testParam.slippage,
@@ -493,12 +483,12 @@ async function testCaseDefinition(testCase, testParam) {
             )
 
             const { exchangeData, cdpData } = prepareBasicParams(
-              testCase.gemAddress,
+              testCaseCopy.gemAddress,
               debtDelta,
               collateralDelta,
               0,
-              testCase._1inchPayload,
-              testCase.existingCDP,
+              testCaseCopy._1inchPayload,
+              testCaseCopy.existingCDP,
               primarySignerAddress,
               true,
               MAINNET_ADRESSES,
@@ -524,14 +514,14 @@ async function testCaseDefinition(testCase, testParam) {
               throw 'Tx failed'
             }
 
-            await updateLastCDPInfo(testCase, primarySigner, provider, userProxyAddr)
+            await updateLastCDPInfo(testCaseCopy, primarySigner, provider, userProxyAddr)
           })
           it(`should increase CollateralisationRatio to ${testParam.desiredCollRatio} `, async function () {
             var negativeMargin = 0.1
             var positiveMargin = 5
             const collRatio = div(
-              mul(testCase.existingCDP.coll, oraclePrice),
-              testCase.existingCDP.debt,
+              mul(testCaseCopy.existingCDP.coll, oraclePrice),
+              testCaseCopy.existingCDP.debt,
             ).toNumber()
             expect(collRatio).to.be.greaterThan(
               testParam.desiredCollRatio * (1 - negativeMargin / 100),
@@ -552,7 +542,7 @@ async function testCaseDefinition(testCase, testParam) {
             expect(reminder).to.be.equal(0)
           })
 
-          addBalanceCheckingAssertions(it, testParam.isMockExchange, deployedContracts)
+          addBalanceCheckingAssertions(it, testParam.useMockExchange, deployedContracts)
           this.afterAll(async function () {
             await restoreSnapshot(provider, internalSnapshotId)
           })
@@ -560,12 +550,7 @@ async function testCaseDefinition(testCase, testParam) {
 
         describe(`Decrease Multiple to coll ratio of ${testParam.desiredCollRatioDAI} with DAI withdrawal (${testParam.desiredDAI} DAI)`, async function () {
           let daiBefore
-          this.beforeEach(async function () {
-            backup(testCase)
-          })
-          this.afterEach(async function () {
-            restore(testCase)
-          })
+          let testCaseCopy
           this.beforeAll(async function () {
             daiBefore = await balanceOf(
               deployedContracts.daiTokenInstance.address,
@@ -574,17 +559,19 @@ async function testCaseDefinition(testCase, testParam) {
             if(testParam.debug){
               console.log("DAI Balance of", await primarySigner.getAddress(), " equals ",daiBefore.toString());
             }
+            console.log("internalSnapshotId");
             internalSnapshotId = await createSnapshot(provider)
+            testCaseCopy = JSON.parse(JSON.stringify(testCase));
 
-            testCase.desiredCDPState.desiredCollRatio = testParam.desiredCollRatioDAI
-            testCase.desiredCDPState.providedCollateral = 0
+            testCaseCopy.desiredCDPState.desiredCollRatio = testParam.desiredCollRatioDAI
+            testCaseCopy.desiredCDPState.providedCollateral = 0
 
             beforeTxBalance = await provider.getBalance(await primarySigner.getAddress())
 
             const [debtDelta, collateralDelta] = calculateRequiredDebt(
               'demul',
-              testCase.existingCDP,
-              testCase.desiredCDPState,
+              testCaseCopy.existingCDP,
+              testCaseCopy.desiredCDPState,
               oraclePrice,
               marketPrice,
               testParam.slippage,
@@ -594,12 +581,12 @@ async function testCaseDefinition(testCase, testParam) {
             )
 
             const { exchangeData, cdpData } = prepareBasicParams(
-              testCase.gemAddress,
+              testCaseCopy.gemAddress,
               debtDelta,
               collateralDelta,
               0,
-              testCase._1inchPayload,
-              testCase.existingCDP,
+              testCaseCopy._1inchPayload,
+              testCaseCopy.existingCDP,
               primarySignerAddress,
               true,
             )
@@ -630,11 +617,11 @@ async function testCaseDefinition(testCase, testParam) {
             if(testParam.debug){
               console.log(
                 'Ratio check before',
-                testCase.existingCDP,
+                testCaseCopy.existingCDP,
                 convertToBigNumber(oraclePrice).toFixed(3),
               )
             }
-            await updateLastCDPInfo(testCase, primarySigner, provider, userProxyAddr)
+            await updateLastCDPInfo(testCaseCopy, primarySigner, provider, userProxyAddr)
           })
           it(`should increase CollateralisationRatio to ${testParam.desiredCollRatioDAI}`, async function () {
             var negativeMargin = 0.1
@@ -643,13 +630,13 @@ async function testCaseDefinition(testCase, testParam) {
             if(testParam.debug){
               console.log(
                 'Ratio check after',
-                testCase.existingCDP,
+                testCaseCopy.existingCDP,
                 convertToBigNumber(oraclePrice).toFixed(3),
               )
             }
             const collRatio = div(
-              mul(testCase.existingCDP.coll, oraclePrice),
-              testCase.existingCDP.debt,
+              mul(testCaseCopy.existingCDP.coll, oraclePrice),
+              testCaseCopy.existingCDP.debt,
             ).toNumber()
             expect(collRatio).to.be.greaterThan(
               testParam.desiredCollRatioDAI * (1 - negativeMargin / 100),
@@ -674,8 +661,9 @@ async function testCaseDefinition(testCase, testParam) {
 
             expect(balanceIncrease).to.be.equal(amountToWei(testParam.desiredDAI).toFixed(0))
           })
-          addBalanceCheckingAssertions(it, testParam.isMockExchange, deployedContracts)
+          addBalanceCheckingAssertions(it, testParam.useMockExchange, deployedContracts)
           this.afterAll(async function () {
+            
             await restoreSnapshot(provider, internalSnapshotId)
           })
         })
@@ -686,30 +674,28 @@ async function testCaseDefinition(testCase, testParam) {
           var daiBefore;
           let actualSwappedAmount;
           let minAcceptableAmount;
+          let testCaseCopy
 
-          this.beforeEach(async function () {
-            backup(testCase)
-          })
-          this.afterEach(async function () {
-            restore(testCase)
-          })
           this.beforeAll(async function () {
             daiBefore = await balanceOf(
               deployedContracts.daiTokenInstance.address,
               await primarySigner.getAddress(),
             )
 
+            console.log("internalSnapshotId");
             internalSnapshotId = await createSnapshot(provider)
 
-            testCase.desiredCDPState.desiredCollRatio = testParam.desiredCollRatioETH
-            testCase.desiredCDPState.providedCollateral = 0
+            testCaseCopy = JSON.parse(JSON.stringify(testCase));
+            
+            testCaseCopy.desiredCDPState.desiredCollRatio = testParam.desiredCollRatioETH
+            testCaseCopy.desiredCDPState.providedCollateral = 0
 
             beforeTxBalance = await provider.getBalance(await primarySigner.getAddress())
 
             const [debtDelta, collateralDelta] = calculateRequiredDebt(
               'demul',
-              testCase.existingCDP,
-              testCase.desiredCDPState,
+              testCaseCopy.existingCDP,
+              testCaseCopy.desiredCDPState,
               oraclePrice,
               marketPrice,
               testParam.slippage,
@@ -719,12 +705,12 @@ async function testCaseDefinition(testCase, testParam) {
             )
 
             const { exchangeData, cdpData } = prepareBasicParams(
-              testCase.gemAddress,
+              testCaseCopy.gemAddress,
               debtDelta,
               collateralDelta,
               0,
-              testCase._1inchPayload,
-              testCase.existingCDP,
+              testCaseCopy._1inchPayload,
+              testCaseCopy.existingCDP,
               primarySignerAddress,
               true,
               MAINNET_ADRESSES,
@@ -759,14 +745,14 @@ async function testCaseDefinition(testCase, testParam) {
               var labels = getAddressesLabels(deployedContracts,ADDRESS_REGISTRY,MAINNET_ADRESSES, primarySignerAddress);
               printAllERC20Transfers(inTxResult, labels);
             }
-            await updateLastCDPInfo(testCase, primarySigner, provider, userProxyAddr)
+            await updateLastCDPInfo(testCaseCopy, primarySigner, provider, userProxyAddr)
           })
           it(`should increase CollateralisationRatio to ${testParam.desiredCollRatioETH} `, async function () {
             var negativeMargin = 0.1
             var positiveMargin = 5
             const collRatio = div(
-              mul(testCase.existingCDP.coll, oraclePrice),
-              testCase.existingCDP.debt,
+              mul(testCaseCopy.existingCDP.coll, oraclePrice),
+              testCaseCopy.existingCDP.debt,
             ).toNumber()
             expect(collRatio).to.be.greaterThan(
               testParam.desiredCollRatioDAI * (1 - negativeMargin / 100),
@@ -801,8 +787,9 @@ async function testCaseDefinition(testCase, testParam) {
             expect(balanceIncrease/swapDifference).to.be.lessThan(1.0+precision/100);
             expect(balanceIncrease/swapDifference).to.be.greaterThan(1.0-precision/100);
           })
-          addBalanceCheckingAssertions(it, testParam.isMockExchange, deployedContracts)
+          addBalanceCheckingAssertions(it, testParam.useMockExchange, deployedContracts)
           this.afterAll(async function () {
+            
             await restoreSnapshot(provider, internalSnapshotId)
           })
         })
@@ -817,6 +804,7 @@ async function testCaseDefinition(testCase, testParam) {
           let daiAfter
           let minTokenAmount;
           let actualSwappedAmount;
+          let testCaseCopy;
           this.beforeAll(async function () {
             await updateLastCDPInfo(testCase, primarySigner, provider, userProxyAddr)
             closingVaultInfo = testCase.existingCDP
@@ -827,17 +815,21 @@ async function testCaseDefinition(testCase, testParam) {
               await primarySigner.getAddress(),
             )
 
+            console.log("internalSnapshotId");
+
             internalSnapshotId = await createSnapshot(provider)
 
-            testCase.desiredCDPState.desiredCollRatio = 0
-            testCase.desiredCDPState.providedCollateral = 0
+            testCaseCopy = JSON.parse(JSON.stringify(testCase));
+
+            testCaseCopy.desiredCDPState.desiredCollRatio = 0
+            testCaseCopy.desiredCDPState.providedCollateral = 0
 
             beforeTxBalance = await provider.getBalance(await primarySigner.getAddress())
 
             const [debtDelta, collateralDelta] = calculateRequiredDebt(
               'demul',
-              testCase.existingCDP,
-              testCase.desiredCDPState,
+              testCaseCopy.existingCDP,
+              testCaseCopy.desiredCDPState,
               oraclePrice,
               marketPrice,
               testParam.slippage,
@@ -847,12 +839,12 @@ async function testCaseDefinition(testCase, testParam) {
             )
 
             const { exchangeData, cdpData } = prepareBasicParams(
-              testCase.gemAddress,
+              testCaseCopy.gemAddress,
               debtDelta,
               collateralDelta,
               0,
-              testCase._1inchPayload,
-              testCase.existingCDP,
+              testCaseCopy._1inchPayload,
+              testCaseCopy.existingCDP,
               primarySignerAddress,
               true,
               MAINNET_ADRESSES,
@@ -862,10 +854,10 @@ async function testCaseDefinition(testCase, testParam) {
             cdpData.withdrawDai = 0
 
             exchangeData.toTokenAmount = ensureWeiFormat(
-              mul(testCase.existingCDP.debt, add(add(1, AAVE_FEE), OUR_FEE)),
+              mul(testCaseCopy.existingCDP.debt, add(add(1, AAVE_FEE), OUR_FEE)),
             )
             exchangeData.minToTokenAmount = ensureWeiFormat(
-              mul(testCase.existingCDP.debt, add(add(1, AAVE_FEE), OUR_FEE)),
+              mul(testCaseCopy.existingCDP.debt, add(add(1, AAVE_FEE), OUR_FEE)),
             )
             exchangeData.fromTokenAmount = ensureWeiFormat(
               div(exchangeData.toTokenAmount, mul(marketPrice, sub(1, testParam.slippage))),
@@ -904,7 +896,7 @@ async function testCaseDefinition(testCase, testParam) {
               printAllERC20Transfers(inTxResult, labels);
             }
 
-            await updateLastCDPInfo(testCase, primarySigner, provider, userProxyAddr)
+            await updateLastCDPInfo(testCaseCopy, primarySigner, provider, userProxyAddr)
 
             daiAfter = await balanceOf(
               deployedContracts.daiTokenInstance.address,
@@ -912,7 +904,7 @@ async function testCaseDefinition(testCase, testParam) {
             )
 
             afterTxBalance = await provider.getBalance(await primarySigner.getAddress())
-            closedVaultInfo = testCase.existingCDP
+            closedVaultInfo = testCaseCopy.existingCDP
           })
           it('should send to user all collateral in a vault minus debt', async function () {
             var gasUsed = parseFloat(inTxResult.cumulativeGasUsed.toString())
@@ -940,7 +932,7 @@ async function testCaseDefinition(testCase, testParam) {
             expect(ratio.toNumber()).to.be.lessThan(1.01);
             expect(ratio.toNumber()).to.be.greaterThan(0.99);
           })
-          addBalanceCheckingAssertions(it, testParam.isMockExchange, deployedContracts)
+          addBalanceCheckingAssertions(it, testParam.useMockExchange, deployedContracts)
           it('should collect fee', async function () {
             var beneficiaryAfter = await balanceOf(
               deployedContracts.daiTokenInstance.address,
@@ -977,6 +969,7 @@ async function testCaseDefinition(testCase, testParam) {
             expect(expectedFee.toNumber()).to.be.greaterThan(0.99*feeAmount.toNumber())
           })
           this.afterAll(async function () {
+            
             await restoreSnapshot(provider, internalSnapshotId)
           })
         })
@@ -988,6 +981,7 @@ async function testCaseDefinition(testCase, testParam) {
           let beneficiaryBefore
           let daiBefore
           let daiAfter
+          let testCaseCopy
           this.beforeAll(async function () {
             await updateLastCDPInfo(testCase, primarySigner, provider, userProxyAddr)
             closingVaultInfo = testCase.existingCDP
@@ -998,16 +992,18 @@ async function testCaseDefinition(testCase, testParam) {
               await primarySigner.getAddress(),
             )
             //console.log('Before DAI Balance', daiBefore.toString())
+            console.log("internalSnapshotId");
 
             internalSnapshotId = await createSnapshot(provider)
+            testCaseCopy = JSON.parse(JSON.stringify(testCase));
 
-            testCase.desiredCDPState.desiredCollRatio = 0
-            testCase.desiredCDPState.providedCollateral = 0
+            testCaseCopy.desiredCDPState.desiredCollRatio = 0
+            testCaseCopy.desiredCDPState.providedCollateral = 0
 
             const [debtDelta, collateralDelta] = calculateRequiredDebt(
               'demul',
-              testCase.existingCDP,
-              testCase.desiredCDPState,
+              testCaseCopy.existingCDP,
+              testCaseCopy.desiredCDPState,
               oraclePrice,
               marketPrice,
               testParam.slippage,
@@ -1017,12 +1013,12 @@ async function testCaseDefinition(testCase, testParam) {
             )
 
             const { exchangeData, cdpData } = prepareBasicParams(
-              testCase.gemAddress,
+              testCaseCopy.gemAddress,
               debtDelta,
               collateralDelta,
               0,
-              testCase._1inchPayload,
-              testCase.existingCDP,
+              testCaseCopy._1inchPayload,
+              testCaseCopy.existingCDP,
               primarySignerAddress,
               true,
               MAINNET_ADRESSES,
@@ -1032,10 +1028,10 @@ async function testCaseDefinition(testCase, testParam) {
             cdpData.withdrawDai = 0
 
             exchangeData.toTokenAmount = ensureWeiFormat(
-              mul(testCase.existingCDP.debt, add(add(1, AAVE_FEE), OUR_FEE)),
+              mul(testCaseCopy.existingCDP.debt, add(add(1, AAVE_FEE), OUR_FEE)),
             )
             exchangeData.minToTokenAmount = ensureWeiFormat(
-              mul(testCase.existingCDP.debt, add(add(1, AAVE_FEE), OUR_FEE)),
+              mul(testCaseCopy.existingCDP.debt, add(add(1, AAVE_FEE), OUR_FEE)),
             )
             exchangeData.fromTokenAmount = ensureWeiFormat(
               div(exchangeData.toTokenAmount, mul(marketPrice, sub(1, testParam.slippage))),
@@ -1068,7 +1064,7 @@ async function testCaseDefinition(testCase, testParam) {
               throw 'Tx failed'
             }
 
-            await updateLastCDPInfo(testCase, primarySigner, provider, userProxyAddr)
+            await updateLastCDPInfo(testCaseCopy, primarySigner, provider, userProxyAddr)
 
             daiAfter = await balanceOf(
               deployedContracts.daiTokenInstance.address,
@@ -1076,7 +1072,7 @@ async function testCaseDefinition(testCase, testParam) {
             )
 
             afterTxBalance = await provider.getBalance(await primarySigner.getAddress())
-            closedVaultInfo = testCase.existingCDP
+            closedVaultInfo = testCaseCopy.existingCDP
           })
           it('should send to user no ETH', async function () {
             var after = await provider.getBalance(await primarySigner.getAddress())
@@ -1115,7 +1111,7 @@ async function testCaseDefinition(testCase, testParam) {
 
             expect(actual.toNumber()).to.be.greaterThan(0.90*expected.toNumber())
           })
-          addBalanceCheckingAssertions(it, testParam.isMockExchange, deployedContracts)
+          addBalanceCheckingAssertions(it, testParam.useMockExchange, deployedContracts)
           this.afterAll(async function () {
             await restoreSnapshot(provider, internalSnapshotId)
           })

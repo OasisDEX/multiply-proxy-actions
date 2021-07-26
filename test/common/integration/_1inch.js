@@ -15,7 +15,7 @@ const {
   const TEN = new BigNumber(10);
 
 const getPayload = async function (exchangeData, beneficiary, slippage,fee) {
-    let retVal, url
+    let retVal, url;
     if (exchangeData.fromTokenAddress == MAINNET_ADRESSES.MCD_DAI) {
       ;[url, retVal] = await exchangeFromDAI(
         exchangeData.toTokenAddress,
