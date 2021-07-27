@@ -466,7 +466,7 @@ contract MultiplyProxyActions {
         IManager(manager).frob(cdp, -int256(wadC), _getWipeDart(vat, IVat(vat).dai(urn), urn, ilk));
 
         IManager(manager).flux(cdp, address(this), wadC);
-        IJoin(gemJoin).exit(address(this), wadC);
+        IJoin(gemJoin).exit(address(this), collateralDraw);
     }
 
     function _withdrawGem(
