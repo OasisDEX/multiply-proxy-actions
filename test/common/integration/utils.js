@@ -46,7 +46,7 @@ const restore = function (el) {
     }
 };
 
-const fillExchangeData = async function (_testParams, exchangeData, exchange, fee, protocols) {
+const fillExchangeData = async function (_testParams, exchangeData, exchange, fee, protocols, precision = 18) {
     if (_testParams.useMockExchange == false) {
         if (_testParams.debug == true) {
         }
@@ -60,7 +60,8 @@ const fillExchangeData = async function (_testParams, exchangeData, exchange, fe
                     exchange.address,
                     _testParams.slippage,
                     fee,
-                    protocols
+                    protocols,
+                    precision
                 );
             } catch (ex) {
                 if (tries == 0) {
