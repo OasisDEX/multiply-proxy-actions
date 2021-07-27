@@ -47,17 +47,17 @@ const calculateParamsDecreaseMP = function (
   requiredCollRatio,
   slippage,
 ) {
-  const marketPriceSlippage = marketPrice.times(one.minus(slippage))
-  const debt = currentColl
-    .times(oraclePrice)
-    .times(marketPriceSlippage)
-    .minus(requiredCollRatio.times(currentDebt).times(marketPriceSlippage))
-    .div(
-      oraclePrice.times(one.plus(FF).plus(OF)).minus(marketPriceSlippage.times(requiredCollRatio)),
-    )
-  const collateral = debt.times(one.plus(OF).plus(FF)).div(marketPriceSlippage)
-  return [debt, collateral]
-}
+    const debt = currentColl
+        .times(oraclePrice)
+        .times(marketPriceSlippage)
+        .minus(requiredCollRatio.times(currentDebt).times(marketPriceSlippage))
+        .div(
+            oraclePrice
+                .times(one.plus(FF).plus(OF).plus(OF.times(FF)))
+                .minus(marketPriceSlippage.times(requiredCollRatio))
+        );
+    const collateral = debt.times(one.plus(OF).plus(FF)).div(marketPriceSlippage);
+    return [debt, collateral];
 
 const prepareMultiplyParameters = function (
   fromTokenAddress,
@@ -71,7 +71,6 @@ const prepareMultiplyParameters = function (
 ) {
   let exchangeData = {
     fromTokenAddress,
-    toTokenAddress,
     fromTokenAmount: amountToWei(desiredCdpState.fromTokenAmount).toFixed(0),
     toTokenAmount: amountToWei(desiredCdpState.toTokenAmount).toFixed(0),
     minToTokenAmount: amountToWei(desiredCdpState.toTokenAmount).toFixed(0),
