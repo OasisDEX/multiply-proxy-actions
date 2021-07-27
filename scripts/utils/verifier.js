@@ -6,7 +6,7 @@ const networkName = process.argv[2];
 const contractName = process.argv[3];
 
 if (!contractName || !networkName) {
-    console.log('You need to provide network name and contract name respectively');
+    console.log("You need to provide network name and contract name respectively");
     process.exit(1);
 }
 
@@ -14,9 +14,9 @@ if (!contractName || !networkName) {
     const filename = (await getFile(`./${DEPLOYMENTS_FOLDER_NAME}`, `${contractName}.json`))[0];
     const file = require(filename);
     const address = file.networks[networkName].address;
-    const args = file.networks[networkName].args.join(' ');
+    const args = file.networks[networkName].args.join(" ");
 
-    const command = `npx hardhat verify --network ${networkName} ${address} ${args}`
+    const command = `npx hardhat verify --network ${networkName} ${address} ${args}`;
 
     console.log(command);
 
