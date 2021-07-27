@@ -28,6 +28,7 @@ contract Exchange {
 
   event AssetSwap(address assetIn, address assetOut, uint256 amountIn, uint256 amountOut);
   event FeePaid(uint256 amount);
+  event SlippageSaved(uint256 minimumPossible, uint256 actualAmount);
 
   // Notes: So  I have to transfer the `amount` to the exchange contract, from the msg.sender
   // After that I have to setup allowance of the destination caller for fromAsset on the behalf of the exchange
@@ -65,6 +66,7 @@ contract Exchange {
     (bool success, ) = callee.call(withData);
     require(success, 'Exchange / Could not swap');
     uint256 balance = IERC20(toAsset).balanceOf(address(this));
+    emit SlippageSaved(receiveAtLeast, balance);
     require(balance >= receiveAtLeast, 'Exchange / Received less');
     console.log("_swap",fromAsset,toAsset);
     console.log("_swap",amount,receiveAtLeast,balance);
@@ -109,6 +111,7 @@ contract Exchange {
   ) public onlyAuthorized {
     _transferIn(msg.sender, asset, amount);
     uint256 balance = _swap(asset, DAI_ADDRESS, amount, receiveAtLeast, callee, withData);
+
     uint256 _balance = _collectFee(DAI_ADDRESS, balance);
     _transferOut(DAI_ADDRESS, msg.sender, _balance);
   }

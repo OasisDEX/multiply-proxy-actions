@@ -51,6 +51,8 @@ const AAVE_FEE = 0.0009
 const BASE_SLIPPAGE = 0.08
 const OUR_FEE = FEE / FEE_BASE
 
+const ALLOWED_PROTOCOLS = "UNISWAP_V3";
+
 var testVaults = [
   {
     existingCDP: undefined,
@@ -92,6 +94,30 @@ testParams = [
     desiredCollRatioETH: 3.5, //collateralisation ratio after Multiply decrease with ETH withdraw
     oraclePriceDivergence: 0, //difference between oracle price and market price, <0,1> marketPrice = (1-x)*oraclePrice
   },
+  {
+    slippage: BASE_SLIPPAGE,
+    desiredDAI: 1100,
+    desiredETH: 0.7,
+    useMockExchange: true,
+    debug: false,
+    printERC20Transfers:false,
+    desiredCollRatio: 1.7,
+    desiredCollRatioDAI: 3.0,
+    desiredCollRatioETH: 4.5,
+    oraclePriceDivergence: 0.2, // marketPrice = 80% of oraclePrice, only used if useMockExchange==true
+  },
+  {
+    slippage: BASE_SLIPPAGE,
+    desiredDAI: 1100,
+    desiredETH: 0.7,
+    useMockExchange: false,
+    debug: false,
+    printERC20Transfers:false,
+    desiredCollRatio: 1.7,
+    desiredCollRatioDAI: 3.0,
+    desiredCollRatioETH: 4.5,
+    oraclePriceDivergence: 0, // marketPrice = 80% of oraclePrice, only used if useMockExchange==true
+  },
 ]
 
 async function runner(tasks) {
@@ -101,8 +127,10 @@ async function runner(tasks) {
 }
 
 runner([
-  testCaseDefinition(testVaults[0], testParams[0]),
-  testCaseDefinition(testVaults[0], testParams[1]),
+//  testCaseDefinition(testVaults[0], testParams[0]),
+//  testCaseDefinition(testVaults[0], testParams[1]),
+//  testCaseDefinition(testVaults[0], testParams[2]),
+  testCaseDefinition(testVaults[0], testParams[3]),
   //testCaseDefinition(testVaults[0],testParams[0])
   // runTestCase(testVaults[0],OracleMarketDifference)
 ])
@@ -361,7 +389,7 @@ async function testCaseDefinition(testCase, testParam) {
             MAINNET_ADRESSES,
           )
 
-          await fillExchangeData(testParam, exchangeData, deployedContracts.exchangeInstance, OUR_FEE)
+          await fillExchangeData(testParam, exchangeData, deployedContracts.exchangeInstance, OUR_FEE,ALLOWED_PROTOCOLS)
 
           const params = packMPAParams(cdpData, exchangeData, ADDRESS_REGISTRY)
 
@@ -494,7 +522,7 @@ async function testCaseDefinition(testCase, testParam) {
               MAINNET_ADRESSES,
             )
 
-            await fillExchangeData(testParam, exchangeData, deployedContracts.exchangeInstance)
+            await fillExchangeData(testParam, exchangeData, deployedContracts.exchangeInstance,ALLOWED_PROTOCOLS)
             const params = packMPAParams(cdpData, exchangeData, ADDRESS_REGISTRY)
 
             let status
@@ -594,7 +622,7 @@ async function testCaseDefinition(testCase, testParam) {
             cdpData.withdrawCollateral = 0
             cdpData.withdrawDai = amountToWei(testParam.desiredDAI).toFixed(0)
 
-            await fillExchangeData(testParam, exchangeData, deployedContracts.exchangeInstance)
+            await fillExchangeData(testParam, exchangeData, deployedContracts.exchangeInstance,ALLOWED_PROTOCOLS)
 
             const params = packMPAParams(cdpData, exchangeData, ADDRESS_REGISTRY)
 
@@ -721,7 +749,7 @@ async function testCaseDefinition(testCase, testParam) {
 
             const params = packMPAParams(cdpData, exchangeData, ADDRESS_REGISTRY)
 
-            await fillExchangeData(testParam, exchangeData, deployedContracts.exchangeInstance)
+            await fillExchangeData(testParam, exchangeData, deployedContracts.exchangeInstance,ALLOWED_PROTOCOLS)
             let status;
             minAcceptableAmount = exchangeData.minToTokenAmount;
             
@@ -867,7 +895,7 @@ async function testCaseDefinition(testCase, testParam) {
             minTokenAmount = exchangeData.minToTokenAmount;
             cdpData.requiredDebt = exchangeData.minToTokenAmount;
 
-            await fillExchangeData(testParam, exchangeData, deployedContracts.exchangeInstance)
+            await fillExchangeData(testParam, exchangeData, deployedContracts.exchangeInstance,ALLOWED_PROTOCOLS)
             const params = packMPAParams(cdpData, exchangeData, ADDRESS_REGISTRY)
             beneficiaryBefore = await balanceOf(
               deployedContracts.daiTokenInstance.address,
@@ -1040,7 +1068,7 @@ async function testCaseDefinition(testCase, testParam) {
             cdpData.borrowCollateral = 0
             cdpData.requiredDebt = exchangeData.minToTokenAmount
 
-            await fillExchangeData(testParam, exchangeData, deployedContracts.exchangeInstance)
+            await fillExchangeData(testParam, exchangeData, deployedContracts.exchangeInstance,ALLOWED_PROTOCOLS)
             const params = packMPAParams(cdpData, exchangeData, ADDRESS_REGISTRY)
             beneficiaryBefore = await balanceOf(
               deployedContracts.daiTokenInstance.address,

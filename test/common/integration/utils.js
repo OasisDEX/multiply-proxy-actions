@@ -52,7 +52,7 @@ const createSnapshot = async function (provider) {
     }
   }
   
-  const fillExchangeData = async function (_testParams, exchangeData, exchange,fee) {
+  const fillExchangeData = async function (_testParams, exchangeData, exchange,fee,protocols) {
     if (_testParams.useMockExchange == false) {
       if (_testParams.debug == true) {
       }
@@ -61,7 +61,7 @@ const createSnapshot = async function (provider) {
       while (_1inchPayload == undefined && tries > 0) {
         try {
           tries--
-          _1inchPayload = await getPayload(exchangeData, exchange.address, _testParams.slippage,fee)
+          _1inchPayload = await getPayload(exchangeData, exchange.address, _testParams.slippage,fee,protocols)
         } catch (ex) {
           if (tries == 0) {
             throw ex
