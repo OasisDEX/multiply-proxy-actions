@@ -49,7 +49,6 @@ struct AddressRegistry {
   address manager;
   address multiplyProxyActions;
   address aaveLendingPoolProvider;
-  address feeRecepient;
   address exchange;
 }
 
@@ -442,7 +441,7 @@ contract MultiplyProxyActions {
     uint256 cdp,
     uint256 borrowedDai,
     uint256 collateralDraw
-  ) public {
+  ) internal {
     address vat = IManager(manager).vat();
     address urn = IManager(manager).urns(cdp);
     bytes32 ilk = IManager(manager).ilks(cdp);

@@ -92,10 +92,13 @@ const prepareMultiplyParameters = function (
     withdrawCollateral: amountToWei(desiredCdpState.withdrawCollateral || zero, 'ETH').toFixed(0),
   }
 
+  var registry = addressRegistryFactory(multiplyProxyActionsInstanceAddress, exchangeInstanceAddress);
+  delete registry.feeRecepient;
+
   let params = [
     exchangeData,
     cdpData,
-    addressRegistryFactory(multiplyProxyActionsInstanceAddress, exchangeInstanceAddress),
+    registry,
   ]
 
   return params
