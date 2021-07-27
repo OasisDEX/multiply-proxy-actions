@@ -210,7 +210,7 @@ describe("Multiply Proxy Action with Mocked Exchange", async function () {
     describe(`Increasing Multiple`, async function () {
         let marketPrice, oraclePrice, currentColl, currentDebt, requiredCollRatio;
 
-        this.beforeAll(async function () {
+        this.beforeEach(async function () {
             marketPrice = await new BigNumber(2380);
             oraclePrice = await getOraclePrice(provider);
 
@@ -423,7 +423,7 @@ describe("Multiply Proxy Action with Mocked Exchange", async function () {
     describe(`Decrease Multiple`, async function () {
         let marketPrice, oraclePrice, currentColl, currentDebt, requiredCollRatio;
 
-        this.beforeAll(async function () {
+        this.beforeEach(async function () {
             marketPrice = await new BigNumber(2380);
             oraclePrice = await getOraclePrice(provider);
 
