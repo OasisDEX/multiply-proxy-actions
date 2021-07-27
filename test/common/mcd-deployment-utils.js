@@ -23,9 +23,9 @@ const {WETH_ADDRESS,
 
 MAINNET_ADRESSES.WETH_ADDRESS = WETH_ADDRESS;
 
-const init = async function(blockNumber = 'latest') {
-  provider = new hre.ethers.providers.JsonRpcProvider()
-  signer = provider.getSigner(0)
+const init = async function(blockNumber, provider, signer) {
+  provider = provider || new hre.ethers.providers.JsonRpcProvider()
+  signer = signer || provider.getSigner(0)
   
   await provider.send("hardhat_reset", [{
     forking: {

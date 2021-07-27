@@ -1,5 +1,5 @@
 const {addressRegistryFactory, MAINNET_ADRESSES} = require('./mcd-deployment-utils');
-const { default: BigNumber } = require('bignumber.js');
+const BigNumber = require('bignumber.js');
 const {
   one,
 } = require('../utils');

@@ -49,18 +49,33 @@ const getCurrentBlockNumber = async function() {
   return parseInt(json.result);
 }
 
-const exchangeToDAI = async function(fromTokenAddress, sourceAmount, slippagePercentage, beneficiary, precision = 18){
-  var url = `https://api.1inch.exchange/v3.0/1/swap?fromTokenAddress=${fromTokenAddress}&toTokenAddress=${MAINNET_ADRESSES.MCD_DAI}&amount=${amountToWei(
-      sourceAmount, precision
-    ).toFixed(0)}&fromAddress=${
-      beneficiary
-    }&slippage=${slippagePercentage.toNumber()}&disableEstimate=true&allowPartial=false`
-  var _1inchResponse = await ((await fetch(url)).json());
-  var txData = _1inchResponse.tx;
-  if(txData == undefined)
-    console.log("incorrect response from 1inch ",_1inchResponse,"original request",url)
-  return txData;
-}
+const exchangeToDAI = async function (
+    fromTokenAddress,
+    amount,
+    recepient,
+    slippage,
+    protocols = [],
+) {
+    protocols = !protocols || !protocols.length ? "" : `protocol=${protocols.join(",")}`;
+
+    var url = `https://api.1inch.exchange/v3.0/1/swap?
+      fromTokenAddress=${fromTokenAddress}
+      &toTokenAddress=${MAINNET_ADRESSES.MCD_DAI}
+      &amount=${amount}
+      ${protocols}
+      &fromAddress=${recepient}
+      &slippage=${slippage}
+      &disableEstimate=true
+      &allowPartialFill=false`.replaceAll(/\n(\s+)/g, "");
+      
+    var data = await (await fetch(url)).json();
+
+    if (!data) {
+        console.log("incorrect response from 1inch ", data, "original request", url);
+    }
+
+    return data;
+};
 
 
 module.exports = {
