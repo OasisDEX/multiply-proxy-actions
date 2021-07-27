@@ -34,11 +34,12 @@ describe(`Manage vault with a collateral with different than 18 precision`, asyn
     multiplyProxyActions = deployment.multiplyProxyActionsInstance;
     mcdView = deployment.mcdViewInstance;
     userProxyAddress = deployment.userProxyAddress;
-
+    exchange = deployment.exchangeInstance;
+/*
     const Exchange = await ethers.getContractFactory("DummyExchange", signer);
     exchange = await Exchange.deploy();
     await exchange.deployed();
-
+*/
     WBTC = new ethers.Contract(MAINNET_ADRESSES.WBTC, erc20Abi, provider).connect(signer);
     await WBTC.transfer(exchange.address, received);
 
@@ -88,7 +89,6 @@ describe(`Manage vault with a collateral with different than 18 precision`, asyn
 
     await WBTC.approve(userProxyAddress, amountToWei(new BigNumber(10), 8).toFixed(0));
 
-    console.log("Params in tests",params,exchange.address);
     await dsproxyExecuteAction(
         multiplyProxyActions,
         dsProxy,
