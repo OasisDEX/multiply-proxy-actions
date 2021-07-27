@@ -109,6 +109,7 @@ const calculateParamsDecreaseMP = function (
 };
 
 const packMPAParams = function (cdpData, exchangeData, registry) {
+    delete registry.feeRecepient;
     let params = [exchangeData, cdpData, registry];
     return params;
 };

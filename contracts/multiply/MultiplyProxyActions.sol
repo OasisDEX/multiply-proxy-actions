@@ -49,7 +49,6 @@ struct AddressRegistry {
     address manager;
     address multiplyProxyActions;
     address aaveLendingPoolProvider;
-    address feeRecepient;
     address exchange;
 }
 

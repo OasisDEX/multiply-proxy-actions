@@ -92,6 +92,7 @@ describe("Proxy Action", async function () {
             exchangeInstance.address
         );
 
+        ADDRESS_REGISTRY.feeRecepient = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
         var check_1inch = async function (data) {
             let [requiredDebt, toBorrowCollateralAmount] = calculateParamsIncreaseMP(
                 oraclePrice,
