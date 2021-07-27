@@ -25,15 +25,17 @@ const exchangeFromDAI = async function (
   slippagePercentage,
   beneficiary,
   fee,
-  protocols
+  protocols,
 ) {
-  var url = `https://api.1inch.exchange/v3.0/1/swap?fromTokenAddress=${
-    MAINNET_ADRESSES.MCD_DAI
-  }&toTokenAddress=${toTokenAddress}&amount=${amountToWei(
-    sourceAmount.times(one.minus(fee)),
-  ).toFixed(
-    0,
-  )}&fromAddress=${beneficiary}&slippage=${slippagePercentage.toNumber()}&disableEstimate=true&allowPartial=false`+(protocols?`&protocols=${protocols}`:"")
+  var url =
+    `https://api.1inch.exchange/v3.0/1/swap?fromTokenAddress=${
+      MAINNET_ADRESSES.MCD_DAI
+    }&toTokenAddress=${toTokenAddress}&amount=${amountToWei(
+      sourceAmount.times(one.minus(fee)),
+    ).toFixed(
+      0,
+    )}&fromAddress=${beneficiary}&slippage=${slippagePercentage.toNumber()}&disableEstimate=true&allowPartial=false` +
+    (protocols ? `&protocols=${protocols}` : '')
   var _1inchResponse = await (await fetch(url)).json()
   var txData = _1inchResponse.tx
 
@@ -60,13 +62,15 @@ const exchangeToDAI = async function (
   sourceAmount,
   slippagePercentage,
   beneficiary,
-  protocols
+  protocols,
 ) {
-  var url = `https://api.1inch.exchange/v3.0/1/swap?fromTokenAddress=${fromTokenAddress}&toTokenAddress=${
-    MAINNET_ADRESSES.MCD_DAI
-  }&amount=${amountToWei(sourceAmount).toFixed(
-    0,
-  )}&fromAddress=${beneficiary}&slippage=${slippagePercentage.toNumber()}&disableEstimate=true&allowPartial=false`+(protocols?`&protocols=${protocols}`:"")
+  var url =
+    `https://api.1inch.exchange/v3.0/1/swap?fromTokenAddress=${fromTokenAddress}&toTokenAddress=${
+      MAINNET_ADRESSES.MCD_DAI
+    }&amount=${amountToWei(sourceAmount).toFixed(
+      0,
+    )}&fromAddress=${beneficiary}&slippage=${slippagePercentage.toNumber()}&disableEstimate=true&allowPartial=false` +
+    (protocols ? `&protocols=${protocols}` : '')
   var _1inchResponse = await (await fetch(url)).json()
   var txData = _1inchResponse.tx
   if (txData == undefined) {

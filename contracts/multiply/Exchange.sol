@@ -68,8 +68,8 @@ contract Exchange {
     uint256 balance = IERC20(toAsset).balanceOf(address(this));
     emit SlippageSaved(receiveAtLeast, balance);
     require(balance >= receiveAtLeast, 'Exchange / Received less');
-    console.log("_swap",fromAsset,toAsset);
-    console.log("_swap",amount,receiveAtLeast,balance);
+    console.log('_swap', fromAsset, toAsset);
+    console.log('_swap', amount, receiveAtLeast, balance);
     emit AssetSwap(fromAsset, toAsset, amount, balance);
     return balance;
   }
@@ -115,5 +115,4 @@ contract Exchange {
     uint256 _balance = _collectFee(DAI_ADDRESS, balance);
     _transferOut(DAI_ADDRESS, msg.sender, _balance);
   }
-
 }

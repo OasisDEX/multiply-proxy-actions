@@ -97,8 +97,8 @@ const calculateParamsDecreaseMP = function (
     .minus(requiredCollRatio.times(currentDebt).times(marketPriceSlippage))
     .div(
       oraclePrice
-      .times(one.plus(FF).plus(OF).plus(OF.times(FF)))
-      .minus(marketPriceSlippage.times(requiredCollRatio))
+        .times(one.plus(FF).plus(OF).plus(OF.times(FF)))
+        .minus(marketPriceSlippage.times(requiredCollRatio)),
     )
   const collateral = debt.times(one.plus(OF).plus(FF)).div(marketPriceSlippage)
   if (debug) {
