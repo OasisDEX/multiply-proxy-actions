@@ -255,10 +255,8 @@ async function testCaseDefinition(testCase, testParam) {
           add(existingCDP ? existingCDP.coll : 0, desiredCDPState.providedCollateral),
           withdrawColl,
         )
-        let currentDebt = sub(
-          add(existingCDP ? existingCDP.debt : 0, desiredCDPState.providedDAI),
-          withdrawDai,
-        )
+        let currentDebt = add(( existingCDP && existingCDP.debt ? existingCDP.debt : 0), withdrawDai)
+
         let targetColRatio = convertToBigNumber(desiredCDPState.desiredCollRatio)
         if (operation == 'mul') {
           ;[debtDelta, exchangeMinAmount] = calculateParamsIncreaseMP(
@@ -270,7 +268,7 @@ async function testCaseDefinition(testCase, testParam) {
             currentDebt,
             targetColRatio,
             slippage,
-            withdrawDai,
+            desiredCDPState.providedDAI,
             debug,
           )
         } else {
