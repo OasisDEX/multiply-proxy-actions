@@ -146,7 +146,7 @@ async function main() {
 
   console.log('Multiplying...');
 
-  await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'openMultiplyVault', params, amountToWei(currentColl, precision).toFixed(0));
+  await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'openMultiplyVault', params);
 
   const lastCDP = await getLastCDP(provider, signer, userProxyAddress);
   console.log('CDP Created with ID #', lastCDP.id);
