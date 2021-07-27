@@ -60,6 +60,7 @@ const fillExchangeData = async function (_testParams, exchangeData, exchange, fe
                     exchange.address,
                     _testParams.slippage,
                     fee,
+                    18,
                     protocols
                 );
             } catch (ex) {

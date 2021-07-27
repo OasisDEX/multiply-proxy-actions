@@ -104,7 +104,7 @@ async function main() {
   console.log('Debt delta:::', requiredDebt.toNumber() , amountToWei(requiredDebt, precision).toFixed(0));  
   console.log('Collateral delta:::', toBorrowCollateralAmount.toNumber() );
 
-  txData = await exchangeFromDAI(collAddress, requiredDebt, slippagePercent, exchange.address, OF);
+  txData = await exchangeFromDAI(collAddress, requiredDebt, slippagePercent, exchange.address, OF, 18);
  
   console.log('PROXY:::', userProxyAddress );
   console.log("Exchange Address:::',", exchange.address);
