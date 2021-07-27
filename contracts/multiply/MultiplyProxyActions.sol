@@ -457,7 +457,6 @@ contract MultiplyProxyActions {
         address urn = IManager(manager).urns(cdp);
         bytes32 ilk = IManager(manager).ilks(cdp);
 
-        IDaiJoin(DAIJOIN).dai().transferFrom(address(this), address(this), borrowedDai);
         IDaiJoin(DAIJOIN).dai().approve(DAIJOIN, borrowedDai);
         IDaiJoin(DAIJOIN).join(urn, borrowedDai);
 
