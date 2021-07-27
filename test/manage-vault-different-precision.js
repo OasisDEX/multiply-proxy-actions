@@ -28,7 +28,7 @@ describe(`Manage vault with a collateral with different than 18 precision`, asyn
       signer
     );
 
-    const deployment = await deploySystem(provider, signer, true);
+    const deployment = await deploySystem(provider, signer, true, true);
 
     dsProxy = deployment.dsProxyInstance;
     multiplyProxyActions = deployment.multiplyProxyActionsInstance;
@@ -88,6 +88,7 @@ describe(`Manage vault with a collateral with different than 18 precision`, asyn
 
     await WBTC.approve(userProxyAddress, amountToWei(new BigNumber(10), 8).toFixed(0));
 
+    console.log("Params in tests",params,exchange.address);
     await dsproxyExecuteAction(
         multiplyProxyActions,
         dsProxy,
