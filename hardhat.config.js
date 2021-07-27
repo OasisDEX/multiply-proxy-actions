@@ -1,5 +1,5 @@
-const path = require('path')
-require('dotenv').config({ path: path.resolve(__dirname, '.env') })
+const path = require('path');
+require('dotenv').config({path:path.resolve(__dirname,".env")});
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-etherscan");
 require("@tenderly/hardhat-tenderly");
@@ -8,6 +8,7 @@ require("@nomiclabs/hardhat-ethers");
 require('hardhat-log-remover');
 require("solidity-coverage");
 require('hardhat-abi-exporter');
+
 
 
 /**
