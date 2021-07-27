@@ -37,7 +37,7 @@ const calculateParamsDecreaseMP = function(oraclePrice, marketPrice, OF, FF, cur
   return [debt, collateral];
 }
 
-const prepareMultiplyParameters = function(fromTokenAddress, toTokenAddress, oneInchPayload, cdpId, desiredCdpState, multiplyProxyActionsInstanceAddress, exchangeInstanceAddress, userAddress){
+const prepareMultiplyParameters = function(fromTokenAddress, toTokenAddress, oneInchPayload, cdpId, desiredCdpState, multiplyProxyActionsInstanceAddress, exchangeInstanceAddress, userAddress, skipFL = false){
         
   let exchangeData = {
     fromTokenAddress,
@@ -51,6 +51,7 @@ const prepareMultiplyParameters = function(fromTokenAddress, toTokenAddress, one
   };
   
   let cdpData =  {
+    skipFL,
     gemJoin: MAINNET_ADRESSES.MCD_JOIN_ETH_A,
     cdpId: cdpId,
     ilk: "0x0000000000000000000000000000000000000000000000000000000000000000",
