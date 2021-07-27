@@ -96,7 +96,9 @@ const calculateParamsDecreaseMP = function (
     .times(marketPriceSlippage)
     .minus(requiredCollRatio.times(currentDebt).times(marketPriceSlippage))
     .div(
-      oraclePrice.times(one.plus(FF).plus(OF)).minus(marketPriceSlippage.times(requiredCollRatio)),
+      oraclePrice
+      .times(one.plus(FF).plus(OF).plus(OF.times(FF)))
+      .minus(marketPriceSlippage.times(requiredCollRatio))
     )
   const collateral = debt.times(one.plus(OF).plus(FF)).div(marketPriceSlippage)
   if (debug) {
@@ -232,6 +234,7 @@ const prepareMultiplyParameters = function (
   cdpId = 0,
 ) {
   let exchangeData = {
+<<<<<<< HEAD
     fromTokenAddress: toDAI ? MAINNET_ADRESSES.WETH_ADDRESS : MAINNET_ADRESSES.MCD_DAI,
     toTokenAddress: toDAI ? MAINNET_ADRESSES.MCD_DAI : MAINNET_ADRESSES.WETH_ADDRESS,
     fromTokenAmount: toDAI
@@ -243,6 +246,12 @@ const prepareMultiplyParameters = function (
     minToTokenAmount: toDAI
       ? amountToWei(desiredCdpState.requiredDebt).toFixed(0)
       : amountToWei(desiredCdpState.toBorrowCollateralAmount).toFixed(0),
+=======
+    fromTokenAddress,
+    fromTokenAmount: amountToWei(desiredCdpState.fromTokenAmount).toFixed(0),
+    toTokenAmount: amountToWei(desiredCdpState.toTokenAmount).toFixed(0),
+    minToTokenAmount: amountToWei(desiredCdpState.toTokenAmount).toFixed(0),
+>>>>>>> develop
     expectedFee: 0,
     exchangeAddress: oneInchPayload.to,
     _exchangeCalldata: oneInchPayload.data,
