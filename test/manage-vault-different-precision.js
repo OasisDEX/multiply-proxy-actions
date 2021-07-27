@@ -28,11 +28,11 @@ describe(`Manage vault with a collateral with different than 18 precision`, asyn
       signer
     );
 
-    const deployment = await deploySystem(provider, signer);
+    const deployment = await deploySystem(provider, signer, true);
 
-    dsProxy = deployment.dsProxy;
-    multiplyProxyActions = deployment.multiplyProxyActions;
-    mcdView = deployment.mcdView;
+    dsProxy = deployment.dsProxyInstance;
+    multiplyProxyActions = deployment.multiplyProxyActionsInstance;
+    mcdView = deployment.mcdViewInstance;
     userProxyAddress = deployment.userProxyAddress;
 
     const Exchange = await ethers.getContractFactory("DummyExchange", signer);

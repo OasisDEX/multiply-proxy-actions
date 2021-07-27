@@ -76,12 +76,11 @@ contract DummyExchange {
         bytes calldata withData
     ) public {
         amount = _collectFee(DAI_ADDRESS, amount);
-        uint256 amountOut = mul(amount, 10**18) / price;
-
+        uint256 amountOut = (mul(amount,  10 ** 18) / price) / (10 ** (18 - precision));
+        
         _transferIn(msg.sender, DAI_ADDRESS, amount);
         emit AssetSwap(DAI_ADDRESS, asset, amount, amountOut);
         amount = _collectFee(DAI_ADDRESS, amount);
-        uint256 amountOut = (mul(amount,  10 ** 18) / price) / (10 ** (18 - precision));
         _transferOut(asset, msg.sender, amountOut);
     }
 
