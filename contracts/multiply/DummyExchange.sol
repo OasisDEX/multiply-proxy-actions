@@ -17,7 +17,7 @@ contract DummyExchange {
     uint8 public fee = 0;
     uint256 public feeBase = 10000;
 
-    address feeBeneficiaryAddress = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8; // second HH address
+    address public feeBeneficiaryAddress = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8; // second HH address
     event AssetSwap(address assetIn, address assetOut, uint256 amountIn, uint256 amountOut);
     event FeePaid(uint256 amount);
 

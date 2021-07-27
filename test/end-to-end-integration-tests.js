@@ -335,11 +335,7 @@ async function testCaseDefinition(testCase, testParam) {
                     deployedContracts.exchangeInstance.address
                 );
 
-                if (testParam.useMockExchange == true) {
-                    ADDRESS_REGISTRY.feeRecepient = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
-                }else{
-                    ADDRESS_REGISTRY.feeRecepient = await deployedContracts.exchangeInstance.feeBeneficiaryAddress();
-                }
+                ADDRESS_REGISTRY.feeRecepient = await deployedContracts.exchangeInstance.feeBeneficiaryAddress();
 
                 oraclePrice = await getOraclePrice(provider);
                 if (testParam.useMockExchange) {
@@ -515,13 +511,11 @@ async function testCaseDefinition(testCase, testParam) {
                     var internalSnapshotId;
                     var testCaseCopy;
                     this.beforeAll(async function () {
-                        console.log("internalSnapshotId");
                         internalSnapshotId = await createSnapshot(provider);
 
                         testCaseCopy = JSON.parse(JSON.stringify(testCase));
 
                         testCaseCopy.desiredCDPState.desiredCollRatio = testParam.desiredCollRatio;
-                        console.log("clearing providedCollateral");
                         testCaseCopy.desiredCDPState.providedCollateral = 0;
 
                         beforeTxBalance = await provider.getBalance(
@@ -785,7 +779,6 @@ async function testCaseDefinition(testCase, testParam) {
                             await primarySigner.getAddress()
                         );
 
-                        console.log("internalSnapshotId");
                         internalSnapshotId = await createSnapshot(provider);
 
                         testCaseCopy = JSON.parse(JSON.stringify(testCase));
@@ -952,8 +945,6 @@ async function testCaseDefinition(testCase, testParam) {
                             deployedContracts.daiTokenInstance.address,
                             await primarySigner.getAddress()
                         );
-
-                        console.log("internalSnapshotId");
 
                         internalSnapshotId = await createSnapshot(provider);
 
@@ -1156,7 +1147,6 @@ async function testCaseDefinition(testCase, testParam) {
                             await primarySigner.getAddress()
                         );
                         //console.log('Before DAI Balance', daiBefore.toString())
-                        console.log("internalSnapshotId");
 
                         internalSnapshotId = await createSnapshot(provider);
                         testCaseCopy = JSON.parse(JSON.stringify(testCase));
