@@ -52,8 +52,14 @@ async function main() {
   await uniswapV3.exactInputSingle(swapParams, {value:  amountToWei(new BigNumber(40), 18).toFixed(0)});
   let wbtcB = ethers.utils.formatUnits((await balanceOf(MAINNET_ADRESSES.WBTC, address)).toString(), 8)
   console.log('Wallet WBTC. Balance', wbtcB);
-  
-  const { mcdView, exchange, multiplyProxyActions, dsProxy, userProxyAddress } = await deploySystem(provider, signer); 
+
+  const deployment = await deploySystem(provider, signer, true);
+
+  const dsProxy = deployment.dsProxyInstance;
+  const multiplyProxyActions = deployment.multiplyProxyActionsInstance;
+  const mcdView = deployment.mcdViewInstance;
+  const userProxyAddress = deployment.userProxyAddress;
+  const exchange = deployment.exchangeInstance;
 
   let caseParams = {
     precision: 18,
@@ -104,8 +110,8 @@ async function main() {
   console.log('Debt delta:::', requiredDebt.toNumber() , amountToWei(requiredDebt, precision).toFixed(0));  
   console.log('Collateral delta:::', toBorrowCollateralAmount.toNumber() );
 
-  txData = await exchangeFromDAI(collAddress, requiredDebt, slippagePercent, exchange.address, OF,18);
- 
+  const [url,txData] = await exchangeFromDAI(collAddress, requiredDebt, slippagePercent, exchange.address, OF, 18);
+
   console.log('PROXY:::', userProxyAddress );
   console.log("Exchange Address:::',", exchange.address);
   console.log("MPA Address:::',", multiplyProxyActions.address);
@@ -144,9 +150,9 @@ async function main() {
   await coll.approve(userProxyAddress, amountToWei(currentColl, precision).toFixed(0));
 
 
-  console.log('Multiplying...');
+  console.log('Multiplying...',currentColl.toString());
 
-  await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'openMultiplyVault', params, amountToWei(currentColl, precision).toFixed(0));
+  await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'openMultiplyVault', params, amountToWei(currentColl, 18).toFixed(0));
 
   const lastCDP = await getLastCDP(provider, signer, userProxyAddress);
   console.log('CDP Created with ID #', lastCDP.id);

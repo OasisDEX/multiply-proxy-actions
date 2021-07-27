@@ -93,7 +93,7 @@ const dsproxyExecuteAction = async function (
 
         return [true, retVal];
     } catch (ex) {
-        console.log(`\x1b[33m  ${method} failed  \x1b[0m`);
+        console.log(`\x1b[33m  ${method} failed  \x1b[0m`,ex, params);
         return [false, ex];
     }
 };
