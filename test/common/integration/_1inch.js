@@ -1,37 +1,37 @@
-const { default: BigNumber } = require("bignumber.js");
-const { exchangeFromDAI, exchangeToDAI } = require("./../http_apis");
+const { default: BigNumber } = require('bignumber.js')
+const { exchangeFromDAI, exchangeToDAI } = require('./../http_apis')
 
-const { convertToBigNumber, mul, div, MAINNET_ADRESSES } = require("./../params-calculation-utils");
+const { convertToBigNumber, mul, div, MAINNET_ADRESSES } = require('./../params-calculation-utils')
 
-const TEN = new BigNumber(10);
+const TEN = new BigNumber(10)
 
 const getPayload = async function (exchangeData, beneficiary, slippage, fee, protocols, precision) {
-    let retVal, url;
-    if (exchangeData.fromTokenAddress == MAINNET_ADRESSES.MCD_DAI) {
-        [url, retVal] = await exchangeFromDAI(
-            exchangeData.toTokenAddress,
-            div(convertToBigNumber(exchangeData.fromTokenAmount), TEN.pow(18)),
-            mul(slippage, 100),
-            beneficiary,
-            fee,
-            precision,
-            protocols
-        );
-    } else {
-        [url, retVal] = await exchangeToDAI(
-            exchangeData.fromTokenAddress,
-            div(convertToBigNumber(exchangeData.fromTokenAmount), TEN.pow(18)),
-            mul(slippage, 100),
-            beneficiary,
-            precision,
-            protocols
-        );
-    }
-    var tmp = JSON.parse(JSON.stringify(retVal));
-    tmp.data = undefined;
-    return retVal;
-};
+  let retVal, url
+  if (exchangeData.fromTokenAddress == MAINNET_ADRESSES.MCD_DAI) {
+    ;[url, retVal] = await exchangeFromDAI(
+      exchangeData.toTokenAddress,
+      div(convertToBigNumber(exchangeData.fromTokenAmount), TEN.pow(18)),
+      mul(slippage, 100),
+      beneficiary,
+      fee,
+      precision,
+      protocols,
+    )
+  } else {
+    ;[url, retVal] = await exchangeToDAI(
+      exchangeData.fromTokenAddress,
+      div(convertToBigNumber(exchangeData.fromTokenAmount), TEN.pow(18)),
+      mul(slippage, 100),
+      beneficiary,
+      precision,
+      protocols,
+    )
+  }
+  var tmp = JSON.parse(JSON.stringify(retVal))
+  tmp.data = undefined
+  return retVal
+}
 
 module.exports = {
-    getPayload,
-};
+  getPayload,
+}
