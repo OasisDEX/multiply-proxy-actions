@@ -61,10 +61,7 @@ contract DummyExchange {
     }
 
     function _collectFee(address asset, uint256 fromAmount) public returns (uint256) {
-        console.log("_collectFee",fromAmount,feeBase);
         uint256 feeToTransfer = (fromAmount.mul(fee)).div(feeBase);
-        console.log("_collectFee to transfer:",feeToTransfer);
-        console.log("_collectFee have:",IERC20(asset).balanceOf(address(this)));
         IERC20(asset).transferFrom(address(this), feeBeneficiaryAddress, feeToTransfer);
         emit FeePaid(feeToTransfer);
         return fromAmount.sub(feeToTransfer);
@@ -79,13 +76,9 @@ contract DummyExchange {
         bytes calldata withData
     ) public {
         amount = _collectFee(DAI_ADDRESS, amount);
-        console.log("after fee");
         uint256 amountOut = (mul(amount,  10 ** 18) / price) / (10 ** (18 - precision));
-        
-        console.log("before _transferIn");
         _transferIn(msg.sender, DAI_ADDRESS, amount);
         emit AssetSwap(DAI_ADDRESS, asset, amount, amountOut);
-        amount = _collectFee(DAI_ADDRESS, amount);
         _transferOut(asset, msg.sender, amountOut);
     }
 
