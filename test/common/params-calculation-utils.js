@@ -109,8 +109,10 @@ const calculateParamsDecreaseMP = function (
 };
 
 const packMPAParams = function (cdpData, exchangeData, registry) {
-    let registryClone = JSON.parse(JSON.stringify(registry)); 
+
+    let registryClone = { ...registry };
     delete registryClone.feeRecepient;
+
     let params = [exchangeData, cdpData, registryClone];
     return params;
 };
