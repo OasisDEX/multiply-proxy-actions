@@ -27,6 +27,7 @@ import "../interfaces/mcd/IJug.sol";
 import "../interfaces/mcd/IDaiJoin.sol";
 import "../interfaces/exchange/IExchange.sol";
 import "./ExchangeData.sol";
+import "hardhat/console.sol";
 
 pragma solidity >=0.7.6;
 pragma abicoder v2;
@@ -114,7 +115,8 @@ contract MultiplyProxyActions {
     ) public payable {
         cdpData.ilk = IJoin(cdpData.gemJoin).ilk();
         cdpData.cdpId = IManager(addressRegistry.manager).open(cdpData.ilk, address(this));
-
+        console.log(cdpData.cdpId);
+        console.logBytes32(cdpData.ilk);
         increaseMultipleDepositCollateral(exchangeData, cdpData, addressRegistry);
     }
 
@@ -135,7 +137,7 @@ contract MultiplyProxyActions {
                 cdpData.depositCollateral
             );
         }
-
+        console.log("increase multiple");
         increaseMultiple(exchangeData, cdpData, addressRegistry);
     }
 
@@ -175,6 +177,7 @@ contract MultiplyProxyActions {
         bytes memory paramsData = abi.encode(1, exchangeData, cdpData, addressRegistry);
 
         ILendingPoolV2 lendingPool = getAaveLendingPool(addressRegistry.aaveLendingPoolProvider);
+        console.log("before flashLoan");
         lendingPool.flashLoan(
             addressRegistry.multiplyProxyActions,
             assets,
@@ -456,7 +459,6 @@ contract MultiplyProxyActions {
         address urn = IManager(manager).urns(cdp);
         bytes32 ilk = IManager(manager).ilks(cdp);
 
-        IDaiJoin(DAIJOIN).dai().transferFrom(address(this), address(this), borrowedDai);
         IDaiJoin(DAIJOIN).dai().approve(DAIJOIN, borrowedDai);
         IDaiJoin(DAIJOIN).join(urn, borrowedDai);
 
@@ -465,7 +467,7 @@ contract MultiplyProxyActions {
         IManager(manager).frob(cdp, -int256(wadC), _getWipeDart(vat, IVat(vat).dai(urn), urn, ilk));
 
         IManager(manager).flux(cdp, address(this), wadC);
-        IJoin(gemJoin).exit(address(this), wadC);
+        IJoin(gemJoin).exit(address(this), collateralDraw);
     }
 
     function _withdrawGem(
@@ -500,6 +502,13 @@ contract MultiplyProxyActions {
             "MPA / Could not approve Exchange for DAI"
         );
 
+        console.log("before swapDaiForToken");
+        console.log("exchangeData.toTokenAddress",exchangeData.toTokenAddress);
+        console.log("exchangeData.fromTokenAmount",exchangeData.fromTokenAmount);
+        console.log("exchangeData.minToTokenAmount",exchangeData.minToTokenAmount);
+        console.log("exchangeData.exchangeAddress",exchangeData.exchangeAddress);
+        console.logBytes(exchangeData._exchangeCalldata);
+        console.log("cdpData.depositDai",cdpData.depositDai);
         exchange.swapDaiForToken(
             exchangeData.toTokenAddress,
             exchangeData.fromTokenAmount.add(cdpData.depositDai),
@@ -507,6 +516,7 @@ contract MultiplyProxyActions {
             exchangeData.exchangeAddress,
             exchangeData._exchangeCalldata
         );
+        console.log("after swapDaiForToken");
 
         joinDrawDebt(cdpData, borrowedDai, addressRegistry.manager, addressRegistry.jug);
 
@@ -660,6 +670,7 @@ contract MultiplyProxyActions {
             CdpData memory cdpData,
             AddressRegistry memory addressRegistry
         ) = abi.decode(params, (uint8, ExchangeData, CdpData, AddressRegistry));
+        console.log("inside flashLoan");
         uint256 borrowedDaiAmount = amounts[0].add(premiums[0]);
         emit FLData(IERC20(DAI).balanceOf(address(this)), borrowedDaiAmount);
 

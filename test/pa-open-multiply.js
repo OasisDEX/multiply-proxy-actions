@@ -110,7 +110,8 @@ describe("Proxy Action", async function () {
                 requiredDebt,
                 data.slippage.multipliedBy(100),
                 exchangeInstance.address,
-                OUR_FEE
+                OUR_FEE,
+                18
             );
             data._1inchPayload = payload;
             data.toBorrowCollateralAmount = toBorrowCollateralAmount;

@@ -5,15 +5,15 @@ const { one } = require("../utils");
 
 const fetch = require("node-fetch");
 
-const getMarketPrice = async function (from, to) {
-    const endpoint = `https://api.1inch.exchange/v3.0/1/quote?fromTokenAddress=${from}&toTokenAddress=${to}&amount=${ethers.utils.parseEther(
-        "0.1"
+const getMarketPrice = async function (from, to, fromPrecision = 18, toPrecision = 18) {
+    const endpoint = `https://api.1inch.exchange/v3.0/1/quote?fromTokenAddress=${from}&toTokenAddress=${to}&amount=${ethers.utils.parseUnits(
+        "0.1",fromPrecision
     )}`;
     const response = await fetch(endpoint);
     const result = await response.json();
 
-    const fromTokenAmount = new BigNumber(ethers.utils.formatEther(result.fromTokenAmount));
-    const toTokenAmount = new BigNumber(ethers.utils.formatEther(result.toTokenAmount));
+    const fromTokenAmount = new BigNumber(ethers.utils.formatUnits(result.fromTokenAmount,fromPrecision));
+    const toTokenAmount = new BigNumber(ethers.utils.formatUnits(result.toTokenAmount, toPrecision));
 
     const marketPrice = toTokenAmount.div(fromTokenAmount);
     return marketPrice;
@@ -25,13 +25,14 @@ const exchangeFromDAI = async function (
     slippagePercentage,
     beneficiary,
     fee,
-    protocols
+    precision = 18,
+    protocols,
 ) {
     var url =
         `https://api.1inch.exchange/v3.0/1/swap?fromTokenAddress=${
             MAINNET_ADRESSES.MCD_DAI
         }&toTokenAddress=${toTokenAddress}&amount=${amountToWei(
-            sourceAmount.times(one.minus(fee))
+            sourceAmount.times(one.minus(fee)),precision
         ).toFixed(
             0
         )}&fromAddress=${beneficiary}&slippage=${slippagePercentage.toNumber()}&disableEstimate=true&allowPartial=false` +
@@ -62,14 +63,14 @@ const exchangeToDAI = async function (
     sourceAmount,
     slippagePercentage,
     beneficiary,
+    precision = 18,
     protocols
 ) {
     var url =
         `https://api.1inch.exchange/v3.0/1/swap?fromTokenAddress=${fromTokenAddress}&toTokenAddress=${
             MAINNET_ADRESSES.MCD_DAI
-        }&amount=${amountToWei(sourceAmount).toFixed(
-            0
-        )}&fromAddress=${beneficiary}&slippage=${slippagePercentage.toNumber()}&disableEstimate=true&allowPartial=false` +
+        }&amount=${amountToWei(sourceAmount,precision).toFixed(0)}&fromAddress=${beneficiary}`+
+        `&slippage=${slippagePercentage.toNumber()}&disableEstimate=true&allowPartial=false` +
         (protocols ? `&protocols=${protocols}` : "");
     var _1inchResponse = await (await fetch(url)).json();
     var txData = _1inchResponse.tx;

@@ -5,7 +5,7 @@ const { convertToBigNumber, mul, div, MAINNET_ADRESSES } = require("./../params-
 
 const TEN = new BigNumber(10);
 
-const getPayload = async function (exchangeData, beneficiary, slippage, fee, protocols) {
+const getPayload = async function (exchangeData, beneficiary, slippage, fee, protocols, precision) {
     let retVal, url;
     if (exchangeData.fromTokenAddress == MAINNET_ADRESSES.MCD_DAI) {
         [url, retVal] = await exchangeFromDAI(
@@ -14,6 +14,7 @@ const getPayload = async function (exchangeData, beneficiary, slippage, fee, pro
             mul(slippage, 100),
             beneficiary,
             fee,
+            precision,
             protocols
         );
     } else {
@@ -22,6 +23,7 @@ const getPayload = async function (exchangeData, beneficiary, slippage, fee, pro
             div(convertToBigNumber(exchangeData.fromTokenAmount), TEN.pow(18)),
             mul(slippage, 100),
             beneficiary,
+            precision,
             protocols
         );
     }
