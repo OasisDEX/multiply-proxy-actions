@@ -22,6 +22,52 @@ const { getVaultInfo } = require("../utils-mcd.js");
 const FEE = 2;
 const FEE_BASE = 10000;
 
+const init = async function(blockNumber = 'latest') {
+    provider = new hre.ethers.providers.JsonRpcProvider()
+    signer = provider.getSigner(0)
+  
+    await provider.send("hardhat_reset", [{
+      forking: {
+        jsonRpcUrl: process.env.ALCHEMY_NODE,
+        blockNumber
+      }
+    }]);
+  
+    return [provider, signer];
+  }
+  
+  /**
+   * tokenIn: string - asset address
+   * tokenOut: string - asset address
+   * amountIn: BigNumber - already formatted to wei
+   * amountOutMinimum: BigNumber - already fromatted to wei. The least amount to receive.
+   * recipient: string - wallet's addrees that's going to receive the funds
+   */
+  
+  const swapTokens = async function(tokenIn, tokenOut, amountIn, amountOutMinimum, recipient, provider, signer){
+    let value = 0
+  
+    if(tokenIn === MAINNET_ADRESSES.ETH) {
+       value = amountIn
+    }
+  
+    const UNISWAP_ROUTER_V3 = "0xe592427a0aece92de3edee1f18e0157c05861564";
+    const uniswapV3 = new ethers.Contract(UNISWAP_ROUTER_V3, UniswapRouterV3Abi, provider).connect(signer);
+  
+    let swapParams = {
+      tokenIn,
+      tokenOut,
+      fee: 3000,
+      recipient,
+      deadline: new Date().getTime(),
+      amountIn,
+      amountOutMinimum,
+      sqrtPriceLimitX96: 0
+    }
+  
+    await uniswapV3.exactInputSingle(swapParams, {value});
+  }
+
 const dsproxyExecuteAction = async function (
     proxyActions,
     dsProxy,
@@ -47,7 +93,7 @@ const dsproxyExecuteAction = async function (
 
         return [true, retVal];
     } catch (ex) {
-        console.log(`\x1b[33m  ${method} failed  \x1b[0m`);
+        console.log(`\x1b[33m  ${method} failed  \x1b[0m`,ex, params);
         return [false, ex];
     }
 };
@@ -195,7 +241,7 @@ const deploySystem = async function (provider, signer, isExchangeDummy = false, 
 
 const ONE = one;
 
-async function getOraclePrice(provider) {
+async function getOraclePrice(provider, pipAddress = MAINNET_ADRESSES.PIP_ETH) {
     const storageHexToBigNumber = (uint256) => {
         const match = uint256.match(/^0x(\w+)$/);
         if (!match) {
@@ -209,7 +255,7 @@ async function getOraclePrice(provider) {
               ];
     };
     const slotCurrent = 3;
-    const priceHex = await provider.getStorageAt(MAINNET_ADRESSES.PIP_ETH, slotCurrent);
+    const priceHex = await provider.getStorageAt(pipAddress, slotCurrent);
     const p = storageHexToBigNumber(priceHex);
     return p[1].shiftedBy(-18);
 }
@@ -244,6 +290,8 @@ module.exports = {
     getVaultInfo,
     balanceOf,
     addressRegistryFactory,
+    swapTokens,
+    init,
     ONE,
     TEN,
     FEE,
