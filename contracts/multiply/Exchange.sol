@@ -74,7 +74,7 @@ contract Exchange {
         return balance;
     }
 
-    function _collectFee(address asset, uint256 fromAmount) public returns (uint256) {
+    function _collectFee(address asset, uint256 fromAmount) internal returns (uint256) {
         uint256 feeToTransfer = (fromAmount.mul(fee)).div(feeBase);
         IERC20(asset).transferFrom(address(this), feeBeneficiaryAddress, feeToTransfer);
         emit FeePaid(feeToTransfer);

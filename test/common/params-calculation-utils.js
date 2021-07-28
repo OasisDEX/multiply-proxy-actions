@@ -116,7 +116,11 @@ const calculateParamsDecreaseMP = function (
 };
 
 const packMPAParams = function (cdpData, exchangeData, registry) {
-    let params = [exchangeData, cdpData, registry];
+
+    let registryClone = { ...registry };
+    delete registryClone.feeRecepient;
+
+    let params = [exchangeData, cdpData, registryClone];
     return params;
 };
 

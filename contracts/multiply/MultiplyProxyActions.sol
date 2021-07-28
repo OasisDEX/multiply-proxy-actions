@@ -50,7 +50,6 @@ struct AddressRegistry {
     address manager;
     address multiplyProxyActions;
     address aaveLendingPoolProvider;
-    address feeRecepient;
     address exchange;
 }
 
@@ -146,7 +145,7 @@ contract MultiplyProxyActions {
         ExchangeData calldata exchangeData,
         CdpData memory cdpData,
         AddressRegistry calldata addressRegistry
-    ) public payable {
+    ) public  {
         IERC20(DAI).transferFrom(
             msg.sender,
             addressRegistry.multiplyProxyActions,
@@ -455,7 +454,7 @@ contract MultiplyProxyActions {
         uint256 cdp,
         uint256 borrowedDai,
         uint256 collateralDraw
-    ) public {
+    ) internal {
         address vat = IManager(manager).vat();
         address urn = IManager(manager).urns(cdp);
         bytes32 ilk = IManager(manager).ilks(cdp);
