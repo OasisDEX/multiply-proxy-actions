@@ -84,7 +84,7 @@ describe("Multiply Proxy Action with Mocked Exchange", async function() {
     }
     
 
-    const OazoFee = 2;  // divided by base (10000), 1 = 0.01%;
+    const OazoFee = 2;  // divided by base (10000), 1 = 0.02%;
     OF = new BigNumber(OazoFee/10000); // OAZO FEE
     FF = new BigNumber(0); // FLASHLOAN FEE
     slippage = new BigNumber(0.001); // Percent
@@ -381,87 +381,48 @@ describe("Multiply Proxy Action with Mocked Exchange", async function() {
     });
   });
 
-  // // To use this test comment out 'Close vault and exit all collateral' as there cannot be two closing actions together
-  
-  // describe(`Close vault and exit all Dai`, async function() {
+  // // To use this test comment out 'Close vault an
+  describe(`Close vault and exit all collateral`, async function() {
 
-  //   let marketPrice, oraclePrice, currentColl, currentDebt, requiredCollRatio;
+    let marketPrice, oraclePrice, currentColl, currentDebt, requiredCollRatio;
 
-  //   this.beforeAll(async function() {
-  //     marketPrice = await new BigNumber(2380);
-  //     oraclePrice = await getOraclePrice(provider);
+    this.beforeAll(async function() {
+      marketPrice = await new BigNumber(2380);
+      oraclePrice = await getOraclePrice(provider);
     
-  //     await exchange.setPrice(amountToWei(marketPrice).toFixed(0));
+      await exchange.setPrice(amountToWei(marketPrice).toFixed(0));
     
-  //     info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK);
-  //     currentColl = new BigNumber(info.coll);
-  //     currentDebt = new BigNumber(info.debt);
-  //   });
+      info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK);
+      currentColl = new BigNumber(info.coll);
+      currentDebt = new BigNumber(info.debt);
+    });
 
-  //   it(`should close vault and return Dai`, async function() {
-  //     const minToTokenAmount = currentDebt.times(one.plus(OF).plus(FF));
+    it(`should close vault and return  collateral`, async function() {
+      await exchange.setPrice(amountToWei(marketPrice).toFixed(0));
+
+      const marketPriceSlippage = marketPrice.times(one.minus(slippage));
+      const minToTokenAmount = currentDebt.times(one.plus(OF).plus(FF));
+      const sellCollateralAmount = minToTokenAmount.div(marketPriceSlippage);
+
+      desiredCdpState = {
+        requiredDebt: 0,
+        toBorrowCollateralAmount: 0,
+        fromTokenAmount: sellCollateralAmount,
+        toTokenAmount: minToTokenAmount,
+        withdrawCollateral:currentColl.minus(sellCollateralAmount).minus(0.00001)/* some ackward rounding errors*/,
+      };
       
-  //     desiredCdpState = {
-  //       requiredDebt: 0,
-  //       toBorrowCollateralAmount: 0,
-  //       fromTokenAmount: amountToWei(currentColl).toFixed(0),
-  //       toTokenAmount: minToTokenAmount,
-  //     };
+      params = prepareMultiplyParameters(MAINNET_ADRESSES.ETH, MAINNET_ADRESSES.MCD_DAI, exchangeDataMock, CDP_ID, desiredCdpState, multiplyProxyActions.address, exchange.address, address,true);  
 
-  //     params = prepareMultiplyParameters(MAINNET_ADRESSES.ETH, MAINNET_ADRESSES.MCD_DAI, exchangeDataMock, CDP_ID, desiredCdpState, multiplyProxyActions.address, exchange.address, address, true);  
+      await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'closeVaultExitCollateral', params);
 
-  //     await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'closeVaultExitDai', params);
+      info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK);
+      const { daiBalance, collateralBalance } = await checkMPAPostState(MAINNET_ADRESSES.ETH, multiplyProxyActions.address);
 
-  //     info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK);
-  //     const { daiBalance, collateralBalance } = await checkMPAPostState(MAINNET_ADRESSES.ETH, multiplyProxyActions.address);
-
-  //     expect(daiBalance.toFixed(0)).to.be.equal('0');
-  //     expect(collateralBalance.toFixed(0)).to.be.equal('0');
-  //     expect(info.debt.toString()).to.be.equal('0');
-  //     expect(info.coll.toString()).to.be.equal('0');
-  //   });
-  // });
-
-  // describe(`Close vault and exit all collateral`, async function() {
-
-  //   let marketPrice, oraclePrice, currentColl, currentDebt, requiredCollRatio;
-
-  //   this.beforeAll(async function() {
-  //     marketPrice = await new BigNumber(2380);
-  //     oraclePrice = await getOraclePrice(provider);
-    
-  //     await exchange.setPrice(amountToWei(marketPrice).toFixed(0));
-    
-  //     info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK);
-  //     currentColl = new BigNumber(info.coll);
-  //     currentDebt = new BigNumber(info.debt);
-  //   });
-
-  //   it(`should close vault and return  collateral`, async function() {
-  //     await exchange.setPrice(amountToWei(marketPrice).toFixed(0));
-
-  //     const marketPriceSlippage = marketPrice.times(one.minus(slippage));
-  //     const minToTokenAmount = currentDebt.times(one.plus(OF).plus(FF));
-  //     const sellCollateralAmount = minToTokenAmount.div(marketPriceSlippage);
-
-  //     desiredCdpState = {
-  //       requiredDebt: 0,
-  //       toBorrowCollateralAmount: 0,
-  //       fromTokenAmount: sellCollateralAmount,
-  //       toTokenAmount: minToTokenAmount,
-  //     };
-      
-  //     params = prepareMultiplyParameters(MAINNET_ADRESSES.ETH, MAINNET_ADRESSES.MCD_DAI, exchangeDataMock, CDP_ID, desiredCdpState, multiplyProxyActions.address, exchange.address, address);  
-
-  //     await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'closeVaultExitCollateral', params);
-
-  //     info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK);
-  //     const { daiBalance, collateralBalance } = await checkMPAPostState(MAINNET_ADRESSES.ETH, multiplyProxyActions.address);
-
-  //     expect(daiBalance.toFixed(0)).to.be.equal('0');
-  //     expect(collateralBalance.toFixed(0)).to.be.equal('0');
-  //     expect(info.debt.toString()).to.be.equal('0');
-  //     expect(info.coll.toString()).to.be.equal('0');
-  //   });
-  // });
+      expect(daiBalance.toFixed(0)).to.be.equal('0');
+      expect(collateralBalance.toString()).to.be.equal('0');
+      expect(info.debt.toString()).to.be.equal('0');
+      expect((new BigNumber(info.coll.toString()).toNumber())).to.be.lessThanOrEqual(0.00001);
+    });
+  });
 });

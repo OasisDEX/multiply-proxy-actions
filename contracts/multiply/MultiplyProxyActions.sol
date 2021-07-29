@@ -27,6 +27,7 @@ import "../interfaces/mcd/IJug.sol";
 import "../interfaces/mcd/IDaiJoin.sol";
 import "../interfaces/exchange/IExchange.sol";
 import "./ExchangeData.sol";
+import "hardhat/console.sol";
 
 pragma solidity >=0.7.6;
 pragma abicoder v2;
@@ -270,20 +271,30 @@ contract MultiplyProxyActions {
 
         bytes memory paramsData = abi.encode(mode, exchangeData, cdpData, addressRegistry);
 
-        IManager(addressRegistry.manager).cdpAllow(cdpData.cdpId, addressRegistry.multiplyProxyActions, 1);
-        
-        ILendingPoolV2 lendingPool = getAaveLendingPool(addressRegistry.aaveLendingPoolProvider);
-        lendingPool.flashLoan(
-            addressRegistry.multiplyProxyActions,
-            assets,
-            amounts,
-            modes,
-            address(this),
-            paramsData,
-            0
-        );
+        if(cdpData.skipFL == false){
 
-        IManager(addressRegistry.manager).cdpAllow(cdpData.cdpId, addressRegistry.multiplyProxyActions, 0);
+            IManager(addressRegistry.manager).cdpAllow(cdpData.cdpId, addressRegistry.multiplyProxyActions, 1);
+            
+            ILendingPoolV2 lendingPool = getAaveLendingPool(addressRegistry.aaveLendingPoolProvider);
+            lendingPool.flashLoan(
+                addressRegistry.multiplyProxyActions,
+                assets,
+                amounts,
+                modes,
+                address(this),
+                paramsData,
+                0
+            );
+
+            IManager(addressRegistry.manager).cdpAllow(cdpData.cdpId, addressRegistry.multiplyProxyActions, 0);
+        }else{
+            if(mode == 2){
+                _closeWithdrawCollateralSkipFL(exchangeData, cdpData, addressRegistry);
+            }else{
+                require(false,"this code should be unreachable");
+            }
+        }
+
     }
 
     function closeVaultExitCollateral(ExchangeData calldata exchangeData, CdpData memory cdpData, AddressRegistry calldata addressRegistry) public {
@@ -291,6 +302,7 @@ contract MultiplyProxyActions {
     }
 
     function closeVaultExitDai(ExchangeData calldata exchangeData, CdpData memory cdpData, AddressRegistry calldata addressRegistry) public {
+        require(cdpData.skipFL == false,"cannot close to DAI if FL not used");
         closeVaultExitGeneric(exchangeData,cdpData,addressRegistry, 3);
     }
 
@@ -420,6 +432,35 @@ contract MultiplyProxyActions {
         }else{
             daiLeft = IERC20(DAI).balanceOf(address(this)).sub(cdpData.requiredDebt.add(premium));
         }
+
+        if( daiLeft > 0) {
+            IERC20(DAI).transfer(cdpData.fundsReceiver, daiLeft);
+        }
+        if( collateralLeft > 0) {
+            _withdrawGem(cdpData.gemJoin, cdpData.fundsReceiver, collateralLeft);
+        }
+    }
+    
+    function _closeWithdrawCollateralSkipFL(ExchangeData memory exchangeData, CdpData memory cdpData, AddressRegistry memory addressRegistry) private {
+        IExchange exchange = IExchange(addressRegistry.exchange);
+        address gemAddress = address(IJoin(cdpData.gemJoin).gem());
+        address urn = IManager(addressRegistry.manager).urns(cdpData.cdpId);
+        address vat = IManager(addressRegistry.manager).vat();
+        (uint256 ink, ) = IVat(vat).urns(cdpData.ilk, urn);
+
+        wipeAndFreeGem(addressRegistry.manager, cdpData.gemJoin, cdpData.cdpId, 0, exchangeData.fromTokenAmount);
+        require(IERC20(exchangeData.fromTokenAddress).approve(address(exchange), ink), "MPA / Could not approve Exchange for Token");
+        exchange.swapTokenForDai(exchangeData.fromTokenAddress, exchangeData.fromTokenAmount, exchangeData.minToTokenAmount, exchangeData.exchangeAddress, exchangeData._exchangeCalldata);
+
+        uint256 daiLeft = IERC20(DAI).balanceOf(address(this));
+
+        require(cdpData.requiredDebt<=daiLeft,"cannot repay all debt");
+        cdpData.withdrawCollateral =  convertTo18(cdpData.gemJoin,cdpData.withdrawCollateral);
+        
+        wipeAndFreeGem(addressRegistry.manager, cdpData.gemJoin, cdpData.cdpId, cdpData.requiredDebt,cdpData.withdrawCollateral  );
+        daiLeft = IERC20(DAI).balanceOf(address(this));
+
+        uint256 collateralLeft = IERC20(gemAddress).balanceOf(address(this));
 
         if( daiLeft > 0) {
             IERC20(DAI).transfer(cdpData.fundsReceiver, daiLeft);
