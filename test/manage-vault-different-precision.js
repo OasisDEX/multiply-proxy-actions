@@ -115,6 +115,7 @@ describe(`Manage vault with a collateral with different than 18 precision`, asyn
       multiplyProxyActions.address,
       exchange.address,
       address,
+      false,
       MAINNET_ADRESSES.MCD_JOIN_WBTC_A,
       8,
     )
@@ -174,6 +175,7 @@ describe(`Manage vault with a collateral with different than 18 precision`, asyn
       multiplyProxyActions.address,
       exchange.address,
       address,
+      false,
       MAINNET_ADRESSES.MCD_JOIN_WBTC_A,
       8,
     )
@@ -220,6 +222,7 @@ describe(`Manage vault with a collateral with different than 18 precision`, asyn
       multiplyProxyActions.address,
       exchange.address,
       address,
+      false,
       MAINNET_ADRESSES.MCD_JOIN_WBTC_A,
       8,
       true,
