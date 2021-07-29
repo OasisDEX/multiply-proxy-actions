@@ -21,7 +21,7 @@ const {
   fillExchangeData,
   createSnapshot,
   restoreSnapshot,
-  resetNetworkToLatest,
+  resetNetworkToBlock,
 } = require('./common/integration/utils')
 
 const {
@@ -48,6 +48,7 @@ const BASE_SLIPPAGE = 0.08
 const OUR_FEE = FEE / FEE_BASE
 
 const ALLOWED_PROTOCOLS = 'UNISWAP_V3'
+let blockNumber = 0;
 
 var testVaults = [
   {
@@ -311,7 +312,10 @@ async function testCaseDefinition(testCase, testParam) {
       }
 
       this.beforeAll(async function () {
-        await resetNetworkToLatest(provider)
+        if(blockNumber == 0){
+          blockNumber = await getCurrentBlockNumber();
+        }
+        await resetNetworkToBlock(provider,blockNumber-6);
         await getSignerWithDetails(provider)
 
         deployedContracts = await deploySystem(
@@ -338,7 +342,7 @@ async function testCaseDefinition(testCase, testParam) {
         } else {
           marketPrice = await getMarketPrice(
             MAINNET_ADRESSES.WETH_ADDRESS,
-            MAINNET_ADRESSES.MCD_DAI,
+            MAINNET_ADRESSES.MCD_DAI, 18,18
           )
         }
 
@@ -378,7 +382,7 @@ async function testCaseDefinition(testCase, testParam) {
             testCase.existingCDP,
             primarySignerAddress,
             false,
-            MAINNET_ADRESSES,
+            false,
           )
 
           await fillExchangeData(
@@ -520,7 +524,7 @@ async function testCaseDefinition(testCase, testParam) {
               testCaseCopy.existingCDP,
               primarySignerAddress,
               true,
-              MAINNET_ADRESSES,
+              false,
             )
 
             await fillExchangeData(
@@ -770,7 +774,7 @@ async function testCaseDefinition(testCase, testParam) {
               testCaseCopy.existingCDP,
               primarySignerAddress,
               true,
-              MAINNET_ADRESSES,
+              false,
             )
 
             cdpData.withdrawCollateral = amountToWei(testParam.desiredETH).toFixed(0)
@@ -915,7 +919,7 @@ async function testCaseDefinition(testCase, testParam) {
               testCaseCopy.existingCDP,
               primarySignerAddress,
               true,
-              MAINNET_ADRESSES,
+              false,
             )
 
             cdpData.withdrawCollateral = 0
@@ -1092,7 +1096,7 @@ async function testCaseDefinition(testCase, testParam) {
               testCaseCopy.existingCDP,
               primarySignerAddress,
               true,
-              MAINNET_ADRESSES,
+              false,
             )
 
             cdpData.withdrawCollateral = 0

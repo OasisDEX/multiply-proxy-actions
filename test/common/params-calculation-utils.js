@@ -198,6 +198,7 @@ const prepareBasicParams = function (
   existingCDP,
   fundsReciver,
   toDAI = false,
+  skipFL = false,
 ) {
   debtDelta = ensureWeiFormat(debtDelta)
   collateralDelta = ensureWeiFormat(collateralDelta)
@@ -214,6 +215,7 @@ const prepareBasicParams = function (
   }
 
   let cdpData = {
+    skipFL:skipFL,
     gemJoin: MAINNET_ADRESSES.MCD_JOIN_ETH_A,
     cdpId: existingCDP ? existingCDP.id : 0,
     ilk: existingCDP
