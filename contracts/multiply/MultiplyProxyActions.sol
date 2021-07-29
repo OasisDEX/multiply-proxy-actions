@@ -226,11 +226,19 @@ contract MultiplyProxyActions {
     }
   }
 
-  function decreaseMultipleInternal(
+  function decreaseMultiple(
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
   ) public {
+    decreaseMultipleInternal(exchangeData, cdpData, addressRegistry);
+  }
+
+  function decreaseMultipleInternal(
+    ExchangeData calldata exchangeData,
+    CdpData memory cdpData,
+    AddressRegistry calldata addressRegistry
+  ) internal {
     cdpData.ilk = IJoin(cdpData.gemJoin).ilk();
 
     address[] memory assets = new address[](1);
