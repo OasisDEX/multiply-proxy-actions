@@ -11,7 +11,6 @@ const erc20Abi = require('../abi/IERC20.json')
 const ethers = hre.ethers
 
 async function addFundsDummyExchange(provider, signer, address, WETH, DAI, exchange) {
-  console.log("addFundsDummyExchange")
   const UNISWAP_ROUTER_V3 = "0xe592427a0aece92de3edee1f18e0157c05861564";
   const uniswapV3 = new ethers.Contract(UNISWAP_ROUTER_V3, UniswapRouterV3Abi, provider).connect(signer);
 
@@ -25,15 +24,12 @@ async function addFundsDummyExchange(provider, signer, address, WETH, DAI, excha
     amountOutMinimum: amountToWei(new BigNumber(400000)).toFixed(0),
     sqrtPriceLimitX96: 0
   }
-  console.log("addFundsDummyExchange2")
   await uniswapV3.exactInputSingle(swapParams, {value:  amountToWei(new BigNumber(200)).toFixed(0)});
   
-  console.log("addFundsDummyExchange3")
   await WETH.deposit({
     value: amountToWei(new BigNumber(1000)).toFixed(0)
   });
 
-  console.log("addFundsDummyExchange4")
   await WETH.transfer(exchange.address, amountToWei(new BigNumber(500)).toFixed(0));
   await DAI.transfer(exchange.address, amountToWei(new BigNumber(400000)).toFixed(0));
 }
