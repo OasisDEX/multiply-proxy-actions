@@ -136,7 +136,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         address,
         false,
       )
-      await dsproxyExecuteAction(
+      var [status,result] = await dsproxyExecuteAction(
         multiplyProxyActions,
         dsProxy,
         address,
@@ -144,6 +144,10 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         params,
         amountToWei(currentColl),
       )
+
+      if(status == false){
+        throw result;
+      }
 
       const lastCDP = await getLastCDP(provider, signer, userProxyAddress)
       let info = await getVaultInfo(mcdView, lastCDP.id, lastCDP.ilk)
@@ -194,7 +198,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         false,
         0,
       )
-      const [result] = await dsproxyExecuteAction(
+      const [status,result] = await dsproxyExecuteAction(
         multiplyProxyActions,
         dsProxy,
         address,
@@ -203,7 +207,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         amountToWei(currentColl).toFixed(0),
       )
 
-      expect(result).to.be.false
+      expect(status).to.be.false
     })
   })
 
