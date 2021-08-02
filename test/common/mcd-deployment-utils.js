@@ -101,7 +101,7 @@ const dsproxyExecuteAction = async function (
     })
 
     var retVal = await tx.wait()
-    debug && console.log(`\x1b[33m  ${method} completed  \x1b[0m`, new Date())
+    debug && console.log(`\x1b[33m  ${method} completed  gasCost = ${retVal.gasUsed.toString()} \x1b[0m`, new Date())
 
     return [true, retVal]
   } catch (ex) {

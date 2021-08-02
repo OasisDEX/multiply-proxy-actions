@@ -256,7 +256,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         CDP_ID,
       )
 
-      await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'increaseMultiple', params)
+      let [status, result] = await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'increaseMultiple', params)
       info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
       const currentCollRatio = new BigNumber(info.coll)
         .times(oraclePrice)
@@ -265,6 +265,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         MAINNET_ADRESSES.ETH,
         multiplyProxyActions.address,
       )
+     // console.log(status, result.events);
 
       expect(daiBalance.toFixed(0)).to.be.equal('0')
       expect(collateralBalance.toFixed(0)).to.be.equal('0')
