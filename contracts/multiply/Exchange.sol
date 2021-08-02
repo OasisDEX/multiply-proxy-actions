@@ -4,6 +4,7 @@ pragma solidity >=0.7.6;
 import '../interfaces/IERC20.sol';
 import '../utils/SafeMath.sol';
 import '../utils/SafeERC20.sol';
+import 'hardhat/console.sol';
 
 contract Exchange {
   using SafeMath for uint256;
@@ -62,7 +63,15 @@ contract Exchange {
     bytes calldata withData
   ) internal returns (uint256) {
     require(IERC20(fromAsset).approve(callee, amount), 'Exchange / Cannot Set Allowance to Callee');
-    (bool success, ) = callee.call(withData);
+    (bool success, bytes memory err) = callee.call(withData);
+
+    if(success == false){
+      console.log("_1inch error",block.number);
+      console.log(string(err));
+      console.log("payload provided to _1inch");
+      console.logBytes(withData);
+    }
+
     require(success, 'Exchange / Could not swap');
     uint256 balance = IERC20(toAsset).balanceOf(address(this));
     emit SlippageSaved(receiveAtLeast, balance);
