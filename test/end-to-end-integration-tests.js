@@ -21,7 +21,7 @@ const {
   fillExchangeData,
   createSnapshot,
   restoreSnapshot,
-  resetNetworkToLatest,
+  resetNetworkToBlock,
 } = require('./common/integration/utils')
 
 const {
@@ -48,6 +48,7 @@ const BASE_SLIPPAGE = 0.08
 const OUR_FEE = FEE / FEE_BASE
 
 const ALLOWED_PROTOCOLS = 'UNISWAP_V3'
+let blockNumber = 12926169
 
 var testVaults = [
   {
@@ -58,7 +59,7 @@ var testVaults = [
       data: '0x111111111117dc0aa78b770fa6a738034120c302',
     }, //irrelevant, for mock exchange just for encoding validation passing
     desiredCDPState: {
-      desiredCollRatio: 1.7, //expected collateralisation Ratio after Vault creation
+      desiredCollRatio: 2.0, //expected collateralisation Ratio after Vault creation
       providedCollateral: 14, // Amount of ETH used initialy
       providedDAI: 0,
     },
@@ -113,6 +114,18 @@ testParams = [
     desiredCollRatioDAI: 3.0,
     desiredCollRatioETH: 4.5,
     oraclePriceDivergence: 0, // marketPrice = 80% of oraclePrice, only used if useMockExchange==true
+  },
+  {
+    slippage: BASE_SLIPPAGE,
+    desiredDAI: 10000, //amount of dai withdrawn in decreaseMultipleWithdrawDai
+    desiredETH: 6, //amount of dai  withdrawn in decreaseMultipleWithdrawCollateral
+    useMockExchange: true,
+    debug: true,
+    printERC20Transfers: false,
+    desiredCollRatio: 2.2, //collateralisation ratio after Multiply decrease
+    desiredCollRatioDAI: 1.8, //collateralisation ratio after Multiply decrease with DAI withdraw
+    desiredCollRatioETH: 1.8, //collateralisation ratio after Multiply decrease with ETH withdraw
+    oraclePriceDivergence: 0, //difference between oracle price and market price, <0,1> marketPrice = (1-x)*oraclePrice
   },
 ]
 
@@ -312,7 +325,10 @@ async function testCaseDefinition(testCase, testParam) {
       }
 
       this.beforeAll(async function () {
-        await resetNetworkToLatest(provider)
+        if (blockNumber == 0 || testParam.useMockExchange == false) {
+          blockNumber = await getCurrentBlockNumber()
+        }
+        await resetNetworkToBlock(provider, blockNumber - 6)
         await getSignerWithDetails(provider)
 
         deployedContracts = await deploySystem(
@@ -340,6 +356,8 @@ async function testCaseDefinition(testCase, testParam) {
           marketPrice = await getMarketPrice(
             MAINNET_ADRESSES.WETH_ADDRESS,
             MAINNET_ADRESSES.MCD_DAI,
+            18,
+            18,
           )
         }
 
@@ -379,7 +397,7 @@ async function testCaseDefinition(testCase, testParam) {
             testCase.existingCDP,
             primarySignerAddress,
             false,
-            MAINNET_ADRESSES,
+            false,
           )
 
           await fillExchangeData(
@@ -521,7 +539,7 @@ async function testCaseDefinition(testCase, testParam) {
               testCaseCopy.existingCDP,
               primarySignerAddress,
               true,
-              MAINNET_ADRESSES,
+              false,
             )
 
             await fillExchangeData(
@@ -771,7 +789,7 @@ async function testCaseDefinition(testCase, testParam) {
               testCaseCopy.existingCDP,
               primarySignerAddress,
               true,
-              MAINNET_ADRESSES,
+              false,
             )
 
             cdpData.withdrawCollateral = amountToWei(testParam.desiredETH).toFixed(0)
@@ -916,7 +934,7 @@ async function testCaseDefinition(testCase, testParam) {
               testCaseCopy.existingCDP,
               primarySignerAddress,
               true,
-              MAINNET_ADRESSES,
+              false,
             )
 
             cdpData.withdrawCollateral = 0
@@ -1093,7 +1111,7 @@ async function testCaseDefinition(testCase, testParam) {
               testCaseCopy.existingCDP,
               primarySignerAddress,
               true,
-              MAINNET_ADRESSES,
+              false,
             )
 
             cdpData.withdrawCollateral = 0

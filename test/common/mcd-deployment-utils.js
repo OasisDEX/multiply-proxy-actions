@@ -87,7 +87,7 @@ const dsproxyExecuteAction = async function (
   method,
   params,
   value = new BigNumber(0),
-  debug = false,
+  debug = false ,
 ) {
   try {
     const calldata = proxyActions.interface.encodeFunctionData(method, params)
@@ -105,7 +105,7 @@ const dsproxyExecuteAction = async function (
 
     return [true, retVal]
   } catch (ex) {
-    console.log(`\x1b[33m  ${method} failed  \x1b[0m`, ex, params)
+    debug && console.log(`\x1b[33m  ${method} failed  \x1b[0m`, ex, params)
     return [false, ex]
   }
 }
