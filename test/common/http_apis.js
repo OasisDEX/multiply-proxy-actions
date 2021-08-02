@@ -53,19 +53,16 @@ const exchangeFromDAI = async function (
 const getCurrentBlockNumber = async function () {
   const url = `https://api.etherscan.io/api?module=block&action=getblocknobytime&timestamp=${Math.floor(
     new Date().getTime() / 1000,
-  )}&closest=before&apikey=YAJI4NVD8QTQ9JVWG2NKN3FFUK6IZTMV5S`;
-  try{
-    const result = await fetch(
-      url
-    )
-  
-    const json = await result.json();
-    return parseInt(json.result)
-  }catch(ex){
-    console.log("getCurrentBlockNumber Url",url);
-    throw ex;
-  }
+  )}&closest=before&apikey=YAJI4NVD8QTQ9JVWG2NKN3FFUK6IZTMV5S`
+  try {
+    const result = await fetch(url)
 
+    const json = await result.json()
+    return parseInt(json.result)
+  } catch (ex) {
+    console.log('getCurrentBlockNumber Url', url)
+    throw ex
+  }
 }
 
 const exchangeToDAI = async function (

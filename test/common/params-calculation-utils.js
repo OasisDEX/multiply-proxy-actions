@@ -215,7 +215,7 @@ const prepareBasicParams = function (
   }
 
   let cdpData = {
-    skipFL:skipFL,
+    skipFL: skipFL,
     gemJoin: MAINNET_ADRESSES.MCD_JOIN_ETH_A,
     cdpId: existingCDP ? existingCDP.id : 0,
     ilk: existingCDP
@@ -264,7 +264,7 @@ const prepareMultiplyParameters = function (
   }
 
   let cdpData = {
-    skipFL:skipFL,
+    skipFL: skipFL,
     gemJoin: MAINNET_ADRESSES.MCD_JOIN_ETH_A,
     cdpId: cdpId,
     ilk: '0x0000000000000000000000000000000000000000000000000000000000000000',
