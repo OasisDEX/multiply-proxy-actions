@@ -137,7 +137,7 @@ async function runner(tasks) {
 
 runner([
   testCaseDefinition(testVaults[0], testParams[0]),
-  // testCaseDefinition(testVaults[0], testParams[1]),
+  testCaseDefinition(testVaults[0], testParams[1]),
   testCaseDefinition(testVaults[0], testParams[4]),
   //  testCaseDefinition(testVaults[0], testParams[2]),
   //  testCaseDefinition(testVaults[0], testParams[3]),
@@ -325,7 +325,7 @@ async function testCaseDefinition(testCase, testParam) {
       }
 
       this.beforeAll(async function () {
-        if (blockNumber == 0) {
+        if (blockNumber == 0 || testParam.useMockExchange == false) {
           blockNumber = await getCurrentBlockNumber()
         }
         await resetNetworkToBlock(provider, blockNumber - 6)
