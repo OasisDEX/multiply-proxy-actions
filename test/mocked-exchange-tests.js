@@ -33,6 +33,27 @@ async function checkMPAPostState(tokenAddress, mpaAddress) {
   }
 }
 
+const findMPAEvent = function (txResult){
+  
+  let abi = [ "event MultipleActionCalled(string methodName, uint indexed cdpId, uint swapMinAmount, uint swapOptimistAmount, uint collateralLeft, uint daiLeft)" ];
+  let iface = new ethers.utils.Interface(abi);
+  let events = txResult.events.filter(x=>{
+    return x.topics[0] == iface.getEventTopic("MultipleActionCalled")
+  }).map(x=>{
+    var result =  iface.decodeEventLog("MultipleActionCalled", x.data, x.topics);
+    return {
+      methodName:result.methodName,
+      cdpId:result.cdpId.toString(),
+      swapMinAmount:result.swapMinAmount.toString(),
+      swapOptimistAmount:result.swapOptimistAmount.toString(),
+      collateralLeft:result.collateralLeft.toString(),
+      daiLeft:result.daiLeft.toString(),
+    };
+  })
+  console.log(events);
+  return events;
+}
+
 describe('Multiply Proxy Action with Mocked Exchange', async function () {
   let provider,
     signer,
@@ -144,10 +165,13 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         params,
         amountToWei(currentColl),
       )
-
       if(status == false){
         throw result;
+      }else{
       }
+
+
+      let actionEvents = findMPAEvent(result);
 
       const lastCDP = await getLastCDP(provider, signer, userProxyAddress)
       let info = await getVaultInfo(mcdView, lastCDP.id, lastCDP.ilk)
@@ -165,6 +189,8 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
       const resultTotalCollateral = new BigNumber(info.coll)
 
       expect(daiBalance.toFixed(0)).to.be.equal('0')
+      expect(actionEvents.length).to.be.equal(1)
+      expect(actionEvents[0].methodName).to.be.equal('openMultiplyVault')
       expect(collateralBalance.toFixed(0)).to.be.equal('0')
       expect(currentCollRatio.toFixed(3)).to.be.equal(requiredCollRatio.toFixed(3))
       expect(resultTotalCollateral.gte(requiredTotalCollateral)).to.be.true
@@ -267,6 +293,9 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
       )
      // console.log(status, result.events);
 
+      let actionEvents = findMPAEvent(result);
+      expect(actionEvents.length).to.be.equal(1)
+      expect(actionEvents[0].methodName).to.be.equal('increaseMultiple')
       expect(daiBalance.toFixed(0)).to.be.equal('0')
       expect(collateralBalance.toFixed(0)).to.be.equal('0')
       expect(currentCollRatio.toFixed(3)).to.be.equal(requiredCollRatio.toFixed(3))
@@ -323,7 +352,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         CDP_ID,
       )
 
-      await dsproxyExecuteAction(
+      let [status,result] = await dsproxyExecuteAction(
         multiplyProxyActions,
         dsProxy,
         address,
@@ -339,6 +368,9 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         multiplyProxyActions.address,
       )
 
+      let actionEvents = findMPAEvent(result);
+      expect(actionEvents.length).to.be.equal(1)
+      expect(actionEvents[0].methodName).to.be.equal('increaseMultipleDepositDai')
       expect(daiBalance.toFixed(0)).to.be.equal('0')
       expect(collateralBalance.toFixed(0)).to.be.equal('0')
       expect(currentCollRatio.toNumber()).to.be.greaterThanOrEqual(
@@ -396,7 +428,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         CDP_ID,
       )
 
-      await dsproxyExecuteAction(
+      let [status,result] = await dsproxyExecuteAction(
         multiplyProxyActions,
         dsProxy,
         address,
@@ -413,6 +445,9 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         multiplyProxyActions.address,
       )
 
+      let actionEvents = findMPAEvent(result);
+      expect(actionEvents.length).to.be.equal(1)
+      expect(actionEvents[0].methodName).to.be.equal('increaseMultipleDepositCollateral')
       expect(daiBalance.toFixed(0)).to.be.equal('0')
       expect(collateralBalance.toFixed(0)).to.be.equal('0')
       expect(currentCollRatio.toFixed(3)).to.be.equal(requiredCollRatio.toFixed(3))
@@ -464,7 +499,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         CDP_ID,
       )
 
-      await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'decreaseMultiple', params)
+      let [status,result] = await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'decreaseMultiple', params)
 
       info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
       const currentCollRatio = new BigNumber(info.coll)
@@ -475,6 +510,9 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         multiplyProxyActions.address,
       )
 
+      let actionEvents = findMPAEvent(result);
+      expect(actionEvents.length).to.be.equal(1)
+      expect(actionEvents[0].methodName).to.be.equal('decreaseMultiple')
       expect(daiBalance.toFixed(0)).to.be.equal('0')
       expect(collateralBalance.toFixed(0)).to.be.equal('0')
       expect(currentCollRatio.toFixed(3)).to.be.equal(requiredCollRatio.toFixed(3))
@@ -529,7 +567,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         CDP_ID,
       )
 
-      await dsproxyExecuteAction(
+      let [status,result] = await dsproxyExecuteAction(
         multiplyProxyActions,
         dsProxy,
         address,
@@ -546,6 +584,9 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         multiplyProxyActions.address,
       )
 
+      let actionEvents = findMPAEvent(result);
+      expect(actionEvents.length).to.be.equal(1)
+      expect(actionEvents[0].methodName).to.be.equal('decreaseMultipleWithdrawDai')
       expect(daiBalance.toFixed(0)).to.be.equal('0')
       expect(collateralBalance.toFixed(0)).to.be.equal('0')
       expect(currentCollRatio.toNumber()).to.be.greaterThanOrEqual(
@@ -611,7 +652,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         CDP_ID,
       )
 
-      await dsproxyExecuteAction(
+      let [status,result] = await dsproxyExecuteAction(
         multiplyProxyActions,
         dsProxy,
         address,
@@ -633,6 +674,9 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         multiplyProxyActions.address,
       )
 
+      let actionEvents = findMPAEvent(result);
+      expect(actionEvents.length).to.be.equal(1)
+      expect(actionEvents[0].methodName).to.be.equal('decreaseMultipleWithdrawCollateral')
       expect(daiBalance.toFixed(0)).to.be.equal('0')
       expect(collateralBalance.toFixed(0)).to.be.equal('0')
       expect(currentCollRatio.toFixed(3)).to.be.equal(requiredCollRatio.toFixed(3))
