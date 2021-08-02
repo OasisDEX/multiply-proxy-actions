@@ -50,7 +50,6 @@ const findMPAEvent = function (txResult){
       daiLeft:result.daiLeft.toString(),
     };
   })
-  console.log(events);
   return events;
 }
 
