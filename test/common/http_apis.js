@@ -33,7 +33,7 @@ const exchangeFromDAI = async function (toTokenAddress, amount, slippage, recepi
     ${protocols}
     &slippage=${slippage}
     &disableEstimate=true
-    &allowPartialFill=false`.replaceAll(/\n(\s*)/g, '')
+    &allowPartialFill=false`.replace(/\n(\s*)/g, '')
 
   var data = await (await fetch(url)).json()
 
@@ -71,7 +71,7 @@ const exchangeToDAI = async function (
     &fromAddress=${recepient}
     &slippage=${slippage}
     &disableEstimate=true
-    &allowPartialFill=false`.replaceAll(/\n(\s*)/g, '')
+    &allowPartialFill=false`.replace(/\n(\s*)/g, '')
 
   var data = await (await fetch(url)).json()
 
