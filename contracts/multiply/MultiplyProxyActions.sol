@@ -516,23 +516,14 @@ contract MultiplyProxyActions {
   ) private {
     IExchange exchange = IExchange(addressRegistry.exchange);
 
-    if (cdpData.skipFL) {
-      wipeAndFreeGem(
-        addressRegistry.manager,
-        cdpData.gemJoin,
-        cdpData.cdpId,
-        0,
-        cdpData.borrowCollateral.add(cdpData.withdrawCollateral)
-      );
-    } else {
-      wipeAndFreeGem(
-        addressRegistry.manager,
-        cdpData.gemJoin,
-        cdpData.cdpId,
-        cdpData.requiredDebt.sub(cdpData.withdrawDai),
-        cdpData.borrowCollateral.add(cdpData.withdrawCollateral)
-      );
-    }
+    uint265 debtToBeWiped = cdpData.skipFL ?  0 : cdpData.requiredDebt.sub(cdpData.withdrawDai);
+    wipeAndFreeGem(
+      addressRegistry.manager,
+      cdpData.gemJoin,
+      cdpData.cdpId,
+      debtToBeWiped,
+      cdpData.borrowCollateral.add(cdpData.withdrawCollateral)
+    );
 
     require(
       IERC20(exchangeData.fromTokenAddress).approve(
