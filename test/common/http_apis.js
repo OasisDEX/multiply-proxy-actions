@@ -1,5 +1,5 @@
 const { default: BigNumber } = require('bignumber.js')
-const { amountToWei } = require('./params-calculation-utils')
+const { amountToWei, convertToBigNumber } = require('./params-calculation-utils')
 let MAINNET_ADRESSES = require('../../addresses/mainnet.json')
 const { one } = require('../utils')
 
@@ -21,33 +21,25 @@ const getMarketPrice = async function (from, to, fromPrecision = 18, toPrecision
   const marketPrice = toTokenAmount.div(fromTokenAmount)
   return marketPrice
 }
+//convertToBigNumber(amount).times(one.minus(fee)).toFixed(0)
+const exchangeFromDAI = async function (toTokenAddress, amount, slippage, recepient, protocols) {
+  protocols = !protocols || !protocols.length ? '' : `&protocols=${protocols.join(',')}`
 
-const exchangeFromDAI = async function (
-  toTokenAddress,
-  sourceAmount,
-  slippagePercentage,
-  beneficiary,
-  fee,
-  precision = 18,
-  protocols,
-) {
-  var url =
-    `https://api.1inch.exchange/v3.0/1/swap?fromTokenAddress=${
-      MAINNET_ADRESSES.MCD_DAI
-    }&toTokenAddress=${toTokenAddress}&amount=${amountToWei(
-      sourceAmount.times(one.minus(fee)),
-      precision,
-    ).toFixed(
-      0,
-    )}&fromAddress=${beneficiary}&slippage=${slippagePercentage.toNumber()}&disableEstimate=true&allowPartial=false` +
-    (protocols ? `&protocols=${protocols}` : '')
-  var _1inchResponse = await (await fetch(url)).json()
-  var txData = _1inchResponse.tx
+  var url = `https://api.1inch.exchange/v3.0/1/swap?
+    fromTokenAddress=${MAINNET_ADRESSES.MCD_DAI}
+    &toTokenAddress=${toTokenAddress}
+    &amount=${amount}
+    &fromAddress=${recepient}
+    ${protocols}
+    &slippage=${slippage}
+    &disableEstimate=true
+    &allowPartialFill=false`.replaceAll(/\n(\s*)/g, '')
 
-  if (txData == undefined)
-    console.log('incorrect response from 1inch ', _1inchResponse, 'original request', url)
+  var data = await (await fetch(url)).json()
 
-  return [url, txData]
+  if (!data) console.log('incorrect response from 1inch ', data, 'original request', url)
+
+  return data
 }
 
 const getCurrentBlockNumber = async function () {
@@ -64,24 +56,30 @@ const getCurrentBlockNumber = async function () {
 
 const exchangeToDAI = async function (
   fromTokenAddress,
-  sourceAmount,
-  slippagePercentage,
-  beneficiary,
-  precision = 18,
-  protocols,
+  amount,
+  recepient,
+  slippage,
+  protocols = [],
 ) {
-  var url =
-    `https://api.1inch.exchange/v3.0/1/swap?fromTokenAddress=${fromTokenAddress}&toTokenAddress=${
-      MAINNET_ADRESSES.MCD_DAI
-    }&amount=${amountToWei(sourceAmount, precision).toFixed(0)}&fromAddress=${beneficiary}` +
-    `&slippage=${slippagePercentage.toNumber()}&disableEstimate=true&allowPartial=false` +
-    (protocols ? `&protocols=${protocols}` : '')
-  var _1inchResponse = await (await fetch(url)).json()
-  var txData = _1inchResponse.tx
-  if (txData == undefined) {
-    console.log('incorrect response from 1inch ', _1inchResponse, 'original request', url)
+  protocols = !protocols || !protocols.length ? '' : `&protocols=${protocols.join(',')}`
+
+  var url = `https://api.1inch.exchange/v3.0/1/swap?
+    fromTokenAddress=${fromTokenAddress}
+    &toTokenAddress=${MAINNET_ADRESSES.MCD_DAI}
+    &amount=${amount}
+    ${protocols}
+    &fromAddress=${recepient}
+    &slippage=${slippage}
+    &disableEstimate=true
+    &allowPartialFill=false`.replaceAll(/\n(\s*)/g, '')
+
+  var data = await (await fetch(url)).json()
+
+  if (!data) {
+    console.log('incorrect response from 1inch ', data, 'original request', url)
   }
-  return [url, txData]
+
+  return data
 }
 
 module.exports = {

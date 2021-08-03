@@ -55,7 +55,6 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
   this.beforeEach(async function () {})
 
   this.beforeAll(async function () {
-    console.log('Before all')
     provider = new hre.ethers.providers.JsonRpcProvider()
     signer = provider.getSigner(0)
     WETH = new ethers.Contract(MAINNET_ADRESSES.ETH, wethAbi, provider).connect(signer)

@@ -15,19 +15,19 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import {IERC20} from '../interfaces/IERC20.sol';
-import '../interfaces/aaveV2/ILendingPoolAddressesProviderV2.sol';
-import '../interfaces/aaveV2/ILendingPoolV2.sol';
-import '../utils/SafeMath.sol';
-import '../interfaces/IWETH.sol';
-import '../interfaces/mcd/IJoin.sol';
-import '../interfaces/mcd/IManager.sol';
-import '../interfaces/mcd/IVat.sol';
-import '../interfaces/mcd/IJug.sol';
-import '../interfaces/mcd/IDaiJoin.sol';
-import '../interfaces/exchange/IExchange.sol';
-import './ExchangeData.sol';
-import 'hardhat/console.sol';
+import {IERC20} from "../interfaces/IERC20.sol";
+import "../interfaces/aaveV2/ILendingPoolAddressesProviderV2.sol";
+import "../interfaces/aaveV2/ILendingPoolV2.sol";
+import "../utils/SafeMath.sol";
+import "../interfaces/IWETH.sol";
+import "../interfaces/mcd/IJoin.sol";
+import "../interfaces/mcd/IManager.sol";
+import "../interfaces/mcd/IVat.sol";
+import "../interfaces/mcd/IJug.sol";
+import "../interfaces/mcd/IDaiJoin.sol";
+import "../interfaces/exchange/IExchange.sol";
+import "./ExchangeData.sol";
+import "hardhat/console.sol";
 
 pragma solidity >=0.7.6;
 pragma abicoder v2;
@@ -75,7 +75,7 @@ contract MultiplyProxyActions {
 
   function toInt256(uint256 x) internal pure returns (int256 y) {
     y = int256(x);
-    require(y >= 0, 'int256-overflow');
+    require(y >= 0, "int256-overflow");
   }
 
   function convertTo18(address gemJoin, uint256 amt) internal returns (uint256 wad) {
@@ -131,7 +131,7 @@ contract MultiplyProxyActions {
     } else {
       gem.transferFrom(msg.sender, addressRegistry.multiplyProxyActions, cdpData.depositCollateral);
     }
-    console.log('increase multiple');
+    console.log("increase multiple");
     increaseMultiple(exchangeData, cdpData, addressRegistry);
   }
 
@@ -167,7 +167,7 @@ contract MultiplyProxyActions {
     bytes memory paramsData = abi.encode(1, exchangeData, cdpData, addressRegistry);
 
     ILendingPoolV2 lendingPool = getAaveLendingPool(addressRegistry.aaveLendingPoolProvider);
-    console.log('before flashLoan');
+    console.log("before flashLoan");
     lendingPool.flashLoan(
       addressRegistry.multiplyProxyActions,
       assets,
@@ -486,16 +486,16 @@ contract MultiplyProxyActions {
 
     require(
       IERC20(DAI).approve(address(exchange), exchangeData.fromTokenAmount.add(cdpData.depositDai)),
-      'MPA / Could not approve Exchange for DAI'
+      "MPA / Could not approve Exchange for DAI"
     );
 
-    console.log('before swapDaiForToken');
-    console.log('exchangeData.toTokenAddress', exchangeData.toTokenAddress);
-    console.log('exchangeData.fromTokenAmount', exchangeData.fromTokenAmount);
-    console.log('exchangeData.minToTokenAmount', exchangeData.minToTokenAmount);
-    console.log('exchangeData.exchangeAddress', exchangeData.exchangeAddress);
+    console.log("before swapDaiForToken");
+    console.log("exchangeData.toTokenAddress", exchangeData.toTokenAddress);
+    console.log("exchangeData.fromTokenAmount", exchangeData.fromTokenAmount);
+    console.log("exchangeData.minToTokenAmount", exchangeData.minToTokenAmount);
+    console.log("exchangeData.exchangeAddress", exchangeData.exchangeAddress);
     console.logBytes(exchangeData._exchangeCalldata);
-    console.log('cdpData.depositDai', cdpData.depositDai);
+    console.log("cdpData.depositDai", cdpData.depositDai);
     exchange.swapDaiForToken(
       exchangeData.toTokenAddress,
       exchangeData.fromTokenAmount.add(cdpData.depositDai),
@@ -503,7 +503,7 @@ contract MultiplyProxyActions {
       exchangeData.exchangeAddress,
       exchangeData._exchangeCalldata
     );
-    console.log('after swapDaiForToken');
+    console.log("after swapDaiForToken");
 
     joinDrawDebt(cdpData, borrowedDai, addressRegistry.manager, addressRegistry.jug);
 
@@ -535,7 +535,7 @@ contract MultiplyProxyActions {
         address(exchange),
         exchangeData.fromTokenAmount
       ),
-      'MPA / Could not approve Exchange for Token'
+      "MPA / Could not approve Exchange for Token"
     );
 
     exchange.swapTokenForDai(
@@ -579,7 +579,7 @@ contract MultiplyProxyActions {
 
     require(
       IERC20(exchangeData.fromTokenAddress).approve(address(exchange), ink),
-      'MPA / Could not approve Exchange for Token'
+      "MPA / Could not approve Exchange for Token"
     );
     exchange.swapTokenForDai(
       exchangeData.fromTokenAddress,
@@ -625,7 +625,7 @@ contract MultiplyProxyActions {
         address(exchange),
         IERC20(gemAddress).balanceOf(address(this))
       ),
-      'MPA / Could not approve Exchange for Token'
+      "MPA / Could not approve Exchange for Token"
     );
     exchange.swapTokenForDai(
       exchangeData.fromTokenAddress,
@@ -655,7 +655,7 @@ contract MultiplyProxyActions {
       CdpData memory cdpData,
       AddressRegistry memory addressRegistry
     ) = abi.decode(params, (uint8, ExchangeData, CdpData, AddressRegistry));
-    console.log('inside flashLoan');
+    console.log("inside flashLoan");
     uint256 borrowedDaiAmount = amounts[0].add(premiums[0]);
     emit FLData(IERC20(DAI).balanceOf(address(this)), borrowedDaiAmount);
 

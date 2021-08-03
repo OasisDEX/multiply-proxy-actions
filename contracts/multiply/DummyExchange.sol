@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 pragma solidity >=0.7.6;
-import '../interfaces/IERC20.sol';
-import '../utils/SafeMath.sol';
-import '../utils/SafeERC20.sol';
-import 'hardhat/console.sol';
+import "../interfaces/IERC20.sol";
+import "../utils/SafeMath.sol";
+import "../utils/SafeERC20.sol";
+import "hardhat/console.sol";
 
 contract DummyExchange {
   using SafeMath for uint256;
@@ -23,7 +23,7 @@ contract DummyExchange {
   event FeePaid(uint256 amount);
 
   function mul(uint256 x, uint256 y) internal pure returns (uint256 z) {
-    require(y == 0 || (z = x * y) / y == x, 'mul-overflow');
+    require(y == 0 || (z = x * y) / y == x, "mul-overflow");
   }
 
   function setPrice(uint256 p) public {
@@ -43,10 +43,10 @@ contract DummyExchange {
     address asset,
     uint256 amount
   ) internal {
-    console.log('TRANSFER IN', asset, amount);
+    console.log("TRANSFER IN", asset, amount);
     require(
       IERC20(asset).allowance(from, address(this)) >= amount,
-      'Exchange / Not enought allowance'
+      "Exchange / Not enought allowance"
     );
     IERC20(asset).transferFrom(from, address(this), amount);
   }
@@ -57,7 +57,7 @@ contract DummyExchange {
     uint256 amount
   ) internal {
     IERC20(asset).safeTransfer(to, amount);
-    console.log('TRANSFER OUT', asset, amount);
+    console.log("TRANSFER OUT", asset, amount);
   }
 
   function _collectFee(address asset, uint256 fromAmount) public returns (uint256) {

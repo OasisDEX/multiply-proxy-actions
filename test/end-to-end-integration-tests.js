@@ -47,7 +47,7 @@ const AAVE_FEE = 0.0009
 const BASE_SLIPPAGE = 0.08
 const OUR_FEE = FEE / FEE_BASE
 
-const ALLOWED_PROTOCOLS = 'UNISWAP_V3'
+const ALLOWED_PROTOCOLS = ['UNISWAP_V2']
 
 var testVaults = [
   {
@@ -346,7 +346,7 @@ async function testCaseDefinition(testCase, testParam) {
         revertBlockNumber = await provider.getBlockNumber()
       })
 
-      describe(`opening Multiply Vault with collateralisation ratio of ${testCase.desiredCDPState.desiredCollRatio}`, async function () {
+      describe.only(`opening Multiply Vault with collateralisation ratio of ${testCase.desiredCDPState.desiredCollRatio}`, async function () {
         var txResult
         var startBalance
 
