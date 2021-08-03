@@ -452,12 +452,12 @@ contract MultiplyProxyActions {
     address urn = IManager(manager).urns(cdp);
     bytes32 ilk = IManager(manager).ilks(cdp);
 
-    IDaiJoin(DAIJOIN).dai().approve(DAIJOIN, borrowedDai);
+    IERC20(DAI).approve(DAIJOIN, borrowedDai);
     IDaiJoin(DAIJOIN).join(urn, borrowedDai);
 
     uint256 wadC = convertTo18(gemJoin, collateralDraw);
 
-    IManager(manager).frob(cdp, -int256(wadC), _getWipeDart(vat, IVat(vat).dai(urn), urn, ilk));
+    IManager(manager).frob(cdp, -toInt256(wadC), _getWipeDart(vat, IVat(vat).dai(urn), urn, ilk));
 
     IManager(manager).flux(cdp, address(this), wadC);
     IJoin(gemJoin).exit(address(this), collateralDraw);
