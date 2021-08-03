@@ -199,12 +199,13 @@ contract MultiplyProxyActions {
 
     bytes memory paramsData = abi.encode(1, exchangeData, cdpData, addressRegistry);
 
-    if (cdpData.skipFL) {
+    if (cdpData.skipFL) {//we want to draw our own DAI and use them in the exchange to buy collateral
       IGem gem = IJoin(cdpData.gemJoin).gem();
       uint256 collBalance = IERC20(address(gem)).balanceOf(address(this));
-      if (collBalance > 0) {
+      if (collBalance > 0) {//if someone provided some collateral during increase
+        //add it to vault and draw DAI
         joinDrawDebt(cdpData, cdpData.requiredDebt, addressRegistry.manager, addressRegistry.jug);
-      } else {
+      } else {//just draw DAI
         drawDaiDebt(cdpData, addressRegistry, cdpData.requiredDebt);
       }
       _increaseMP(exchangeData, cdpData, addressRegistry, 0);
@@ -486,7 +487,7 @@ contract MultiplyProxyActions {
     IExchange exchange = IExchange(addressRegistry.exchange);
     uint256 borrowedDai = cdpData.requiredDebt.add(premium);
     if (cdpData.skipFL) {
-      borrowedDai = 0;
+      borrowedDai = 0;//this DAI are not borrowed and shal not stay after this method execution
     }
     require(
       IERC20(DAI).approve(address(exchange), exchangeData.fromTokenAmount.add(cdpData.depositDai)),
@@ -499,7 +500,9 @@ contract MultiplyProxyActions {
       exchangeData.exchangeAddress,
       exchangeData._exchangeCalldata
     );
+    //here we add collateral we got from exchange, if skipFL then borrowedDai = 0
     joinDrawDebt(cdpData, borrowedDai, addressRegistry.manager, addressRegistry.jug);
+    //if some DAI are left after exchange return them to the user
     uint256 daiLeft = IERC20(DAI).balanceOf(address(this)).sub(borrowedDai);
 
     if (daiLeft > 0) {
