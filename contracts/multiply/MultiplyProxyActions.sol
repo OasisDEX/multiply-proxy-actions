@@ -142,7 +142,6 @@ contract MultiplyProxyActions {
         gem.transferFrom(msg.sender, address(this), cdpData.depositCollateral);
       }
     }
-    console.log('increase multiple');
     increaseMultiple(exchangeData, cdpData, addressRegistry);
   }
 
@@ -211,8 +210,6 @@ contract MultiplyProxyActions {
       } else {
         drawDaiDebt(cdpData, addressRegistry, cdpData.requiredDebt);
       }
-      uint256[] memory premiums = new uint256[](1);
-      premiums[0] = 0;
       _increaseMP(exchangeData, cdpData, addressRegistry, 0);
       //   bool result = this.executeOperation(assets, amounts, premiums, address(this), paramsData);
     } else {
