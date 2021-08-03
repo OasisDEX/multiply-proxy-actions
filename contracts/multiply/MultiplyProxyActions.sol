@@ -454,7 +454,7 @@ contract MultiplyProxyActions {
 
     uint256 wadC = convertTo18(gemJoin, collateralDraw);
 
-    IManager(manager).frob(cdp, -int256(wadC), _getWipeDart(vat, IVat(vat).dai(urn), urn, ilk));
+    IManager(manager).frob(cdp, -toInt256(wadC), _getWipeDart(vat, IVat(vat).dai(urn), urn, ilk));
 
     IManager(manager).flux(cdp, address(this), wadC);
     IJoin(gemJoin).exit(address(this), collateralDraw);
