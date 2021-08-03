@@ -27,7 +27,6 @@ import '../interfaces/mcd/IJug.sol';
 import '../interfaces/mcd/IDaiJoin.sol';
 import '../interfaces/exchange/IExchange.sol';
 import './ExchangeData.sol';
-import 'hardhat/console.sol';
 
 pragma solidity >=0.7.6;
 pragma abicoder v2;
