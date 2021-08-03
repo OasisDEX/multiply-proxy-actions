@@ -114,8 +114,6 @@ contract MultiplyProxyActions {
   ) public payable {
     cdpData.ilk = IJoin(cdpData.gemJoin).ilk();
     cdpData.cdpId = IManager(addressRegistry.manager).open(cdpData.ilk, address(this));
-    console.log(cdpData.cdpId);
-    console.logBytes32(cdpData.ilk);
     increaseMultipleDepositCollateral(exchangeData, cdpData, addressRegistry);
   }
 
@@ -220,7 +218,6 @@ contract MultiplyProxyActions {
       );
 
       ILendingPoolV2 lendingPool = getAaveLendingPool(addressRegistry.aaveLendingPoolProvider);
-      console.log('before flashLoan');
       lendingPool.flashLoan(
         addressRegistry.multiplyProxyActions,
         assets,
@@ -729,7 +726,6 @@ contract MultiplyProxyActions {
       CdpData memory cdpData,
       AddressRegistry memory addressRegistry
     ) = abi.decode(params, (uint8, ExchangeData, CdpData, AddressRegistry));
-    console.log('inside flashLoan');
     uint256 borrowedDaiAmount = amounts[0].add(premiums[0]);
     emit FLData(IERC20(DAI).balanceOf(address(this)), borrowedDaiAmount);
 
