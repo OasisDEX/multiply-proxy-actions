@@ -1,5 +1,6 @@
 const {
   deploySystem,
+  ONE,
   TEN,
   getOraclePrice,
   dsproxyExecuteAction,
@@ -9,18 +10,13 @@ const {
   MAINNET_ADRESSES,
   FEE_BASE,
 } = require('../test/common/mcd-deployment-utils')
-const {
-  getMarketPrice,
-  exchangeFromDAI,
-  exchangeToDAI,
-  getCurrentBlockNumber,
-} = require('../test/common/http_apis')
+const { getMarketPrice, exchangeFromDAI } = require('../test/common/http_apis')
 const {
   calculateParamsIncreaseMP,
-  calculateParamsDecreaseMP,
   amountToWei,
   prepareMultiplyParameters,
   addressRegistryFactory,
+  convertToBigNumber,
 } = require('../test/common/params-calculation-utils')
 const { default: BigNumber } = require('bignumber.js')
 const { expect } = require('chai')
@@ -109,15 +105,14 @@ describe('Proxy Action', async function () {
         data.slippage,
       )
 
-      let [url, payload] = await exchangeFromDAI(
+      payload = await exchangeFromDAI(
         MAINNET_ADRESSES.WETH_ADDRESS,
-        requiredDebt,
-        data.slippage.multipliedBy(100),
+        amountToWei(convertToBigNumber(requiredDebt).times(ONE.minus(OUR_FEE))).toFixed(0),
+        data.slippage.multipliedBy(100).toNumber(),
         exchangeInstance.address,
-        OUR_FEE,
-        18,
       )
-      data._1inchPayload = payload
+      console.log('PAYLOAD', payload)
+      data._1inchPayload = payload.tx
       data.toBorrowCollateralAmount = toBorrowCollateralAmount
       data.desiredCDPState.requiredDebt = requiredDebt
       data.desiredCDPState.toBorrowCollateralAmount = toBorrowCollateralAmount

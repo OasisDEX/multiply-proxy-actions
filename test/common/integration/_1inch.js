@@ -1,34 +1,33 @@
 const { default: BigNumber } = require('bignumber.js')
 const { exchangeFromDAI, exchangeToDAI } = require('./../http_apis')
+const { ONE } = require('../mcd-deployment-utils')
+const { convertToBigNumber, mul, MAINNET_ADRESSES } = require('./../params-calculation-utils')
 
-const { convertToBigNumber, mul, div, MAINNET_ADRESSES } = require('./../params-calculation-utils')
+const getPayload = async function (exchangeData, beneficiary, slippage, fee, protocols) {
+  let retVal
 
-const TEN = new BigNumber(10)
-
-const getPayload = async function (exchangeData, beneficiary, slippage, fee, protocols, precision) {
-  let retVal, url
   if (exchangeData.fromTokenAddress == MAINNET_ADRESSES.MCD_DAI) {
-    ;[url, retVal] = await exchangeFromDAI(
+    let response = await exchangeFromDAI(
       exchangeData.toTokenAddress,
-      div(convertToBigNumber(exchangeData.fromTokenAmount), TEN.pow(18)),
+      convertToBigNumber(exchangeData.fromTokenAmount).times(ONE.minus(fee)).toFixed(0),
       mul(slippage, 100),
       beneficiary,
-      fee,
-      precision,
       protocols,
     )
+
+    retVal = response && response.tx
   } else {
-    ;[url, retVal] = await exchangeToDAI(
+    let response = await exchangeToDAI(
       exchangeData.fromTokenAddress,
-      div(convertToBigNumber(exchangeData.fromTokenAmount), TEN.pow(18)),
-      mul(slippage, 100),
+      exchangeData.fromTokenAmount,
       beneficiary,
-      precision,
+      mul(slippage, 100),
       protocols,
     )
+
+    retVal = response && response.tx
   }
-  var tmp = JSON.parse(JSON.stringify(retVal))
-  tmp.data = undefined
+
   return retVal
 }
 

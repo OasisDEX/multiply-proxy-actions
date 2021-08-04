@@ -19,18 +19,15 @@ const addressRegistryFactory = function (
 }
 
 function amountToWei(amount, precision = 18) {
-  if (!amount) {
-    amount = 0
-  }
   if (BigNumber.isBigNumber(amount) == false) {
-    amount = new BigNumber(amount)
+    amount = new BigNumber(amount || 0)
   }
   return amount.times(new BigNumber(10).pow(precision))
 }
 
 function amountFromWei(amount, precision = 18) {
   if (BigNumber.isBigNumber(amount) == false) {
-    amount = new BigNumber(amount)
+    amount = new BigNumber(amount || 0)
   }
   return amount.div(new BigNumber(10).pow(precision))
 }

@@ -15,19 +15,18 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import {IERC20} from '../interfaces/IERC20.sol';
-import '../interfaces/aaveV2/ILendingPoolAddressesProviderV2.sol';
-import '../interfaces/aaveV2/ILendingPoolV2.sol';
-import '../utils/SafeMath.sol';
-import '../interfaces/IWETH.sol';
-import '../interfaces/mcd/IJoin.sol';
-import '../interfaces/mcd/IManager.sol';
-import '../interfaces/mcd/IVat.sol';
-import '../interfaces/mcd/IJug.sol';
-import '../interfaces/mcd/IDaiJoin.sol';
-import '../interfaces/exchange/IExchange.sol';
-import './ExchangeData.sol';
-import 'hardhat/console.sol';
+import {IERC20} from "../interfaces/IERC20.sol";
+import "../interfaces/aaveV2/ILendingPoolAddressesProviderV2.sol";
+import "../interfaces/aaveV2/ILendingPoolV2.sol";
+import "../utils/SafeMath.sol";
+import "../interfaces/IWETH.sol";
+import "../interfaces/mcd/IJoin.sol";
+import "../interfaces/mcd/IManager.sol";
+import "../interfaces/mcd/IVat.sol";
+import "../interfaces/mcd/IJug.sol";
+import "../interfaces/mcd/IDaiJoin.sol";
+import "../interfaces/exchange/IExchange.sol";
+import "./ExchangeData.sol";
 
 pragma solidity >=0.7.6;
 pragma abicoder v2;
@@ -69,18 +68,6 @@ contract MultiplyProxyActions {
   address public constant DAIJOIN = 0x9759A6Ac90977b93B58547b4A71c78317f391A28;
   address public constant ETH_ADDR = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
-  string private flCalledMethodName = "";
-
-  function setMethodName(string memory name) public{
-    if(keccak256(abi.encodePacked(flCalledMethodName))==keccak256(abi.encodePacked(""))){
-      flCalledMethodName = name;
-    }
-  }
-
-  function clearMethodName() public{
-    flCalledMethodName = "";
-  }
-
   modifier logMethodName(string memory name,CdpData memory data, address destination){
     if(bytes(data.methodName).length == 0){
       data.methodName = name;
@@ -97,7 +84,7 @@ contract MultiplyProxyActions {
 
   function toInt256(uint256 x) internal pure returns (int256 y) {
     y = int256(x);
-    require(y >= 0, 'int256-overflow');
+    require(y >= 0, "int256-overflow");
   }
 
   function convertTo18(address gemJoin, uint256 amt) internal returns (uint256 wad) {
@@ -231,15 +218,17 @@ contract MultiplyProxyActions {
     bytes memory paramsData = abi.encode(1, exchangeData, cdpData, addressRegistry);
 
     if (cdpData.skipFL) {
+      //we want to draw our own DAI and use them in the exchange to buy collateral
       IGem gem = IJoin(cdpData.gemJoin).gem();
       uint256 collBalance = IERC20(address(gem)).balanceOf(address(this));
       if (collBalance > 0) {
+        //if someone provided some collateral during increase
+        //add it to vault and draw DAI
         joinDrawDebt(cdpData, cdpData.requiredDebt, addressRegistry.manager, addressRegistry.jug);
       } else {
+        //just draw DAI
         drawDaiDebt(cdpData, addressRegistry, cdpData.requiredDebt);
       }
-      uint256[] memory premiums = new uint256[](1);
-      premiums[0] = 0;
       _increaseMP(exchangeData, cdpData, addressRegistry, 0);
       //   bool result = this.executeOperation(assets, amounts, premiums, address(this), paramsData);
     } else {
@@ -398,18 +387,15 @@ contract MultiplyProxyActions {
     AddressRegistry calldata addressRegistry
   ) public logMethodName("closeVaultExitCollateral", cdpData, addressRegistry.multiplyProxyActions){
     closeVaultExitGeneric(exchangeData, cdpData, addressRegistry, 2);
-    MultiplyProxyActions(payable(addressRegistry.multiplyProxyActions)).clearMethodName();
   }
 
   function closeVaultExitDai(
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
-  ) public {
+  ) public logMethodName("closeVaultExitDai", cdpData, addressRegistry.multiplyProxyActions){
     require(cdpData.skipFL == false, 'cannot close to DAI if FL not used');
-    MultiplyProxyActions(payable(addressRegistry.multiplyProxyActions)).setMethodName("closeVaultExitDai");
     closeVaultExitGeneric(exchangeData, cdpData, addressRegistry, 3);
-    MultiplyProxyActions(payable(addressRegistry.multiplyProxyActions)).clearMethodName();
   }
 
   function joinDrawDebt(
@@ -487,12 +473,12 @@ contract MultiplyProxyActions {
     address urn = IManager(manager).urns(cdp);
     bytes32 ilk = IManager(manager).ilks(cdp);
 
-    IDaiJoin(DAIJOIN).dai().approve(DAIJOIN, borrowedDai);
+    IERC20(DAI).approve(DAIJOIN, borrowedDai);
     IDaiJoin(DAIJOIN).join(urn, borrowedDai);
 
     uint256 wadC = convertTo18(gemJoin, collateralDraw);
 
-    IManager(manager).frob(cdp, -int256(wadC), _getWipeDart(vat, IVat(vat).dai(urn), urn, ilk));
+    IManager(manager).frob(cdp, -toInt256(wadC), _getWipeDart(vat, IVat(vat).dai(urn), urn, ilk));
 
     IManager(manager).flux(cdp, address(this), wadC);
     IJoin(gemJoin).exit(address(this), collateralDraw);
@@ -504,7 +490,6 @@ contract MultiplyProxyActions {
     uint256 amount
   ) private {
     IGem gem = IJoin(gemJoin).gem();
-    console.log("_withdrawGem", address(gem), WETH);
 
     if (address(gem) == WETH) {
       gem.withdraw(amount);
@@ -523,11 +508,11 @@ contract MultiplyProxyActions {
     IExchange exchange = IExchange(addressRegistry.exchange);
     uint256 borrowedDai = cdpData.requiredDebt.add(premium);
     if (cdpData.skipFL) {
-      borrowedDai = 0;
+      borrowedDai = 0; //this DAI are not borrowed and shal not stay after this method execution
     }
     require(
       IERC20(DAI).approve(address(exchange), exchangeData.fromTokenAmount.add(cdpData.depositDai)),
-      'MPA / Could not approve Exchange for DAI'
+      "MPA / Could not approve Exchange for DAI"
     );
     exchange.swapDaiForToken(
       exchangeData.toTokenAddress,
@@ -536,7 +521,9 @@ contract MultiplyProxyActions {
       exchangeData.exchangeAddress,
       exchangeData._exchangeCalldata
     );
+    //here we add collateral we got from exchange, if skipFL then borrowedDai = 0
     joinDrawDebt(cdpData, borrowedDai, addressRegistry.manager, addressRegistry.jug);
+    //if some DAI are left after exchange return them to the user
     uint256 daiLeft = IERC20(DAI).balanceOf(address(this)).sub(borrowedDai);
     emit MultipleActionCalled(cdpData.methodName, cdpData.cdpId,exchangeData.minToTokenAmount,exchangeData.toTokenAmount,0,daiLeft);
 
@@ -551,32 +538,27 @@ contract MultiplyProxyActions {
     AddressRegistry memory addressRegistry,
     uint256 premium
   ) private {
+    uint256 debtToBeWiped = 0 ;
+    
     IExchange exchange = IExchange(addressRegistry.exchange);
-
-    if (cdpData.skipFL) {
-      wipeAndFreeGem(
-        addressRegistry.manager,
-        cdpData.gemJoin,
-        cdpData.cdpId,
-        0,
-        cdpData.borrowCollateral.add(cdpData.withdrawCollateral)
-      );
-    } else {
-      wipeAndFreeGem(
-        addressRegistry.manager,
-        cdpData.gemJoin,
-        cdpData.cdpId,
-        cdpData.requiredDebt.sub(cdpData.withdrawDai),
-        cdpData.borrowCollateral.add(cdpData.withdrawCollateral)
-      );
+    
+    if(!cdpData.skipFL){
+     debtToBeWiped = cdpData.requiredDebt.sub(cdpData.withdrawDai);
     }
+    wipeAndFreeGem(
+      addressRegistry.manager,
+      cdpData.gemJoin,
+      cdpData.cdpId,
+      debtToBeWiped,
+      cdpData.borrowCollateral.add(cdpData.withdrawCollateral)
+    );
 
     require(
       IERC20(exchangeData.fromTokenAddress).approve(
         address(exchange),
         exchangeData.fromTokenAmount
       ),
-      'MPA / Could not approve Exchange for Token'
+      "MPA / Could not approve Exchange for Token"
     );
 
     exchange.swapTokenForDai(
@@ -690,7 +672,7 @@ contract MultiplyProxyActions {
 
     require(
       IERC20(exchangeData.fromTokenAddress).approve(address(exchange), ink),
-      'MPA / Could not approve Exchange for Token'
+      "MPA / Could not approve Exchange for Token"
     );
     exchange.swapTokenForDai(
       exchangeData.fromTokenAddress,
@@ -737,7 +719,7 @@ contract MultiplyProxyActions {
         address(exchange),
         IERC20(gemAddress).balanceOf(address(this))
       ),
-      'MPA / Could not approve Exchange for Token'
+      "MPA / Could not approve Exchange for Token"
     );
     exchange.swapTokenForDai(
       exchangeData.fromTokenAddress,
