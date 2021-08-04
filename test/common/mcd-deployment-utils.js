@@ -285,6 +285,26 @@ const getLastCDP = async function (provider, signer, proxyAddress) {
   return cdp
 }
 
+const findMPAEvent = function (txResult){
+  
+  let abi = [ "event MultipleActionCalled(string methodName, uint indexed cdpId, uint swapMinAmount, uint swapOptimistAmount, uint collateralLeft, uint daiLeft)" ];
+  let iface = new ethers.utils.Interface(abi);
+  let events = txResult.events.filter(x=>{
+    return x.topics[0] == iface.getEventTopic("MultipleActionCalled")
+  }).map(x=>{
+    var result =  iface.decodeEventLog("MultipleActionCalled", x.data, x.topics);
+    return {
+      methodName:result.methodName,
+      cdpId:result.cdpId.toString(),
+      swapMinAmount:result.swapMinAmount.toString(),
+      swapOptimistAmount:result.swapOptimistAmount.toString(),
+      collateralLeft:result.collateralLeft.toString(),
+      daiLeft:result.daiLeft.toString(),
+    };
+  })
+  return events;
+}
+
 module.exports = {
   getOrCreateProxy,
   deploySystem,
@@ -295,6 +315,7 @@ module.exports = {
   balanceOf,
   addressRegistryFactory,
   swapTokens,
+  findMPAEvent,
   init,
   ONE,
   TEN,
