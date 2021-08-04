@@ -22,9 +22,9 @@ const { getVaultInfo } = require('../utils-mcd.js')
 const FEE = 2
 const FEE_BASE = 10000
 
-const init = async function (blockNumber = 'latest') {
-  provider = new hre.ethers.providers.JsonRpcProvider()
-  signer = provider.getSigner(0)
+const init = async function (blockNumber, provider, signer) {
+  provider = provider || new hre.ethers.providers.JsonRpcProvider()
+  signer = signer || provider.getSigner(0)
 
   await provider.send('hardhat_reset', [
     {
@@ -87,7 +87,7 @@ const dsproxyExecuteAction = async function (
   method,
   params,
   value = new BigNumber(0),
-  debug = false ,
+  debug = false,
 ) {
   try {
     const calldata = proxyActions.interface.encodeFunctionData(method, params)

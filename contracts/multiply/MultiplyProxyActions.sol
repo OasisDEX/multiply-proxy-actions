@@ -15,18 +15,18 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import {IERC20} from '../interfaces/IERC20.sol';
-import '../interfaces/aaveV2/ILendingPoolAddressesProviderV2.sol';
-import '../interfaces/aaveV2/ILendingPoolV2.sol';
-import '../utils/SafeMath.sol';
-import '../interfaces/IWETH.sol';
-import '../interfaces/mcd/IJoin.sol';
-import '../interfaces/mcd/IManager.sol';
-import '../interfaces/mcd/IVat.sol';
-import '../interfaces/mcd/IJug.sol';
-import '../interfaces/mcd/IDaiJoin.sol';
-import '../interfaces/exchange/IExchange.sol';
-import './ExchangeData.sol';
+import {IERC20} from "../interfaces/IERC20.sol";
+import "../interfaces/aaveV2/ILendingPoolAddressesProviderV2.sol";
+import "../interfaces/aaveV2/ILendingPoolV2.sol";
+import "../utils/SafeMath.sol";
+import "../interfaces/IWETH.sol";
+import "../interfaces/mcd/IJoin.sol";
+import "../interfaces/mcd/IManager.sol";
+import "../interfaces/mcd/IVat.sol";
+import "../interfaces/mcd/IJug.sol";
+import "../interfaces/mcd/IDaiJoin.sol";
+import "../interfaces/exchange/IExchange.sol";
+import "./ExchangeData.sol";
 
 pragma solidity >=0.7.6;
 pragma abicoder v2;
@@ -75,7 +75,7 @@ contract MultiplyProxyActions {
 
   function toInt256(uint256 x) internal pure returns (int256 y) {
     y = int256(x);
-    require(y >= 0, 'int256-overflow');
+    require(y >= 0, "int256-overflow");
   }
 
   function convertTo18(address gemJoin, uint256 amt) internal returns (uint256 wad) {
@@ -199,13 +199,16 @@ contract MultiplyProxyActions {
 
     bytes memory paramsData = abi.encode(1, exchangeData, cdpData, addressRegistry);
 
-    if (cdpData.skipFL) {//we want to draw our own DAI and use them in the exchange to buy collateral
+    if (cdpData.skipFL) {
+      //we want to draw our own DAI and use them in the exchange to buy collateral
       IGem gem = IJoin(cdpData.gemJoin).gem();
       uint256 collBalance = IERC20(address(gem)).balanceOf(address(this));
-      if (collBalance > 0) {//if someone provided some collateral during increase
+      if (collBalance > 0) {
+        //if someone provided some collateral during increase
         //add it to vault and draw DAI
         joinDrawDebt(cdpData, cdpData.requiredDebt, addressRegistry.manager, addressRegistry.jug);
-      } else {//just draw DAI
+      } else {
+        //just draw DAI
         drawDaiDebt(cdpData, addressRegistry, cdpData.requiredDebt);
       }
       _increaseMP(exchangeData, cdpData, addressRegistry, 0);
@@ -355,7 +358,7 @@ contract MultiplyProxyActions {
       if (mode == 2) {
         _closeWithdrawCollateralSkipFL(exchangeData, cdpData, addressRegistry);
       } else {
-        require(false, 'this code should be unreachable');
+        require(false, "this code should be unreachable");
       }
     }
   }
@@ -373,7 +376,7 @@ contract MultiplyProxyActions {
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
   ) public {
-    require(cdpData.skipFL == false, 'cannot close to DAI if FL not used');
+    require(cdpData.skipFL == false, "cannot close to DAI if FL not used");
     closeVaultExitGeneric(exchangeData, cdpData, addressRegistry, 3);
   }
 
@@ -487,11 +490,11 @@ contract MultiplyProxyActions {
     IExchange exchange = IExchange(addressRegistry.exchange);
     uint256 borrowedDai = cdpData.requiredDebt.add(premium);
     if (cdpData.skipFL) {
-      borrowedDai = 0;//this DAI are not borrowed and shal not stay after this method execution
+      borrowedDai = 0; //this DAI are not borrowed and shal not stay after this method execution
     }
     require(
       IERC20(DAI).approve(address(exchange), exchangeData.fromTokenAmount.add(cdpData.depositDai)),
-      'MPA / Could not approve Exchange for DAI'
+      "MPA / Could not approve Exchange for DAI"
     );
     exchange.swapDaiForToken(
       exchangeData.toTokenAddress,
@@ -518,7 +521,7 @@ contract MultiplyProxyActions {
   ) private {
     IExchange exchange = IExchange(addressRegistry.exchange);
 
-    uint265 debtToBeWiped = cdpData.skipFL ?  0 : cdpData.requiredDebt.sub(cdpData.withdrawDai);
+    uint265 debtToBeWiped = cdpData.skipFL ? 0 : cdpData.requiredDebt.sub(cdpData.withdrawDai);
     wipeAndFreeGem(
       addressRegistry.manager,
       cdpData.gemJoin,
@@ -532,7 +535,7 @@ contract MultiplyProxyActions {
         address(exchange),
         exchangeData.fromTokenAmount
       ),
-      'MPA / Could not approve Exchange for Token'
+      "MPA / Could not approve Exchange for Token"
     );
 
     exchange.swapTokenForDai(
@@ -587,7 +590,7 @@ contract MultiplyProxyActions {
     );
     require(
       IERC20(exchangeData.fromTokenAddress).approve(address(exchange), ink),
-      'MPA / Could not approve Exchange for Token'
+      "MPA / Could not approve Exchange for Token"
     );
     exchange.swapTokenForDai(
       exchangeData.fromTokenAddress,
@@ -599,7 +602,7 @@ contract MultiplyProxyActions {
 
     uint256 daiLeft = IERC20(DAI).balanceOf(address(this));
 
-    require(cdpData.requiredDebt <= daiLeft, 'cannot repay all debt');
+    require(cdpData.requiredDebt <= daiLeft, "cannot repay all debt");
     cdpData.withdrawCollateral = convertTo18(cdpData.gemJoin, cdpData.withdrawCollateral);
 
     wipeAndFreeGem(
@@ -643,7 +646,7 @@ contract MultiplyProxyActions {
 
     require(
       IERC20(exchangeData.fromTokenAddress).approve(address(exchange), ink),
-      'MPA / Could not approve Exchange for Token'
+      "MPA / Could not approve Exchange for Token"
     );
     exchange.swapTokenForDai(
       exchangeData.fromTokenAddress,
@@ -689,7 +692,7 @@ contract MultiplyProxyActions {
         address(exchange),
         IERC20(gemAddress).balanceOf(address(this))
       ),
-      'MPA / Could not approve Exchange for Token'
+      "MPA / Could not approve Exchange for Token"
     );
     exchange.swapTokenForDai(
       exchangeData.fromTokenAddress,

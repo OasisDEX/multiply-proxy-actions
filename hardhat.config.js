@@ -25,8 +25,8 @@ module.exports = {
         url: process.env.ALCHEMY_NODE,
         blockNumber: 12763570
       },
-      // chainId: 1,
-      chainId: 2137,
+      chainId: 1,
+      // chainId: 2137,
       mining: {
         auto: true
       },

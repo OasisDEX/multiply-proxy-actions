@@ -213,7 +213,6 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
 
     it(`should increase vault's multiple to required collateralization ratio`, async function () {
       requiredCollRatio = new BigNumber(7)
-
       ;[requiredDebt, toBorrowCollateralAmount] = calculateParamsIncreaseMP(
         oraclePrice,
         marketPrice,
@@ -279,7 +278,6 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
       const daiDeposit = new BigNumber(300)
 
       await DAI.approve(userProxyAddress, amountToWei(daiDeposit).toFixed(0))
-
       ;[requiredDebt, toBorrowCollateralAmount] = calculateParamsIncreaseMP(
         oraclePrice,
         marketPrice,

@@ -55,7 +55,6 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
   this.beforeEach(async function () {})
 
   this.beforeAll(async function () {
-    console.log('Before all')
     provider = new hre.ethers.providers.JsonRpcProvider()
     signer = provider.getSigner(0)
     WETH = new ethers.Contract(MAINNET_ADRESSES.ETH, wethAbi, provider).connect(signer)
@@ -136,7 +135,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         address,
         false,
       )
-      var [status,result] = await dsproxyExecuteAction(
+      var [status, result] = await dsproxyExecuteAction(
         multiplyProxyActions,
         dsProxy,
         address,
@@ -145,8 +144,8 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         amountToWei(currentColl),
       )
 
-      if(status == false){
-        throw result;
+      if (status == false) {
+        throw result
       }
 
       const lastCDP = await getLastCDP(provider, signer, userProxyAddress)
@@ -198,7 +197,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         false,
         0,
       )
-      const [status,result] = await dsproxyExecuteAction(
+      const [status, result] = await dsproxyExecuteAction(
         multiplyProxyActions,
         dsProxy,
         address,

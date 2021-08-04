@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 pragma solidity >=0.7.6;
-import '../interfaces/IERC20.sol';
-import '../utils/SafeMath.sol';
-import '../utils/SafeERC20.sol';
+import "../interfaces/IERC20.sol";
+import "../utils/SafeMath.sol";
+import "../utils/SafeERC20.sol";
+import "hardhat/console.sol";
 
 contract Exchange {
   using SafeMath for uint256;
@@ -11,9 +12,9 @@ contract Exchange {
 
   address constant DAI_ADDRESS = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
   address public feeBeneficiaryAddress;
-  mapping(address => bool) WHITELISTED_CALLERS;
+  mapping(address => bool) public WHITELISTED_CALLERS;
   uint8 public fee;
-  uint256 public feeBase = 10000;
+  uint256 public constant feeBase = 10000;
 
   constructor(
     address authorisedCaller,
@@ -29,16 +30,13 @@ contract Exchange {
   event FeePaid(uint256 amount);
   event SlippageSaved(uint256 minimumPossible, uint256 actualAmount);
 
-  // Notes: So  I have to transfer the `amount` to the exchange contract, from the msg.sender
-  // After that I have to setup allowance of the destination caller for fromAsset on the behalf of the exchange
-  // Once I have the tokens transfers I call the aggregator with the call data
-  // If the call is successful then I check if the balance for the Exchange in the toAsset has increased by the toAmount
-  // If the amount has increased by `toAmount` I must send this to the msg.sender
-  // In order to do that I have to call toAsset.transfer
-
-  modifier onlyAuthorized {
-    require(WHITELISTED_CALLERS[msg.sender], 'Exchange / Unauthorized Caller.'); // This will be changed to registry.isTrusty(msg.sender) or smth
+  modifier onlyAuthorized() {
+    require(WHITELISTED_CALLERS[msg.sender], "Exchange / Unauthorized Caller.");
     _;
+  }
+
+  function setFee(uint8 _fee) public onlyAuthorized {
+    fee = _fee;
   }
 
   function _transferIn(
@@ -48,7 +46,7 @@ contract Exchange {
   ) internal {
     require(
       IERC20(asset).allowance(from, address(this)) >= amount,
-      'Exchange / Not enought allowance'
+      "Exchange / Not enough allowance"
     );
     IERC20(asset).safeTransferFrom(from, address(this), amount);
   }
@@ -61,19 +59,19 @@ contract Exchange {
     address callee,
     bytes calldata withData
   ) internal returns (uint256) {
-    require(IERC20(fromAsset).approve(callee, amount), 'Exchange / Cannot Set Allowance to Callee');
+    IERC20(fromAsset).safeApprove(callee, amount);
     (bool success, ) = callee.call(withData);
-    require(success, 'Exchange / Could not swap');
+    require(success, "Exchange / Could not swap");
     uint256 balance = IERC20(toAsset).balanceOf(address(this));
     emit SlippageSaved(receiveAtLeast, balance);
-    require(balance >= receiveAtLeast, 'Exchange / Received less');
+    require(balance >= receiveAtLeast, "Exchange / Received less");
     emit AssetSwap(fromAsset, toAsset, amount, balance);
     return balance;
   }
 
   function _collectFee(address asset, uint256 fromAmount) internal returns (uint256) {
     uint256 feeToTransfer = (fromAmount.mul(fee)).div(feeBase);
-    IERC20(asset).transferFrom(address(this), feeBeneficiaryAddress, feeToTransfer);
+    IERC20(asset).safeTransfer(feeBeneficiaryAddress, feeToTransfer);
     emit FeePaid(feeToTransfer);
     return fromAmount.sub(feeToTransfer);
   }
@@ -94,8 +92,16 @@ contract Exchange {
     bytes calldata withData
   ) public onlyAuthorized {
     _transferIn(msg.sender, DAI_ADDRESS, amount);
+
     uint256 _amount = _collectFee(DAI_ADDRESS, amount);
     uint256 balance = _swap(DAI_ADDRESS, asset, _amount, receiveAtLeast, callee, withData);
+
+    uint256 daiBalance = IERC20(DAI_ADDRESS).balanceOf(address(this));
+
+    if (daiBalance > 0) {
+      _transferOut(DAI_ADDRESS, msg.sender, daiBalance);
+    }
+
     _transferOut(asset, msg.sender, balance);
   }
 
@@ -107,8 +113,16 @@ contract Exchange {
     bytes calldata withData
   ) public onlyAuthorized {
     _transferIn(msg.sender, asset, amount);
+
     uint256 balance = _swap(asset, DAI_ADDRESS, amount, receiveAtLeast, callee, withData);
     uint256 _balance = _collectFee(DAI_ADDRESS, balance);
+
+    uint256 assetBalance = IERC20(asset).balanceOf(address(this));
+
+    if (assetBalance > 0) {
+      _transferOut(asset, msg.sender, assetBalance);
+    }
+
     _transferOut(DAI_ADDRESS, msg.sender, _balance);
   }
 }
