@@ -198,6 +198,7 @@ const prepareBasicParams = function (
   existingCDP,
   fundsReciver,
   toDAI = false,
+  skipFL = false,
 ) {
   debtDelta = ensureWeiFormat(debtDelta)
   collateralDelta = ensureWeiFormat(collateralDelta)
@@ -214,6 +215,7 @@ const prepareBasicParams = function (
   }
 
   let cdpData = {
+    skipFL: skipFL,
     gemJoin: MAINNET_ADRESSES.MCD_JOIN_ETH_A,
     cdpId: existingCDP ? existingCDP.id : 0,
     ilk: existingCDP
@@ -242,6 +244,7 @@ const prepareMultiplyParameters = function (
   fundsReceiver,
   toDAI = false,
   cdpId = 0,
+  skipFL = false,
 ) {
   let exchangeData = {
     fromTokenAddress: toDAI ? MAINNET_ADRESSES.WETH_ADDRESS : MAINNET_ADRESSES.MCD_DAI,
@@ -261,6 +264,7 @@ const prepareMultiplyParameters = function (
   }
 
   let cdpData = {
+    skipFL: skipFL,
     gemJoin: MAINNET_ADRESSES.MCD_JOIN_ETH_A,
     cdpId: cdpId,
     ilk: '0x0000000000000000000000000000000000000000000000000000000000000000',
@@ -291,6 +295,7 @@ const prepareMultiplyParameters2 = function (
   multiplyProxyActionsInstanceAddress,
   exchangeInstanceAddress,
   userAddress,
+  skipFL = false,
   join = MAINNET_ADRESSES.MCD_JOIN_ETH_A,
   precision = 18,
   reversedSwap = false,
@@ -310,12 +315,12 @@ const prepareMultiplyParameters2 = function (
       desiredCdpState.toTokenAmount,
       !reversedSwap ? precision : 18,
     ).toFixed(0),
-    expectedFee: 0,
     exchangeAddress: oneInchPayload.to,
     _exchangeCalldata: oneInchPayload.data,
   }
 
   let cdpData = {
+    skipFL,
     gemJoin: join,
     cdpId: cdpId,
     ilk: '0x0000000000000000000000000000000000000000000000000000000000000000',
