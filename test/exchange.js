@@ -497,7 +497,7 @@ describe('Exchange', async function () {
       await expect(tx).to.revertedWith('Exchange / Unauthorized Caller')
     })
 
-    describe.only('when transferring an exact amount to the exchange', async function () {
+    describe('when transferring an exact amount to the exchange', async function () {
       let localSnapshotId
 
       this.beforeEach(async function () {
@@ -944,7 +944,6 @@ describe('Exchange', async function () {
         amountInWei,
         exchange.address,
         slippage.value.toString(),
-        ['UNISWAP_V2'],
       )
 
       const {
@@ -1058,7 +1057,6 @@ describe('Exchange', async function () {
         amountInWei.toFixed(0),
         slippage.value.toString(),
         exchange.address,
-        ['UNISWAP_V2'],
       )
 
       const {
@@ -1175,7 +1173,6 @@ describe('Exchange', async function () {
         amountInWei.toFixed(0),
         slippage.value.toString(),
         exchange.address,
-        ['UNISWAP_V2'],
       )
 
       const {
