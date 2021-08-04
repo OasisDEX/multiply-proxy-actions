@@ -44,6 +44,7 @@ struct CdpData {
   uint256 depositDai;
   uint256 depositCollateral;
   bool skipFL;
+  string methodName ;
 }
 
 struct AddressRegistry {
@@ -80,19 +81,12 @@ contract MultiplyProxyActions {
     flCalledMethodName = "";
   }
 
-  modifier logMethodName(string memory name, bool skipFL, address destination){
-
-    if(skipFL){
-      setMethodName(name);
-    } else {
-      MultiplyProxyActions(payable(destination)).setMethodName(name);
+  modifier logMethodName(string memory name,CdpData memory data, address destination){
+    if(bytes(data.methodName).length == 0){
+      data.methodName = name;
     }
     _;
-    if(skipFL){
-      clearMethodName();
-    } else {
-      MultiplyProxyActions(payable(destination)).clearMethodName();
-    }
+    data.methodName = "";
   }
 
   function getAaveLendingPool(address lendingPoolProvider) private view returns (ILendingPoolV2) {
@@ -138,7 +132,7 @@ contract MultiplyProxyActions {
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
-  ) public payable logMethodName("openMultiplyVault", cdpData.skipFL, addressRegistry.multiplyProxyActions) {
+  ) public payable logMethodName("openMultiplyVault", cdpData, addressRegistry.multiplyProxyActions) {
     cdpData.ilk = IJoin(cdpData.gemJoin).ilk();
     cdpData.cdpId = IManager(addressRegistry.manager).open(cdpData.ilk, address(this));
     increaseMultipleDepositCollateral(exchangeData, cdpData, addressRegistry);
@@ -148,7 +142,7 @@ contract MultiplyProxyActions {
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
-  ) public payable  logMethodName("increaseMultipleDepositCollateral", cdpData.skipFL, addressRegistry.multiplyProxyActions)  {
+  ) public payable  logMethodName("increaseMultipleDepositCollateral", cdpData, addressRegistry.multiplyProxyActions)  {
     
     IGem gem = IJoin(cdpData.gemJoin).gem();
 
@@ -199,7 +193,7 @@ contract MultiplyProxyActions {
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
-  ) public  logMethodName("increaseMultipleDepositDai", cdpData.skipFL, addressRegistry.multiplyProxyActions) {
+  ) public  logMethodName("increaseMultipleDepositDai", cdpData, addressRegistry.multiplyProxyActions) {
     if(cdpData.skipFL){
       IERC20(DAI).transferFrom(msg.sender, address(this), cdpData.depositDai);
     } else {
@@ -216,7 +210,7 @@ contract MultiplyProxyActions {
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
-  ) public  logMethodName("increaseMultiple", cdpData.skipFL, addressRegistry.multiplyProxyActions) {
+  ) public  logMethodName("increaseMultiple", cdpData, addressRegistry.multiplyProxyActions) {
     increaseMultipleInternal(exchangeData, cdpData, addressRegistry);
   }
 
@@ -278,7 +272,7 @@ contract MultiplyProxyActions {
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
-  ) public  logMethodName("decreaseMultiple", cdpData.skipFL, addressRegistry.multiplyProxyActions){
+  ) public  logMethodName("decreaseMultiple", cdpData, addressRegistry.multiplyProxyActions){
     decreaseMultipleInternal(exchangeData, cdpData, addressRegistry);
   }
 
@@ -331,7 +325,7 @@ contract MultiplyProxyActions {
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
-  ) public logMethodName("decreaseMultipleWithdrawCollateral", cdpData.skipFL, addressRegistry.multiplyProxyActions){
+  ) public logMethodName("decreaseMultipleWithdrawCollateral", cdpData, addressRegistry.multiplyProxyActions){
     decreaseMultipleInternal(exchangeData, cdpData, addressRegistry);
   }
 
@@ -339,7 +333,7 @@ contract MultiplyProxyActions {
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
-  ) public  logMethodName("decreaseMultipleWithdrawDai", cdpData.skipFL, addressRegistry.multiplyProxyActions){
+  ) public  logMethodName("decreaseMultipleWithdrawDai", cdpData, addressRegistry.multiplyProxyActions){
     decreaseMultipleInternal(exchangeData, cdpData, addressRegistry);
   }
 
@@ -402,7 +396,7 @@ contract MultiplyProxyActions {
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
-  ) public logMethodName("closeVaultExitCollateral", cdpData.skipFL, addressRegistry.multiplyProxyActions){
+  ) public logMethodName("closeVaultExitCollateral", cdpData, addressRegistry.multiplyProxyActions){
     closeVaultExitGeneric(exchangeData, cdpData, addressRegistry, 2);
     MultiplyProxyActions(payable(addressRegistry.multiplyProxyActions)).clearMethodName();
   }
@@ -544,7 +538,7 @@ contract MultiplyProxyActions {
     );
     joinDrawDebt(cdpData, borrowedDai, addressRegistry.manager, addressRegistry.jug);
     uint256 daiLeft = IERC20(DAI).balanceOf(address(this)).sub(borrowedDai);
-    emit MultipleActionCalled(flCalledMethodName,cdpData.cdpId,exchangeData.minToTokenAmount,exchangeData.toTokenAmount,0,daiLeft);
+    emit MultipleActionCalled(cdpData.methodName, cdpData.cdpId,exchangeData.minToTokenAmount,exchangeData.toTokenAmount,0,daiLeft);
 
     if (daiLeft > 0) {
       IERC20(DAI).transfer(cdpData.fundsReceiver, daiLeft);
@@ -608,7 +602,7 @@ contract MultiplyProxyActions {
     } else {
       daiLeft = IERC20(DAI).balanceOf(address(this)).sub(cdpData.requiredDebt.add(premium));
     }
-    emit MultipleActionCalled(flCalledMethodName,cdpData.cdpId,exchangeData.minToTokenAmount,exchangeData.toTokenAmount,collateralLeft,daiLeft);
+    emit MultipleActionCalled(cdpData.methodName, cdpData.cdpId,exchangeData.minToTokenAmount,exchangeData.toTokenAmount,collateralLeft,daiLeft);
 
     if (daiLeft > 0) {
       IERC20(DAI).transfer(cdpData.fundsReceiver, daiLeft);
@@ -670,7 +664,7 @@ contract MultiplyProxyActions {
     if (collateralLeft > 0) {
       _withdrawGem(cdpData.gemJoin, cdpData.fundsReceiver, collateralLeft);
     }
-    emit MultipleActionCalled(flCalledMethodName,cdpData.cdpId,exchangeData.minToTokenAmount,exchangeData.toTokenAmount,collateralLeft,daiLeft);
+    emit MultipleActionCalled(cdpData.methodName, cdpData.cdpId,exchangeData.minToTokenAmount,exchangeData.toTokenAmount,collateralLeft,daiLeft);
 
   }
 
@@ -715,7 +709,7 @@ contract MultiplyProxyActions {
     if (collateralLeft > 0) {
       _withdrawGem(cdpData.gemJoin, cdpData.fundsReceiver, collateralLeft);
     }
-    emit MultipleActionCalled(flCalledMethodName,cdpData.cdpId,exchangeData.minToTokenAmount,exchangeData.toTokenAmount,collateralLeft,daiLeft);
+    emit MultipleActionCalled(cdpData.methodName ,cdpData.cdpId,exchangeData.minToTokenAmount,exchangeData.toTokenAmount,collateralLeft,daiLeft);
   }
 
   function _closeWithdrawDai(
@@ -763,7 +757,7 @@ contract MultiplyProxyActions {
     if (collateralLeft > 0) {
       _withdrawGem(cdpData.gemJoin, cdpData.fundsReceiver, collateralLeft);
     }*/
-    emit MultipleActionCalled(flCalledMethodName,cdpData.cdpId,exchangeData.minToTokenAmount,exchangeData.toTokenAmount,collateralLeft,daiLeft);
+    emit MultipleActionCalled(cdpData.methodName, cdpData.cdpId,exchangeData.minToTokenAmount,exchangeData.toTokenAmount,collateralLeft,daiLeft);
   }
 
   function executeOperation(

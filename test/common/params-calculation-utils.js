@@ -228,6 +228,7 @@ const prepareBasicParams = function (
     withdrawDai: 0,
     withdrawCollateral: 0,
     fundsReceiver: fundsReciver,
+    methodName:''
   }
 
   return {
@@ -275,6 +276,7 @@ const prepareMultiplyParameters = function (
     depositCollateral: amountToWei(desiredCdpState.providedCollateral).toFixed(0),
     withdrawDai: amountToWei(desiredCdpState.withdrawDai).toFixed(0),
     withdrawCollateral: amountToWei(desiredCdpState.withdrawCollateral).toFixed(0),
+    methodName:''
   }
 
   let params = packMPAParams(
@@ -335,6 +337,7 @@ const prepareMultiplyParameters2 = function (
     withdrawCollateral: amountToWei(desiredCdpState.withdrawCollateral || zero, precision).toFixed(
       0,
     ),
+    methodName:''
   }
 
   let params = [
