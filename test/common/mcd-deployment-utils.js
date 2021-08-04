@@ -292,8 +292,8 @@ const findMPAEvent = function (txResult){
   let events = txResult.events.filter(x=>{
     return x.topics[0] == iface.getEventTopic("MultipleActionCalled")
   }).map(x=>{
-    var result =  iface.decodeEventLog("MultipleActionCalled", x.data, x.topics);
-    return {
+    let result =  iface.decodeEventLog("MultipleActionCalled", x.data, x.topics);
+    let retVal = {
       methodName:result.methodName,
       cdpId:result.cdpId.toString(),
       swapMinAmount:result.swapMinAmount.toString(),
@@ -301,6 +301,7 @@ const findMPAEvent = function (txResult){
       collateralLeft:result.collateralLeft.toString(),
       daiLeft:result.daiLeft.toString(),
     };
+    return retVal;
   })
   return events;
 }

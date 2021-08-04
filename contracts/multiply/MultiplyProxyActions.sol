@@ -80,6 +80,21 @@ contract MultiplyProxyActions {
     flCalledMethodName = "";
   }
 
+  modifier logMethodName(string memory name, bool skipFL, address destination){
+
+    if(skipFL){
+      setMethodName(name);
+    } else {
+      MultiplyProxyActions(payable(destination)).setMethodName(name);
+    }
+    _;
+    if(skipFL){
+      clearMethodName();
+    } else {
+      MultiplyProxyActions(payable(destination)).clearMethodName();
+    }
+  }
+
   function getAaveLendingPool(address lendingPoolProvider) private view returns (ILendingPoolV2) {
     ILendingPoolAddressesProviderV2 provider = ILendingPoolAddressesProviderV2(lendingPoolProvider);
     ILendingPoolV2 lendingPool = ILendingPoolV2(provider.getLendingPool());
@@ -123,20 +138,18 @@ contract MultiplyProxyActions {
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
-  ) public payable {
-    MultiplyProxyActions(payable(addressRegistry.multiplyProxyActions)).setMethodName("openMultiplyVault");
+  ) public payable logMethodName("openMultiplyVault", cdpData.skipFL, addressRegistry.multiplyProxyActions) {
     cdpData.ilk = IJoin(cdpData.gemJoin).ilk();
     cdpData.cdpId = IManager(addressRegistry.manager).open(cdpData.ilk, address(this));
     increaseMultipleDepositCollateral(exchangeData, cdpData, addressRegistry);
-    MultiplyProxyActions(payable(addressRegistry.multiplyProxyActions)).clearMethodName();
   }
 
   function increaseMultipleDepositCollateral(
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
-  ) public payable {
-    MultiplyProxyActions(payable(addressRegistry.multiplyProxyActions)).setMethodName("increaseMultipleDepositCollateral");
+  ) public payable  logMethodName("increaseMultipleDepositCollateral", cdpData.skipFL, addressRegistry.multiplyProxyActions)  {
+    
     IGem gem = IJoin(cdpData.gemJoin).gem();
 
     if (address(gem) == WETH) {
@@ -156,7 +169,6 @@ contract MultiplyProxyActions {
       }
     }
     increaseMultipleInternal(exchangeData, cdpData, addressRegistry);(exchangeData, cdpData, addressRegistry);
-    MultiplyProxyActions(payable(addressRegistry.multiplyProxyActions)).clearMethodName();
   }
 
   function toRad(uint256 wad) internal pure returns (uint256 rad) {
@@ -187,9 +199,8 @@ contract MultiplyProxyActions {
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
-  ) public {
-    MultiplyProxyActions(payable(addressRegistry.multiplyProxyActions)).setMethodName("increaseMultipleDepositDai");
-    if (cdpData.skipFL) {
+  ) public  logMethodName("increaseMultipleDepositDai", cdpData.skipFL, addressRegistry.multiplyProxyActions) {
+    if(cdpData.skipFL){
       IERC20(DAI).transferFrom(msg.sender, address(this), cdpData.depositDai);
     } else {
       IERC20(DAI).transferFrom(
@@ -199,17 +210,14 @@ contract MultiplyProxyActions {
       );
     }
     increaseMultipleInternal(exchangeData, cdpData, addressRegistry);
-    MultiplyProxyActions(payable(addressRegistry.multiplyProxyActions)).clearMethodName();
   }
 
   function increaseMultiple(
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
-  ) public {
-    MultiplyProxyActions(payable(addressRegistry.multiplyProxyActions)).setMethodName("increaseMultiple");
+  ) public  logMethodName("increaseMultiple", cdpData.skipFL, addressRegistry.multiplyProxyActions) {
     increaseMultipleInternal(exchangeData, cdpData, addressRegistry);
-    MultiplyProxyActions(payable(addressRegistry.multiplyProxyActions)).clearMethodName();
   }
 
   function increaseMultipleInternal(
@@ -270,10 +278,8 @@ contract MultiplyProxyActions {
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
-  ) public {
-    MultiplyProxyActions(payable(addressRegistry.multiplyProxyActions)).setMethodName("decreaseMultiple");
+  ) public  logMethodName("decreaseMultiple", cdpData.skipFL, addressRegistry.multiplyProxyActions){
     decreaseMultipleInternal(exchangeData, cdpData, addressRegistry);
-    MultiplyProxyActions(payable(addressRegistry.multiplyProxyActions)).clearMethodName();
   }
 
   function decreaseMultipleInternal(
@@ -325,20 +331,16 @@ contract MultiplyProxyActions {
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
-  ) public {
-    MultiplyProxyActions(payable(addressRegistry.multiplyProxyActions)).setMethodName("decreaseMultipleWithdrawCollateral");
+  ) public logMethodName("decreaseMultipleWithdrawCollateral", cdpData.skipFL, addressRegistry.multiplyProxyActions){
     decreaseMultipleInternal(exchangeData, cdpData, addressRegistry);
-    MultiplyProxyActions(payable(addressRegistry.multiplyProxyActions)).clearMethodName();
   }
 
   function decreaseMultipleWithdrawDai(
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
-  ) public {
-    MultiplyProxyActions(payable(addressRegistry.multiplyProxyActions)).setMethodName("decreaseMultipleWithdrawDai");
+  ) public  logMethodName("decreaseMultipleWithdrawDai", cdpData.skipFL, addressRegistry.multiplyProxyActions){
     decreaseMultipleInternal(exchangeData, cdpData, addressRegistry);
-    MultiplyProxyActions(payable(addressRegistry.multiplyProxyActions)).clearMethodName();
   }
 
   function closeVaultExitGeneric(
@@ -400,8 +402,7 @@ contract MultiplyProxyActions {
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
-  ) public {
-    MultiplyProxyActions(payable(addressRegistry.multiplyProxyActions)).setMethodName("closeVaultExitCollateral");
+  ) public logMethodName("closeVaultExitCollateral", cdpData.skipFL, addressRegistry.multiplyProxyActions){
     closeVaultExitGeneric(exchangeData, cdpData, addressRegistry, 2);
     MultiplyProxyActions(payable(addressRegistry.multiplyProxyActions)).clearMethodName();
   }

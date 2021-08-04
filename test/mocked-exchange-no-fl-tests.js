@@ -252,7 +252,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         true,
       )
 
-      await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'increaseMultiple', params)
+      let [status,result] = await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'increaseMultiple', params)
       info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
       const currentCollRatio = new BigNumber(info.coll)
         .times(oraclePrice)
@@ -323,7 +323,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         true,
       )
 
-      await dsproxyExecuteAction(
+      let [status,result] = await dsproxyExecuteAction(
         multiplyProxyActions,
         dsProxy,
         address,
@@ -396,7 +396,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         true,
       )
 
-      await dsproxyExecuteAction(
+      let [status,result] = await dsproxyExecuteAction(
         multiplyProxyActions,
         dsProxy,
         address,
@@ -468,7 +468,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         true,
       )
 
-      await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'decreaseMultiple', params)
+      let [status,result] = await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'decreaseMultiple', params)
 
       info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
       const currentCollRatio = new BigNumber(info.coll)
@@ -537,7 +537,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         true,
       )
 
-      await dsproxyExecuteAction(
+      let [status,result] = await dsproxyExecuteAction(
         multiplyProxyActions,
         dsProxy,
         address,
@@ -612,7 +612,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         true,
       )
 
-      await dsproxyExecuteAction(
+      let [status,result] = await dsproxyExecuteAction(
         multiplyProxyActions,
         dsProxy,
         address,
@@ -682,7 +682,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         true,
       )
 
-      await dsproxyExecuteAction(
+      let [status,result] = await dsproxyExecuteAction(
         multiplyProxyActions,
         dsProxy,
         address,
