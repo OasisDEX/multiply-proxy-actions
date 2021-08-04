@@ -21,11 +21,11 @@ const getMarketPrice = async function (from, to, fromPrecision = 18, toPrecision
   const marketPrice = toTokenAmount.div(fromTokenAmount)
   return marketPrice
 }
-//convertToBigNumber(amount).times(one.minus(fee)).toFixed(0)
+
 const exchangeFromDAI = async function (toTokenAddress, amount, slippage, recepient, protocols) {
   protocols = !protocols || !protocols.length ? '' : `&protocols=${protocols.join(',')}`
 
-  var url = `https://api.1inch.exchange/v3.0/1/swap?
+  var url = `https://oasis.api.enterprise.1inch.exchange/v3.0/1/swap?
     fromTokenAddress=${MAINNET_ADRESSES.MCD_DAI}
     &toTokenAddress=${toTokenAddress}
     &amount=${amount}
@@ -63,7 +63,7 @@ const exchangeToDAI = async function (
 ) {
   protocols = !protocols || !protocols.length ? '' : `&protocols=${protocols.join(',')}`
 
-  var url = `https://api.1inch.exchange/v3.0/1/swap?
+  var url = `https://oasis.api.enterprise.1inch.exchange/v3.0/1/swap?
     fromTokenAddress=${fromTokenAddress}
     &toTokenAddress=${MAINNET_ADRESSES.MCD_DAI}
     &amount=${amount}

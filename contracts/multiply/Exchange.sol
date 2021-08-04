@@ -99,7 +99,6 @@ contract Exchange {
     uint256 daiBalance = IERC20(DAI_ADDRESS).balanceOf(address(this));
 
     if (daiBalance > 0) {
-      console.log("DAI BALANCE", msg.sender, daiBalance);
       _transferOut(DAI_ADDRESS, msg.sender, daiBalance);
     }
 
@@ -125,11 +124,5 @@ contract Exchange {
     }
 
     _transferOut(DAI_ADDRESS, msg.sender, _balance);
-  }
-
-  receive() external payable {
-    if (msg.value > 0) {
-      msg.sender.transfer(msg.value);
-    }
   }
 }

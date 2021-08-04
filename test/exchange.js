@@ -92,28 +92,8 @@ describe('Exchange', async function () {
   })
 
   it('should not allow unauthorized caller to update the fee', async function () {
-    try {
-      await exchange.connect(provider.getSigner(1)).setFee('3')
-    } catch (err) {
-      expect(err.body).to.have.string('Exchange / Unauthorized Caller')
-    }
-  })
-
-  it('should transfer back the funds if user try to send ETH to the exchange wallet', async function () {
-    let ethBalanceInWei = await provider.getBalance(address)
-    const ethBalanceBeforeCall = amountFromWei(ethBalanceInWei.toString()).toFixed(0)
-
-    const tx = {
-      to: exchange.address,
-      value: ethers.utils.parseEther('10.0'),
-    }
-
-    await signer.sendTransaction(tx)
-
-    ethBalanceInWei = await provider.getBalance(address)
-    const ethBalanceAfterCall = amountFromWei(ethBalanceInWei.toString()).toFixed(0)
-
-    expect(ethBalanceBeforeCall).to.be.equal(ethBalanceAfterCall)
+    let tx = exchange.connect(provider.getSigner(1)).setFee('3')
+    await expect(tx).to.revertedWith('Exchange / Unauthorized Caller')
   })
 
   describe('Asset for DAI', async function () {
@@ -128,7 +108,6 @@ describe('Exchange', async function () {
         amountInWei,
         exchange.address,
         slippage.value.toString(),
-        ['UNISWAP_V2'],
       )
       initialDaiWalletBalance = convertToBigNumber(await balanceOf(MAINNET_ADRESSES.ETH, address))
 
@@ -150,22 +129,19 @@ describe('Exchange', async function () {
     })
 
     it('should not happen if it is triggered from unauthorized caller', async () => {
-      try {
-        await exchange
-          .connect(provider.getSigner(1))
-          .swapTokenForDai(
-            MAINNET_ADRESSES.ETH,
-            amountToWei(1).toFixed(0),
-            amountFromWei(1).toFixed(0),
-            AGGREGATOR_V3_ADDRESS,
-            0,
-          )
-      } catch (err) {
-        expect(err.body).to.have.string('Exchange / Unauthorized Caller')
-      }
+      let tx = exchange
+        .connect(provider.getSigner(1))
+        .swapTokenForDai(
+          MAINNET_ADRESSES.ETH,
+          amountToWei(1).toFixed(0),
+          amountFromWei(1).toFixed(0),
+          AGGREGATOR_V3_ADDRESS,
+          0,
+        )
+      await expect(tx).to.revertedWith('Exchange / Unauthorized Caller')
     })
 
-    describe('and transferring an exact amount to the exchange', async function () {
+    describe('when transferring an exact amount to the exchange', async function () {
       let localSnapshotId, initialWethWalletBalance
 
       this.beforeEach(async function () {
@@ -198,7 +174,7 @@ describe('Exchange', async function () {
         await provider.send('evm_revert', [localSnapshotId])
       })
 
-      it('should exchange all amount', async function () {
+      it(`should receive at least amount specified in receiveAtLeast`, async function () {
         const wethBalance = convertToBigNumber(await balanceOf(MAINNET_ADRESSES.ETH, address))
         const daiBalance = convertToBigNumber(await balanceOf(MAINNET_ADRESSES.MCD_DAI, address))
 
@@ -245,7 +221,7 @@ describe('Exchange', async function () {
       })
     })
 
-    describe('and transferring more amount to the exchange', async function () {
+    describe('when transferring more amount to the exchange', async function () {
       let initialWethWalletBalance, moreThanTheTransferAmount, localSnapshotId
 
       this.beforeEach(async function () {
@@ -278,7 +254,7 @@ describe('Exchange', async function () {
         await provider.send('evm_revert', [localSnapshotId])
       })
 
-      it('should exchange all amount', async function () {
+      it(`should receive at least amount specified in receiveAtLeast`, async function () {
         const wethBalance = convertToBigNumber(await balanceOf(MAINNET_ADRESSES.ETH, address))
         const daiBalance = convertToBigNumber(await balanceOf(MAINNET_ADRESSES.MCD_DAI, address))
 
@@ -325,7 +301,7 @@ describe('Exchange', async function () {
       })
     })
 
-    describe('and transferring less amount to the exchange', async function () {
+    describe('when transferring less amount to the exchange', async function () {
       let initialWethWalletBalance, lessThanTheTransferAmount, localSnapshotId
 
       this.beforeEach(async function () {
@@ -348,21 +324,18 @@ describe('Exchange', async function () {
       })
 
       it('should throw an error and not exchange anything', async function () {
-        try {
-          await exchange.swapTokenForDai(
-            MAINNET_ADRESSES.ETH,
-            lessThanTheTransferAmount,
-            receiveAtLeastInWei,
-            to,
-            data,
-            {
-              value: 0,
-              gasLimit: 2500000,
-            },
-          )
-        } catch (err) {
-          expect(err.body).to.have.string('Exchange / Could not swap')
-        }
+        let tx = exchange.swapTokenForDai(
+          MAINNET_ADRESSES.ETH,
+          lessThanTheTransferAmount,
+          receiveAtLeastInWei,
+          to,
+          data,
+          {
+            value: 0,
+            gasLimit: 2500000,
+          },
+        )
+        await expect(tx).to.revertedWith('Exchange / Could not swap')
 
         const wethBalance = convertToBigNumber(await balanceOf(MAINNET_ADRESSES.ETH, address))
         const daiBalance = convertToBigNumber(await balanceOf(MAINNET_ADRESSES.MCD_DAI, address))
@@ -390,7 +363,7 @@ describe('Exchange', async function () {
       })
     })
 
-    describe('and sending some token amount in advance to the exchange', async function () {
+    describe('when sending some token amount in advance to the exchange', async function () {
       let localSnapshotId
 
       this.beforeEach(async function () {
@@ -495,7 +468,6 @@ describe('Exchange', async function () {
         amountInWei.toFixed(0),
         slippage.value.toString(),
         exchange.address,
-        ['UNISWAP_V2'],
       )
 
       const {
@@ -512,22 +484,20 @@ describe('Exchange', async function () {
     })
 
     it('should not happen if it is triggered from unauthorized caller', async () => {
-      try {
-        await exchange
-          .connect(provider.getSigner(1))
-          .swapDaiForToken(
-            MAINNET_ADRESSES.ETH,
-            amountToWei(1).toFixed(0),
-            amountFromWei(1).toFixed(0),
-            AGGREGATOR_V3_ADDRESS,
-            0,
-          )
-      } catch (err) {
-        expect(err.body).to.have.string('Exchange / Unauthorized Caller')
-      }
+      let tx = exchange
+        .connect(provider.getSigner(1))
+        .swapDaiForToken(
+          MAINNET_ADRESSES.ETH,
+          amountToWei(1).toFixed(0),
+          amountFromWei(1).toFixed(0),
+          AGGREGATOR_V3_ADDRESS,
+          0,
+        )
+
+      await expect(tx).to.revertedWith('Exchange / Unauthorized Caller')
     })
 
-    describe('and transferring an exact amount to the exchange', async function () {
+    describe.only('when transferring an exact amount to the exchange', async function () {
       let localSnapshotId
 
       this.beforeEach(async function () {
@@ -566,7 +536,7 @@ describe('Exchange', async function () {
         await provider.send('evm_revert', [localSnapshotId])
       })
 
-      it('should exchange all amount', async function () {
+      it(`should receive at least amount specified in receiveAtLeast`, async function () {
         const wethBalance = convertToBigNumber(await balanceOf(MAINNET_ADRESSES.ETH, address))
         const daiBalance = convertToBigNumber(await balanceOf(MAINNET_ADRESSES.MCD_DAI, address))
 
@@ -602,7 +572,7 @@ describe('Exchange', async function () {
       })
     })
 
-    describe('and transferring more amount to the exchange', async function () {
+    describe('when transferring more amount to the exchange', async function () {
       let initialDaiWalletBalance, moreThanTheTransferAmount, localSnapshotId, surplusAmount
 
       this.beforeEach(async function () {
@@ -687,7 +657,7 @@ describe('Exchange', async function () {
       })
     })
 
-    describe('and transferring less amount to the exchange', async function () {
+    describe('when transferring less amount to the exchange', async function () {
       let initialDaiWalletBalance, lessThanTheTransferAmount, localSnapshotId, deficitAmount
 
       this.beforeEach(async function () {
@@ -719,22 +689,18 @@ describe('Exchange', async function () {
       })
 
       it('should throw an error and not exchange anything', async function () {
-        try {
-          await exchange.swapDaiForToken(
-            MAINNET_ADRESSES.ETH,
-            lessThanTheTransferAmount,
-            receiveAtLeastInWei,
-            to,
-            data,
-            {
-              value: 0,
-              gasLimit: 2500000,
-            },
-          )
-        } catch (err) {
-          expect(err.body).to.have.string('Exchange / Could not swap')
-        }
-
+        let tx = exchange.swapDaiForToken(
+          MAINNET_ADRESSES.ETH,
+          lessThanTheTransferAmount,
+          receiveAtLeastInWei,
+          to,
+          data,
+          {
+            value: 0,
+            gasLimit: 2500000,
+          },
+        )
+        await expect(tx).to.revertedWith('Exchange / Could not swap')
         const wethBalance = convertToBigNumber(await balanceOf(MAINNET_ADRESSES.ETH, address))
         const daiBalance = convertToBigNumber(await balanceOf(MAINNET_ADRESSES.MCD_DAI, address))
 
@@ -759,7 +725,7 @@ describe('Exchange', async function () {
       })
     })
 
-    describe('and sending some token amount in advance to the exchange', async function () {
+    describe('when sending some token amount in advance to the exchange', async function () {
       let localSnapshotId
 
       this.beforeEach(async function () {
@@ -908,21 +874,18 @@ describe('Exchange', async function () {
       const receiveAtLeastInWeiAny = amountToWei(ONE).toFixed(0)
       const data = 0
 
-      try {
-        await exchange.swapTokenForDai(
-          MAINNET_ADRESSES.MCD_DAI,
-          amountInWei,
-          receiveAtLeastInWeiAny,
-          AGGREGATOR_V3_ADDRESS,
-          data,
-          {
-            value: 0,
-            gasLimit: 2500000,
-          },
-        )
-      } catch (err) {
-        expect(err.body).to.have.string('Exchange / Not enough allowance')
-      }
+      let tx = exchange.swapTokenForDai(
+        MAINNET_ADRESSES.MCD_DAI,
+        amountInWei,
+        receiveAtLeastInWeiAny,
+        AGGREGATOR_V3_ADDRESS,
+        data,
+        {
+          value: 0,
+          gasLimit: 2500000,
+        },
+      )
+      await expect(tx).to.revertedWith('Exchange / Not enough allowance')
     })
 
     it('should not have received anything', async function () {
@@ -931,22 +894,21 @@ describe('Exchange', async function () {
       const randomAddress = '0xddD11F156bD353F110Ae11574Dc8f5E9f3cE9C7E'
       const data = 0
 
-      try {
-        await WETH.approve(exchange.address, amountInWei)
-        await exchange.swapTokenForDai(
-          MAINNET_ADRESSES.ETH,
-          amountInWei,
-          receiveAtLeastInWeiAny,
-          randomAddress,
-          data,
-          {
-            value: 0,
-            gasLimit: 2500000,
-          },
-        )
-      } catch (err) {
-        expect(err.body).to.have.string('Exchange / Received less')
-      }
+      await WETH.approve(exchange.address, amountInWei)
+
+      let tx = exchange.swapTokenForDai(
+        MAINNET_ADRESSES.ETH,
+        amountInWei,
+        receiveAtLeastInWeiAny,
+        randomAddress,
+        data,
+        {
+          value: 0,
+          gasLimit: 2500000,
+        },
+      )
+
+      await expect(tx).to.revertedWith('Exchange / Received less')
     })
 
     it('should end up with unsuccessful swap', async function () {
@@ -954,22 +916,20 @@ describe('Exchange', async function () {
       const receiveAtLeastInWeiAny = amountToWei(ONE).toFixed(0)
       const data = 0
 
-      try {
-        await WETH.approve(exchange.address, amountInWei)
-        await exchange.swapTokenForDai(
-          MAINNET_ADRESSES.ETH,
-          amountInWei,
-          receiveAtLeastInWeiAny,
-          AGGREGATOR_V3_ADDRESS,
-          data,
-          {
-            value: 0,
-            gasLimit: 2500000,
-          },
-        )
-      } catch (err) {
-        expect(err.body).to.have.string('Exchange / Could not swap')
-      }
+      await WETH.approve(exchange.address, amountInWei)
+
+      let tx = exchange.swapTokenForDai(
+        MAINNET_ADRESSES.ETH,
+        amountInWei,
+        receiveAtLeastInWeiAny,
+        AGGREGATOR_V3_ADDRESS,
+        data,
+        {
+          value: 0,
+          gasLimit: 2500000,
+        },
+      )
+      await expect(tx).to.revertedWith('Exchange / Could not swap')
     })
 
     it('should receive less', async function () {
@@ -991,11 +951,8 @@ describe('Exchange', async function () {
         tx: { to, data },
       } = response
 
-      try {
-        await exchange.swapTokenForDai(MAINNET_ADRESSES.ETH, amountInWei, receiveAtLeast, to, data)
-      } catch (err) {
-        expect(err.body).to.have.string('Exchange / Received less')
-      }
+      let tx = exchange.swapTokenForDai(MAINNET_ADRESSES.ETH, amountInWei, receiveAtLeast, to, data)
+      await expect(tx).to.revertedWith('Exchange / Received less')
     })
   })
 
@@ -1034,21 +991,19 @@ describe('Exchange', async function () {
       const receiveAtLeastInWeiAny = amountToWei(ONE).toFixed(0)
       const data = 0
 
-      try {
-        await exchange.swapDaiForToken(
-          MAINNET_ADRESSES.ETH,
-          amountWithFeeInWei,
-          receiveAtLeastInWeiAny,
-          AGGREGATOR_V3_ADDRESS,
-          data,
-          {
-            value: 0,
-            gasLimit: 2500000,
-          },
-        )
-      } catch (err) {
-        expect(err.body).to.have.string('Exchange / Not enough allowance')
-      }
+      let tx = exchange.swapDaiForToken(
+        MAINNET_ADRESSES.ETH,
+        amountWithFeeInWei,
+        receiveAtLeastInWeiAny,
+        AGGREGATOR_V3_ADDRESS,
+        data,
+        {
+          value: 0,
+          gasLimit: 2500000,
+        },
+      )
+
+      await expect(tx).to.revertedWith('Exchange / Not enough allowance')
     })
 
     it('should not have received anything', async function () {
@@ -1056,44 +1011,41 @@ describe('Exchange', async function () {
       const randomAddress = '0xddD11F156bD353F110Ae11574Dc8f5E9f3cE9C7E'
       const data = 0
 
-      try {
-        await DAI.approve(exchange.address, amountWithFeeInWei)
-        await exchange.swapDaiForToken(
-          MAINNET_ADRESSES.ETH,
-          amountWithFeeInWei,
-          receiveAtLeastInWeiAny,
-          randomAddress,
-          data,
-          {
-            value: 0,
-            gasLimit: 2500000,
-          },
-        )
-      } catch (err) {
-        expect(err.body).to.have.string('Exchange / Received less')
-      }
+      await DAI.approve(exchange.address, amountWithFeeInWei)
+
+      let tx = exchange.swapDaiForToken(
+        MAINNET_ADRESSES.ETH,
+        amountWithFeeInWei,
+        receiveAtLeastInWeiAny,
+        randomAddress,
+        data,
+        {
+          value: 0,
+          gasLimit: 2500000,
+        },
+      )
+
+      await expect(tx).to.revertedWith('Exchange / Received less')
     })
 
     it('should end up with unsuccessful swap', async function () {
       const receiveAtLeastInWeiAny = amountToWei(ONE).toFixed(0)
       const data = 0
 
-      try {
-        await DAI.approve(exchange.address, amountWithFeeInWei)
-        await exchange.swapDaiForToken(
-          MAINNET_ADRESSES.ETH,
-          amountWithFeeInWei,
-          receiveAtLeastInWeiAny,
-          AGGREGATOR_V3_ADDRESS,
-          data,
-          {
-            value: 0,
-            gasLimit: 2500000,
-          },
-        )
-      } catch (err) {
-        expect(err.body).to.have.string('Exchange / Could not swap')
-      }
+      await DAI.approve(exchange.address, amountWithFeeInWei)
+      
+      let tx = exchange.swapDaiForToken(
+        MAINNET_ADRESSES.ETH,
+        amountWithFeeInWei,
+        receiveAtLeastInWeiAny,
+        AGGREGATOR_V3_ADDRESS,
+        data,
+        {
+          value: 0,
+          gasLimit: 2500000,
+        },
+      )
+      await expect(tx).to.revertedWith('Exchange / Could not swap')
     })
 
     it('should receive less', async function () {
@@ -1113,17 +1065,15 @@ describe('Exchange', async function () {
         tx: { to, data },
       } = response
 
-      try {
-        await exchange.swapDaiForToken(
-          MAINNET_ADRESSES.ETH,
-          amountWithFeeInWei,
-          receiveAtLeast,
-          to,
-          data,
-        )
-      } catch (err) {
-        expect(err.body).to.have.string('Exchange / Received less')
-      }
+      let tx = exchange.swapDaiForToken(
+        MAINNET_ADRESSES.ETH,
+        amountWithFeeInWei,
+        receiveAtLeast,
+        to,
+        data,
+      )
+
+      await expect(tx).to.revertedWith('Exchange / Received less')
     })
   })
 
@@ -1175,7 +1125,7 @@ describe('Exchange', async function () {
       await provider.send('evm_revert', [localSnapshotId])
     })
 
-    it('should succeed', async function () {
+    it(`should exchange to at least amount specified in receiveAtLeast`, async function () {
       await exchange.swapTokenForDai(
         MAINNET_ADRESSES.USDT,
         initialUSDTBalanceInWei,
@@ -1246,7 +1196,7 @@ describe('Exchange', async function () {
       await provider.send('evm_revert', [localSnapshotId])
     })
 
-    it('should succeed', async function () {
+    it(`should exchange to at least amount specified in receiveAtLeast`, async function () {
       await DAI.approve(exchange.address, amountWithFeeInWei)
       await exchange.swapDaiForToken(
         MAINNET_ADRESSES.USDT,
