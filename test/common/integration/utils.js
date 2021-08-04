@@ -203,14 +203,13 @@ const printAllERC20Transfers = function (txResult, labels) {
   return packedEvents
 }
 
-const resetNetworkToLatest = async function (provider) {
-  let blockNumber = await getCurrentBlockNumber()
-  console.log('\x1b[33m Reseting network to:\x1b[0m', blockNumber - 6, new Date())
+const resetNetworkToBlock = async function (provider, blockNumber) {
+  console.log('\x1b[33m Reseting network to:\x1b[0m', blockNumber, new Date())
   provider.send('hardhat_reset', [
     {
       forking: {
         jsonRpcUrl: process.env.ALCHEMY_NODE,
-        blockNumber: blockNumber - 6,
+        blockNumber: blockNumber,
       },
     },
   ])
@@ -225,5 +224,5 @@ module.exports = {
   restoreSnapshot,
   backup,
   restore,
-  resetNetworkToLatest,
+  resetNetworkToBlock,
 }

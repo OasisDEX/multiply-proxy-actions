@@ -1032,7 +1032,7 @@ describe('Exchange', async function () {
       const data = 0
 
       await DAI.approve(exchange.address, amountWithFeeInWei)
-      
+
       let tx = exchange.swapDaiForToken(
         MAINNET_ADRESSES.ETH,
         amountWithFeeInWei,
@@ -1173,7 +1173,7 @@ describe('Exchange', async function () {
         amountInWei.toFixed(0),
         slippage.value.toString(),
         exchange.address,
-        ['UNISWAP_V2']
+        ['UNISWAP_V2'],
       )
 
       const {
