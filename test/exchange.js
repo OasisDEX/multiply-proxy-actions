@@ -1173,6 +1173,7 @@ describe('Exchange', async function () {
         amountInWei.toFixed(0),
         slippage.value.toString(),
         exchange.address,
+        ['UNISWAP_V2']
       )
 
       const {
