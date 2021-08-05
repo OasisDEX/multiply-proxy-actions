@@ -225,7 +225,7 @@ const prepareBasicParams = function (
     withdrawDai: 0,
     withdrawCollateral: 0,
     fundsReceiver: fundsReciver,
-    methodName: '',
+    methodName: '0x0000000000000000000000000000000000000000000000000000000000000000',
   }
 
   return {
