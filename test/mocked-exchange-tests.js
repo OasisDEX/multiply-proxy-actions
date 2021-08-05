@@ -146,7 +146,6 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
       )
       if (status == false) {
         throw result
-      } else {
       }
 
       let actionEvents = findMPAEvent(result)
