@@ -8,7 +8,7 @@ require("@nomiclabs/hardhat-ethers");
 require('hardhat-log-remover');
 require("solidity-coverage");
 require('hardhat-abi-exporter');
-
+require('hardhat-contract-sizer');
 
 
 /**
