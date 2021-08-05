@@ -278,7 +278,6 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         MAINNET_ADRESSES.ETH,
         multiplyProxyActions.address,
       )
-      // console.log(status, result.events);
 
       let actionEvents = findMPAEvent(result)
       expect(actionEvents.length).to.be.equal(1)
