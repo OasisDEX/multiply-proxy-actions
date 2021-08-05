@@ -47,11 +47,7 @@ const AAVE_FEE = 0.0009
 const BASE_SLIPPAGE = 0.08
 const OUR_FEE = FEE / FEE_BASE
 
-<<<<<<< HEAD
-const ALLOWED_PROTOCOLS = 'UNISWAP_V3'
-=======
 const ALLOWED_PROTOCOLS = ['UNISWAP_V3']
->>>>>>> develop
 let blockNumber = 12926169
 
 var testVaults = [
@@ -142,11 +138,7 @@ async function runner(tasks) {
 runner([
  // testCaseDefinition(testVaults[0], testParams[0]),
   testCaseDefinition(testVaults[0], testParams[1]),
-<<<<<<< HEAD
- // testCaseDefinition(testVaults[0], testParams[4]),
-=======
   testCaseDefinition(testVaults[0], testParams[4]),
->>>>>>> develop
   //  testCaseDefinition(testVaults[0], testParams[2]),
   //  testCaseDefinition(testVaults[0], testParams[3]),
   //testCaseDefinition(testVaults[0],testParams[0])
@@ -630,7 +622,6 @@ async function testCaseDefinition(testCase, testParam) {
                 daiBefore.toString(),
               )
             }
-            console.log('internalSnapshotId')
             internalSnapshotId = await createSnapshot(provider)
             testCaseCopy = JSON.parse(JSON.stringify(testCase))
 
