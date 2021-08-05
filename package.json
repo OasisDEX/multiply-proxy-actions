@@ -36,7 +36,7 @@
     "ethers": "^5.0.19",
     "hardhat": "^2.3.3",
     "hardhat-abi-exporter": "^2.2.1",
-    "hardhat-contract-sizer": "^2.0.1",
+    "hardhat-contract-sizer": "^2.0.3",
     "hardhat-gas-reporter": "^1.0.1",
     "hardhat-log-remover": "^2.0.0",
     "husky": "^4.3.0",

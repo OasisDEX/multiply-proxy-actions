@@ -214,29 +214,41 @@ contract MultiplyProxyActions {
       _increaseMP(exchangeData, cdpData, addressRegistry, 0);
       //   bool result = this.executeOperation(assets, amounts, premiums, address(this), paramsData);
     } else {
-      IManager(addressRegistry.manager).cdpAllow(
-        cdpData.cdpId,
-        addressRegistry.multiplyProxyActions,
-        1
-      );
-
-      ILendingPoolV2 lendingPool = getAaveLendingPool(addressRegistry.aaveLendingPoolProvider);
-      lendingPool.flashLoan(
-        addressRegistry.multiplyProxyActions,
-        assets,
-        amounts,
-        modes,
-        address(this),
-        paramsData,
-        0
-      );
-
-      IManager(addressRegistry.manager).cdpAllow(
-        cdpData.cdpId,
-        addressRegistry.multiplyProxyActions,
-        0
-      );
+      takeAFlashloan(exchangeData, cdpData, addressRegistry, assets, amounts, modes);
     }
+  }
+
+  function takeAFlashloan(
+    ExchangeData calldata exchangeData,
+    CdpData memory cdpData,
+    AddressRegistry calldata addressRegistry,
+    address[] memory assets,
+    uint256[] memory amounts,
+    uint256[] memory modes
+  ) private {
+    IManager(addressRegistry.manager).cdpAllow(
+      cdpData.cdpId,
+      addressRegistry.multiplyProxyActions,
+      1
+    );
+
+    bytes memory paramsData = abi.encode(0, exchangeData, cdpData, addressRegistry);
+    ILendingPoolV2 lendingPool = getAaveLendingPool(addressRegistry.aaveLendingPoolProvider);
+    lendingPool.flashLoan(
+      addressRegistry.multiplyProxyActions,
+      assets,
+      amounts,
+      modes,
+      address(this),
+      paramsData,
+      0
+    );
+
+    IManager(addressRegistry.manager).cdpAllow(
+      cdpData.cdpId,
+      addressRegistry.multiplyProxyActions,
+      0
+    );
   }
 
   function decreaseMultiple(
@@ -266,29 +278,7 @@ contract MultiplyProxyActions {
     if (cdpData.skipFL) {
       _decreaseMP(exchangeData, cdpData, addressRegistry, 0);
     } else {
-      IManager(addressRegistry.manager).cdpAllow(
-        cdpData.cdpId,
-        addressRegistry.multiplyProxyActions,
-        1
-      );
-
-      bytes memory paramsData = abi.encode(0, exchangeData, cdpData, addressRegistry);
-      ILendingPoolV2 lendingPool = getAaveLendingPool(addressRegistry.aaveLendingPoolProvider);
-      lendingPool.flashLoan(
-        addressRegistry.multiplyProxyActions,
-        assets,
-        amounts,
-        modes,
-        address(this),
-        paramsData,
-        0
-      );
-
-      IManager(addressRegistry.manager).cdpAllow(
-        cdpData.cdpId,
-        addressRegistry.multiplyProxyActions,
-        0
-      );
+      takeAFlashloan(exchangeData, cdpData, addressRegistry, assets, amounts, modes);
     }
   }
 
@@ -332,33 +322,12 @@ contract MultiplyProxyActions {
 
     bytes memory paramsData = abi.encode(mode, exchangeData, cdpData, addressRegistry);
     if (cdpData.skipFL == false) {
-      IManager(addressRegistry.manager).cdpAllow(
-        cdpData.cdpId,
-        addressRegistry.multiplyProxyActions,
-        1
-      );
-
-      ILendingPoolV2 lendingPool = getAaveLendingPool(addressRegistry.aaveLendingPoolProvider);
-      lendingPool.flashLoan(
-        addressRegistry.multiplyProxyActions,
-        assets,
-        amounts,
-        modes,
-        address(this),
-        paramsData,
-        0
-      );
-
-      IManager(addressRegistry.manager).cdpAllow(
-        cdpData.cdpId,
-        addressRegistry.multiplyProxyActions,
-        0
-      );
+      takeAFlashloan(exchangeData, cdpData, addressRegistry, assets, amounts, modes);
     } else {
       if (mode == 2) {
-        _closeWithdrawCollateralSkipFL(exchangeData, cdpData, addressRegistry);
+        _closeWithdrawCollateralSkipFL(exchangeData, cdpData, addressRegistry, urn, vat);
       } else {
-        require(false, "this code should be unreachable");
+        require(false, "not-reachable");
       }
     }
   }
@@ -376,7 +345,7 @@ contract MultiplyProxyActions {
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
   ) public {
-    require(cdpData.skipFL == false, "cannot close to DAI if FL not used");
+    require(cdpData.skipFL == false, "cannot-skip-fl");
     closeVaultExitGeneric(exchangeData, cdpData, addressRegistry, 3);
   }
 
@@ -390,10 +359,11 @@ contract MultiplyProxyActions {
 
     uint256 balance = IERC20(address(gem)).balanceOf(address(this));
     gem.approve(address(cdpData.gemJoin), balance);
-    IJoin(cdpData.gemJoin).join(IManager(manager).urns(cdpData.cdpId), balance);
 
-    address urn = IManager(manager).urns(cdpData.cdpId);
     address vat = IManager(manager).vat();
+    address urn = IManager(manager).urns(cdpData.cdpId);
+
+    IJoin(cdpData.gemJoin).join(urn, balance);
 
     IManager(manager).frob(
       cdpData.cdpId,
@@ -492,10 +462,9 @@ contract MultiplyProxyActions {
     if (cdpData.skipFL) {
       borrowedDai = 0; //this DAI are not borrowed and shal not stay after this method execution
     }
-    require(
-      IERC20(DAI).approve(address(exchange), exchangeData.fromTokenAmount.add(cdpData.depositDai)),
-      "MPA / Could not approve Exchange for DAI"
-    );
+    
+    approve(DAI, address(exchange), exchangeData.fromTokenAmount.add(cdpData.depositDai));
+    
     exchange.swapDaiForToken(
       exchangeData.toTokenAddress,
       exchangeData.fromTokenAmount.add(cdpData.depositDai),
@@ -531,13 +500,7 @@ contract MultiplyProxyActions {
       cdpData.borrowCollateral.add(cdpData.withdrawCollateral)
     );
 
-    require(
-      IERC20(exchangeData.fromTokenAddress).approve(
-        address(exchange),
-        exchangeData.fromTokenAmount
-      ),
-      "MPA / Could not approve Exchange for Token"
-    );
+    approve(exchangeData.fromTokenAddress, address(exchange), exchangeData.fromTokenAmount);
 
     exchange.swapTokenForDai(
       exchangeData.fromTokenAddress,
@@ -571,15 +534,22 @@ contract MultiplyProxyActions {
     }
   }
 
+  function approve(address what, address whom, uint howMuch) internal {
+    require(
+      IERC20(what).approve(whom, howMuch),
+      "cannot-approve"
+    );
+  }
+
   function _closeWithdrawCollateralSkipFL(
     ExchangeData memory exchangeData,
     CdpData memory cdpData,
-    AddressRegistry memory addressRegistry
+    AddressRegistry memory addressRegistry,
+    address urn,
+    address vat
   ) private {
     IExchange exchange = IExchange(addressRegistry.exchange);
     address gemAddress = address(IJoin(cdpData.gemJoin).gem());
-    address urn = IManager(addressRegistry.manager).urns(cdpData.cdpId);
-    address vat = IManager(addressRegistry.manager).vat();
     (uint256 ink, ) = IVat(vat).urns(cdpData.ilk, urn);
 
     wipeAndFreeGem(
@@ -589,10 +559,8 @@ contract MultiplyProxyActions {
       0,
       exchangeData.fromTokenAmount
     );
-    require(
-      IERC20(exchangeData.fromTokenAddress).approve(address(exchange), ink),
-      "MPA / Could not approve Exchange for Token"
-    );
+    approve(exchangeData.fromTokenAddress, address(exchange), ink);
+
     exchange.swapTokenForDai(
       exchangeData.fromTokenAddress,
       exchangeData.fromTokenAmount,
@@ -629,13 +597,11 @@ contract MultiplyProxyActions {
     ExchangeData memory exchangeData,
     CdpData memory cdpData,
     AddressRegistry memory addressRegistry,
-    uint256 borrowedDaiAmount
+    uint256 borrowedDaiAmount,
+    uint256 ink
   ) private {
     IExchange exchange = IExchange(addressRegistry.exchange);
     address gemAddress = address(IJoin(cdpData.gemJoin).gem());
-    address urn = IManager(addressRegistry.manager).urns(cdpData.cdpId);
-    address vat = IManager(addressRegistry.manager).vat();
-    (uint256 ink, ) = IVat(vat).urns(cdpData.ilk, urn);
 
     wipeAndFreeGem(
       addressRegistry.manager,
@@ -644,11 +610,8 @@ contract MultiplyProxyActions {
       cdpData.requiredDebt,
       ink
     );
+    approve(exchangeData.fromTokenAddress, address(exchange), ink);
 
-    require(
-      IERC20(exchangeData.fromTokenAddress).approve(address(exchange), ink),
-      "MPA / Could not approve Exchange for Token"
-    );
     exchange.swapTokenForDai(
       exchangeData.fromTokenAddress,
       exchangeData.fromTokenAmount,
@@ -672,13 +635,11 @@ contract MultiplyProxyActions {
     ExchangeData memory exchangeData,
     CdpData memory cdpData,
     AddressRegistry memory addressRegistry,
-    uint256 borrowedDaiAmount
+    uint256 borrowedDaiAmount,
+    uint256 ink
   ) private {
     IExchange exchange = IExchange(addressRegistry.exchange);
     address gemAddress = address(IJoin(cdpData.gemJoin).gem());
-    address urn = IManager(addressRegistry.manager).urns(cdpData.cdpId);
-    address vat = IManager(addressRegistry.manager).vat();
-    (uint256 ink, ) = IVat(vat).urns(cdpData.ilk, urn);
 
     wipeAndFreeGem(
       addressRegistry.manager,
@@ -688,13 +649,8 @@ contract MultiplyProxyActions {
       ink
     );
 
-    require(
-      IERC20(exchangeData.fromTokenAddress).approve(
-        address(exchange),
-        IERC20(gemAddress).balanceOf(address(this))
-      ),
-      "MPA / Could not approve Exchange for Token"
-    );
+    approve(exchangeData.fromTokenAddress, address(exchange), IERC20(gemAddress).balanceOf(address(this)));
+   
     exchange.swapTokenForDai(
       exchangeData.fromTokenAddress,
       ink,
@@ -708,6 +664,14 @@ contract MultiplyProxyActions {
     if (daiLeft > 0) {
       IERC20(DAI).transfer(cdpData.fundsReceiver, daiLeft);
     }
+  }
+
+  function getInk(address manager, CdpData memory cdpData) internal view returns (uint256) {
+    address urn = IManager(manager).urns(cdpData.cdpId);
+    address vat = IManager(manager).vat();
+
+    (uint256 ink, ) = IVat(vat).urns(cdpData.ilk, urn);
+    return ink;
   }
 
   function executeOperation(
@@ -733,10 +697,22 @@ contract MultiplyProxyActions {
       _increaseMP(exchangeData, cdpData, addressRegistry, premiums[0]);
     }
     if (mode == 2) {
-      _closeWithdrawCollateral(exchangeData, cdpData, addressRegistry, borrowedDaiAmount);
+      _closeWithdrawCollateral(
+        exchangeData,
+        cdpData,
+        addressRegistry,
+        borrowedDaiAmount,
+        getInk(addressRegistry.manager, cdpData)
+      );
     }
     if (mode == 3) {
-      _closeWithdrawDai(exchangeData, cdpData, addressRegistry, borrowedDaiAmount);
+      _closeWithdrawDai(
+        exchangeData,
+        cdpData,
+        addressRegistry,
+        borrowedDaiAmount,
+        getInk(addressRegistry.manager, cdpData)
+      );
     }
 
     ILendingPoolV2 lendingPool = getAaveLendingPool(addressRegistry.aaveLendingPoolProvider);
@@ -749,6 +725,4 @@ contract MultiplyProxyActions {
   }
 
   event FLData(uint256 indexed borrowed, uint256 indexed due);
-
-  fallback() external payable {}
 }

@@ -5,6 +5,7 @@ require("@nomiclabs/hardhat-etherscan");
 require("@tenderly/hardhat-tenderly");
 require("@nomiclabs/hardhat-ethers");
 // require("hardhat-gas-reporter");
+require('hardhat-contract-sizer');
 require('hardhat-log-remover');
 require("solidity-coverage");
 require('hardhat-abi-exporter');
@@ -44,8 +45,8 @@ module.exports = {
   solidity: "0.7.6",
   settings: {
     optimizer: {
-      enabled: false,
-      runs: 1000
+      enabled: true,
+      runs: 200
     }
   },
   paths: {
