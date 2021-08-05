@@ -26,8 +26,8 @@ contract Exchange {
     fee = _fee;
   }
 
-  event AssetSwap(address assetIn, address assetOut, uint256 amountIn, uint256 amountOut);
-  event FeePaid(uint256 amount);
+  event AssetSwap(address indexed assetIn, address indexed assetOut, uint256 amountIn, uint256 amountOut);
+  event FeePaid(address indexed beneficiary ,uint256 amount);
   event SlippageSaved(uint256 minimumPossible, uint256 actualAmount);
 
   modifier onlyAuthorized() {
@@ -72,7 +72,7 @@ contract Exchange {
   function _collectFee(address asset, uint256 fromAmount) internal returns (uint256) {
     uint256 feeToTransfer = (fromAmount.mul(fee)).div(feeBase);
     IERC20(asset).safeTransfer(feeBeneficiaryAddress, feeToTransfer);
-    emit FeePaid(feeToTransfer);
+    emit FeePaid(feeBeneficiaryAddress, feeToTransfer);
     return fromAmount.sub(feeToTransfer);
   }
 
