@@ -87,7 +87,7 @@ const dsproxyExecuteAction = async function (
   method,
   params,
   value = new BigNumber(0),
-  debug = false ,
+  debug = false,
 ) {
   try {
     const calldata = proxyActions.interface.encodeFunctionData(method, params)
@@ -101,7 +101,11 @@ const dsproxyExecuteAction = async function (
     })
 
     var retVal = await tx.wait()
-    debug && console.log(`\x1b[33m  ${method} completed  gasCost = ${retVal.gasUsed.toString()} \x1b[0m`, new Date())
+    debug &&
+      console.log(
+        `\x1b[33m  ${method} completed  gasCost = ${retVal.gasUsed.toString()} \x1b[0m`,
+        new Date(),
+      )
 
     return [true, retVal]
   } catch (ex) {
@@ -285,25 +289,28 @@ const getLastCDP = async function (provider, signer, proxyAddress) {
   return cdp
 }
 
-const findMPAEvent = function (txResult){
-  
-  let abi = [ "event MultipleActionCalled(string methodName, uint indexed cdpId, uint swapMinAmount, uint swapOptimistAmount, uint collateralLeft, uint daiLeft)" ];
-  let iface = new ethers.utils.Interface(abi);
-  let events = txResult.events.filter(x=>{
-    return x.topics[0] == iface.getEventTopic("MultipleActionCalled")
-  }).map(x=>{
-    let result =  iface.decodeEventLog("MultipleActionCalled", x.data, x.topics);
-    let retVal = {
-      methodName:result.methodName,
-      cdpId:result.cdpId.toString(),
-      swapMinAmount:result.swapMinAmount.toString(),
-      swapOptimistAmount:result.swapOptimistAmount.toString(),
-      collateralLeft:result.collateralLeft.toString(),
-      daiLeft:result.daiLeft.toString(),
-    };
-    return retVal;
-  })
-  return events;
+const findMPAEvent = function (txResult) {
+  let abi = [
+    'event MultipleActionCalled(string methodName, uint indexed cdpId, uint swapMinAmount, uint swapOptimistAmount, uint collateralLeft, uint daiLeft)',
+  ]
+  let iface = new ethers.utils.Interface(abi)
+  let events = txResult.events
+    .filter((x) => {
+      return x.topics[0] == iface.getEventTopic('MultipleActionCalled')
+    })
+    .map((x) => {
+      let result = iface.decodeEventLog('MultipleActionCalled', x.data, x.topics)
+      let retVal = {
+        methodName: result.methodName,
+        cdpId: result.cdpId.toString(),
+        swapMinAmount: result.swapMinAmount.toString(),
+        swapOptimistAmount: result.swapOptimistAmount.toString(),
+        collateralLeft: result.collateralLeft.toString(),
+        daiLeft: result.daiLeft.toString(),
+      }
+      return retVal
+    })
+  return events
 }
 
 module.exports = {
