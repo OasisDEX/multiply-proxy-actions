@@ -26,8 +26,13 @@ contract Exchange {
     fee = _fee;
   }
 
-  event AssetSwap(address indexed assetIn, address indexed assetOut, uint256 amountIn, uint256 amountOut);
-  event FeePaid(address indexed beneficiary ,uint256 amount);
+  event AssetSwap(
+    address indexed assetIn,
+    address indexed assetOut,
+    uint256 amountIn,
+    uint256 amountOut
+  );
+  event FeePaid(address indexed beneficiary, uint256 amount);
   event SlippageSaved(uint256 minimumPossible, uint256 actualAmount);
 
   modifier onlyAuthorized() {
