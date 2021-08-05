@@ -68,6 +68,17 @@ contract MultiplyProxyActions {
   address public constant DAIJOIN = 0x9759A6Ac90977b93B58547b4A71c78317f391A28;
   address public constant ETH_ADDR = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
+  bytes32 public expectedContentHash;
+  uint private _callDepth = 0;
+
+//protects against unwanted order of execution where method needs to stay public
+  modifier callDepth(uint requiredDepth) {
+    require(_callDepth == requiredDepth, "illegal chain of execution");
+    _callDepth = _callDepth +1;
+    _;
+    _callDepth = _callDepth -1;
+  }
+
   modifier logMethodName(
     string memory name,
     CdpData memory data,
@@ -78,6 +89,23 @@ contract MultiplyProxyActions {
     }
     _;
     data.methodName = "";
+  }
+  
+
+  function setExpectedContentHash(bytes32 expectedHash) public callDepth(1){ //ensure that despite being public it is called only from our code
+    expectedContentHash = expectedHash;
+  }
+
+  function clearExpectedContentHash() public callDepth(1){//ensure that despite being public it is called only from our code
+    expectedContentHash = bytes32(0);
+  }
+
+  function setExpectedContentHash( address destination,bytes32 expectedHash) internal  callDepth(0){
+    MultiplyProxyActions(payable(destination)).setExpectedContentHash(expectedHash);
+  }
+
+  function clearExpectedContentHash(address destination) internal callDepth(0){
+    MultiplyProxyActions(payable(destination)).clearExpectedContentHash();
   }
 
   function getAaveLendingPool(address lendingPoolProvider) private view returns (ILendingPoolV2) {
@@ -257,6 +285,10 @@ contract MultiplyProxyActions {
       );
 
       ILendingPoolV2 lendingPool = getAaveLendingPool(addressRegistry.aaveLendingPoolProvider);
+
+      bytes32 actualContentHash = keccak256(abi.encodePacked(amounts,paramsData));
+      setExpectedContentHash(addressRegistry.multiplyProxyActions, actualContentHash);
+
       lendingPool.flashLoan(
         addressRegistry.multiplyProxyActions,
         assets,
@@ -266,6 +298,8 @@ contract MultiplyProxyActions {
         paramsData,
         0
       );
+
+      clearExpectedContentHash(addressRegistry.multiplyProxyActions);
 
       IManager(addressRegistry.manager).cdpAllow(
         cdpData.cdpId,
@@ -310,6 +344,10 @@ contract MultiplyProxyActions {
 
       bytes memory paramsData = abi.encode(0, exchangeData, cdpData, addressRegistry);
       ILendingPoolV2 lendingPool = getAaveLendingPool(addressRegistry.aaveLendingPoolProvider);
+
+      bytes32 actualContentHash = keccak256(abi.encodePacked(amounts,paramsData));
+      setExpectedContentHash(addressRegistry.multiplyProxyActions, actualContentHash);
+
       lendingPool.flashLoan(
         addressRegistry.multiplyProxyActions,
         assets,
@@ -319,6 +357,8 @@ contract MultiplyProxyActions {
         paramsData,
         0
       );
+
+      clearExpectedContentHash(addressRegistry.multiplyProxyActions);
 
       IManager(addressRegistry.manager).cdpAllow(
         cdpData.cdpId,
@@ -385,6 +425,10 @@ contract MultiplyProxyActions {
       );
 
       ILendingPoolV2 lendingPool = getAaveLendingPool(addressRegistry.aaveLendingPoolProvider);
+      
+      bytes32 actualContentHash = keccak256(abi.encodePacked(amounts,paramsData));
+      setExpectedContentHash(addressRegistry.multiplyProxyActions, actualContentHash);
+
       lendingPool.flashLoan(
         addressRegistry.multiplyProxyActions,
         assets,
@@ -394,6 +438,8 @@ contract MultiplyProxyActions {
         paramsData,
         0
       );
+
+      clearExpectedContentHash(addressRegistry.multiplyProxyActions);
 
       IManager(addressRegistry.manager).cdpAllow(
         cdpData.cdpId,
@@ -804,13 +850,26 @@ contract MultiplyProxyActions {
     );
   }
 
+  function validateInputValuesCorrectness(uint256[] memory amounts, bytes calldata params) private{
+    require(amounts[0]==IERC20(DAI).balanceOf(address(this)),"Flash Loan Malfunction");
+
+    require(keccak256(abi.encodePacked(amounts,params)) == expectedContentHash,"Flash Loan mibehaviour");
+  }
+
+  function setAllowenceIfNeeded( CdpData memory cdpData,address lendingPool, uint256 borrowedDaiAmount, address[] calldata assets) private{
+    
+    if (cdpData.skipFL == false) {
+      IERC20(assets[0]).approve(address(lendingPool), borrowedDaiAmount);
+    }
+  }
+
   function executeOperation(
     address[] calldata assets,
     uint256[] calldata amounts,
     uint256[] calldata premiums,
     address initiator,
     bytes calldata params
-  ) external returns (bool) {
+  ) external callDepth(0) returns (bool) {
     (
       uint8 mode,
       ExchangeData memory exchangeData,
@@ -819,6 +878,9 @@ contract MultiplyProxyActions {
     ) = abi.decode(params, (uint8, ExchangeData, CdpData, AddressRegistry));
     uint256 borrowedDaiAmount = amounts[0].add(premiums[0]);
     emit FLData(IERC20(DAI).balanceOf(address(this)), borrowedDaiAmount);
+
+    //naive check do not protect against incorrect data passed
+    validateInputValuesCorrectness(amounts,params);
 
     if (mode == 0) {
       _decreaseMP(exchangeData, cdpData, addressRegistry, premiums[0]);
@@ -835,9 +897,8 @@ contract MultiplyProxyActions {
 
     ILendingPoolV2 lendingPool = getAaveLendingPool(addressRegistry.aaveLendingPoolProvider);
 
-    if (cdpData.skipFL == false) {
-      IERC20(assets[0]).approve(address(lendingPool), borrowedDaiAmount);
-    }
+    //because of stack too deep
+    setAllowenceIfNeeded(cdpData, address(lendingPool), borrowedDaiAmount, assets);
 
     return true;
   }
