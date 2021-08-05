@@ -521,7 +521,8 @@ contract MultiplyProxyActions {
   ) private {
     IExchange exchange = IExchange(addressRegistry.exchange);
 
-    uint265 debtToBeWiped = cdpData.skipFL ? 0 : cdpData.requiredDebt.sub(cdpData.withdrawDai);
+    uint256 debtToBeWiped = cdpData.skipFL ? 0 : cdpData.requiredDebt.sub(cdpData.withdrawDai);
+
     wipeAndFreeGem(
       addressRegistry.manager,
       cdpData.gemJoin,
