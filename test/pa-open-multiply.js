@@ -111,7 +111,6 @@ describe('Proxy Action', async function () {
         data.slippage.multipliedBy(100).toNumber(),
         exchangeInstance.address,
       )
-      console.log('PAYLOAD', payload)
       data._1inchPayload = payload.tx
       data.toBorrowCollateralAmount = toBorrowCollateralAmount
       data.desiredCDPState.requiredDebt = requiredDebt

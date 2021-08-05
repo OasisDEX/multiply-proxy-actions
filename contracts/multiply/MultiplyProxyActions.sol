@@ -43,6 +43,7 @@ struct CdpData {
   uint256 depositDai;
   uint256 depositCollateral;
   bool skipFL;
+  string methodName;
 }
 
 struct AddressRegistry {
@@ -66,6 +67,18 @@ contract MultiplyProxyActions {
   address public constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
   address public constant DAIJOIN = 0x9759A6Ac90977b93B58547b4A71c78317f391A28;
   address public constant ETH_ADDR = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+
+  modifier logMethodName(
+    string memory name,
+    CdpData memory data,
+    address destination
+  ) {
+    if (bytes(data.methodName).length == 0) {
+      data.methodName = name;
+    }
+    _;
+    data.methodName = "";
+  }
 
   function getAaveLendingPool(address lendingPoolProvider) private view returns (ILendingPoolV2) {
     ILendingPoolAddressesProviderV2 provider = ILendingPoolAddressesProviderV2(lendingPoolProvider);
@@ -110,7 +123,11 @@ contract MultiplyProxyActions {
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
-  ) public payable {
+  )
+    public
+    payable
+    logMethodName("openMultiplyVault", cdpData, addressRegistry.multiplyProxyActions)
+  {
     cdpData.ilk = IJoin(cdpData.gemJoin).ilk();
     cdpData.cdpId = IManager(addressRegistry.manager).open(cdpData.ilk, address(this));
     increaseMultipleDepositCollateral(exchangeData, cdpData, addressRegistry);
@@ -120,7 +137,15 @@ contract MultiplyProxyActions {
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
-  ) public payable {
+  )
+    public
+    payable
+    logMethodName(
+      "increaseMultipleDepositCollateral",
+      cdpData,
+      addressRegistry.multiplyProxyActions
+    )
+  {
     IGem gem = IJoin(cdpData.gemJoin).gem();
 
     if (address(gem) == WETH) {
@@ -139,7 +164,7 @@ contract MultiplyProxyActions {
         gem.transferFrom(msg.sender, address(this), cdpData.depositCollateral);
       }
     }
-    increaseMultiple(exchangeData, cdpData, addressRegistry);
+    increaseMultipleInternal(exchangeData, cdpData, addressRegistry);
   }
 
   function toRad(uint256 wad) internal pure returns (uint256 rad) {
@@ -170,7 +195,10 @@ contract MultiplyProxyActions {
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
-  ) public {
+  )
+    public
+    logMethodName("increaseMultipleDepositDai", cdpData, addressRegistry.multiplyProxyActions)
+  {
     if (cdpData.skipFL) {
       IERC20(DAI).transferFrom(msg.sender, address(this), cdpData.depositDai);
     } else {
@@ -180,14 +208,22 @@ contract MultiplyProxyActions {
         cdpData.depositDai
       );
     }
-    increaseMultiple(exchangeData, cdpData, addressRegistry);
+    increaseMultipleInternal(exchangeData, cdpData, addressRegistry);
   }
 
   function increaseMultiple(
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
-  ) public {
+  ) public logMethodName("increaseMultiple", cdpData, addressRegistry.multiplyProxyActions) {
+    increaseMultipleInternal(exchangeData, cdpData, addressRegistry);
+  }
+
+  function increaseMultipleInternal(
+    ExchangeData calldata exchangeData,
+    CdpData memory cdpData,
+    AddressRegistry calldata addressRegistry
+  ) internal {
     cdpData.ilk = IJoin(cdpData.gemJoin).ilk();
 
     address[] memory assets = new address[](1);
@@ -243,7 +279,7 @@ contract MultiplyProxyActions {
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
-  ) public {
+  ) public logMethodName("decreaseMultiple", cdpData, addressRegistry.multiplyProxyActions) {
     decreaseMultipleInternal(exchangeData, cdpData, addressRegistry);
   }
 
@@ -296,7 +332,14 @@ contract MultiplyProxyActions {
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
-  ) public {
+  )
+    public
+    logMethodName(
+      "decreaseMultipleWithdrawCollateral",
+      cdpData,
+      addressRegistry.multiplyProxyActions
+    )
+  {
     decreaseMultipleInternal(exchangeData, cdpData, addressRegistry);
   }
 
@@ -304,7 +347,10 @@ contract MultiplyProxyActions {
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
-  ) public {
+  )
+    public
+    logMethodName("decreaseMultipleWithdrawDai", cdpData, addressRegistry.multiplyProxyActions)
+  {
     decreaseMultipleInternal(exchangeData, cdpData, addressRegistry);
   }
 
@@ -367,7 +413,10 @@ contract MultiplyProxyActions {
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
-  ) public {
+  )
+    public
+    logMethodName("closeVaultExitCollateral", cdpData, addressRegistry.multiplyProxyActions)
+  {
     closeVaultExitGeneric(exchangeData, cdpData, addressRegistry, 2);
   }
 
@@ -375,7 +424,7 @@ contract MultiplyProxyActions {
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
-  ) public {
+  ) public logMethodName("closeVaultExitDai", cdpData, addressRegistry.multiplyProxyActions) {
     require(cdpData.skipFL == false, "cannot close to DAI if FL not used");
     closeVaultExitGeneric(exchangeData, cdpData, addressRegistry, 3);
   }
@@ -507,6 +556,14 @@ contract MultiplyProxyActions {
     joinDrawDebt(cdpData, borrowedDai, addressRegistry.manager, addressRegistry.jug);
     //if some DAI are left after exchange return them to the user
     uint256 daiLeft = IERC20(DAI).balanceOf(address(this)).sub(borrowedDai);
+    emit MultipleActionCalled(
+      cdpData.methodName,
+      cdpData.cdpId,
+      exchangeData.minToTokenAmount,
+      exchangeData.toTokenAmount,
+      0,
+      daiLeft
+    );
 
     if (daiLeft > 0) {
       IERC20(DAI).transfer(cdpData.fundsReceiver, daiLeft);
@@ -562,6 +619,14 @@ contract MultiplyProxyActions {
     } else {
       daiLeft = IERC20(DAI).balanceOf(address(this)).sub(cdpData.requiredDebt.add(premium));
     }
+    emit MultipleActionCalled(
+      cdpData.methodName,
+      cdpData.cdpId,
+      exchangeData.minToTokenAmount,
+      exchangeData.toTokenAmount,
+      collateralLeft,
+      daiLeft
+    );
 
     if (daiLeft > 0) {
       IERC20(DAI).transfer(cdpData.fundsReceiver, daiLeft);
@@ -623,6 +688,14 @@ contract MultiplyProxyActions {
     if (collateralLeft > 0) {
       _withdrawGem(cdpData.gemJoin, cdpData.fundsReceiver, collateralLeft);
     }
+    emit MultipleActionCalled(
+      cdpData.methodName,
+      cdpData.cdpId,
+      exchangeData.minToTokenAmount,
+      exchangeData.toTokenAmount,
+      collateralLeft,
+      daiLeft
+    );
   }
 
   function _closeWithdrawCollateral(
@@ -666,6 +739,14 @@ contract MultiplyProxyActions {
     if (collateralLeft > 0) {
       _withdrawGem(cdpData.gemJoin, cdpData.fundsReceiver, collateralLeft);
     }
+    emit MultipleActionCalled(
+      cdpData.methodName,
+      cdpData.cdpId,
+      exchangeData.minToTokenAmount,
+      exchangeData.toTokenAmount,
+      collateralLeft,
+      daiLeft
+    );
   }
 
   function _closeWithdrawDai(
@@ -708,6 +789,19 @@ contract MultiplyProxyActions {
     if (daiLeft > 0) {
       IERC20(DAI).transfer(cdpData.fundsReceiver, daiLeft);
     }
+    uint256 collateralLeft = IERC20(gemAddress).balanceOf(address(this));
+    /*
+    if (collateralLeft > 0) {
+      _withdrawGem(cdpData.gemJoin, cdpData.fundsReceiver, collateralLeft);
+    }*/
+    emit MultipleActionCalled(
+      cdpData.methodName,
+      cdpData.cdpId,
+      exchangeData.minToTokenAmount,
+      exchangeData.toTokenAmount,
+      collateralLeft,
+      daiLeft
+    );
   }
 
   function executeOperation(
@@ -749,6 +843,14 @@ contract MultiplyProxyActions {
   }
 
   event FLData(uint256 indexed borrowed, uint256 indexed due);
+  event MultipleActionCalled(
+    string methodName,
+    uint256 indexed cdpId,
+    uint256 swapMinAmount,
+    uint256 swapOptimistAmount,
+    uint256 collateralLeft,
+    uint256 daiLeft
+  );
 
   fallback() external payable {}
 }

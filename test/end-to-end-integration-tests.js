@@ -136,7 +136,7 @@ async function runner(tasks) {
 }
 
 runner([
-  testCaseDefinition(testVaults[0], testParams[0]),
+  // testCaseDefinition(testVaults[0], testParams[0]),
   testCaseDefinition(testVaults[0], testParams[1]),
   testCaseDefinition(testVaults[0], testParams[4]),
   //  testCaseDefinition(testVaults[0], testParams[2]),
@@ -622,7 +622,6 @@ async function testCaseDefinition(testCase, testParam) {
                 daiBefore.toString(),
               )
             }
-            console.log('internalSnapshotId')
             internalSnapshotId = await createSnapshot(provider)
             testCaseCopy = JSON.parse(JSON.stringify(testCase))
 
