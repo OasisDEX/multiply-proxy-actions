@@ -6,6 +6,7 @@ require("@tenderly/hardhat-tenderly");
 require("@nomiclabs/hardhat-ethers");
 // require("hardhat-gas-reporter");
 require('hardhat-log-remover');
+require('hardhat-contract-sizer');
 require("solidity-coverage");
 require('hardhat-abi-exporter');
 
@@ -30,8 +31,9 @@ module.exports = {
       mining: {
         auto: true
       },
-      gas: 12000000,
-      blockGasLimit: 14000000,
+      hardfork: "london",
+      gas: "auto",
+      initialBaseFeePerGas: "1000000000",
       allowUnlimitedContractSize: true,
       timeout: 100000,
     },
@@ -41,13 +43,15 @@ module.exports = {
       gasPrice: 40000000000
     }
   },
-  solidity: "0.7.6",
-  settings: {
-    optimizer: {
-      enabled: true,
-      runs: 200
-    }
-  },
+  solidity: {
+    version: "0.7.6",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200
+      }
+    },
+  },  
   paths: {
     sources: "./contracts",
     tests: "./test",
