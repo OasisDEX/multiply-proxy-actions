@@ -819,12 +819,7 @@ contract MultiplyProxyActions {
     ) = abi.decode(params, (uint8, ExchangeData, CdpData, AddressRegistry));
     uint256 borrowedDaiAmount = amounts[0].add(premiums[0]);
     emit FLData(IERC20(DAI).balanceOf(address(this)).sub(cdpData.depositDai), borrowedDaiAmount);
-
-    require(
-      IERC20(DAI).balanceOf(address(this)) == amounts[0],
-      "Declared and actual amount mismatch"
-    );
-
+    
     require(
       cdpData.requiredDebt == IERC20(DAI).balanceOf(address(this)),
       "requested and recieved amounts mismatch"
