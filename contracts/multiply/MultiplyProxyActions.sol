@@ -793,7 +793,8 @@ contract MultiplyProxyActions {
       AddressRegistry memory addressRegistry
     ) = abi.decode(params, (uint8, ExchangeData, CdpData, AddressRegistry));
     uint256 borrowedDaiAmount = amounts[0].add(premiums[0]);
-    emit FLData(IERC20(DAI).balanceOf(address(this)), borrowedDaiAmount);
+
+    emit FLData(IERC20(DAI).balanceOf(address(this)).sub(cdpData.depositDai), borrowedDaiAmount);
 
     uint256 ink = getInk(addressRegistry.manager, cdpData);
 
@@ -825,7 +826,7 @@ contract MultiplyProxyActions {
     return true;
   }
 
-  event FLData(uint256 indexed borrowed, uint256 indexed due);
+  event FLData(uint256 borrowed, uint256 due);
   event MultipleActionCalled(
     string methodName,
     uint256 indexed cdpId,
