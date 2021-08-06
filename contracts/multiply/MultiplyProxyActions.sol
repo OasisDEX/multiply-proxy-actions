@@ -827,6 +827,11 @@ contract MultiplyProxyActions {
     );
     require(amounts[0] + premiums[0] == borrowedDaiAmount, "Flash loan fee mismatch");
 
+    require(
+      cdpData.requiredDebt == IERC20(DAI).balanceOf(address(this)),
+      "requested and recieved amounts mismatch"
+    );
+
     if (mode == 0) {
       _decreaseMP(exchangeData, cdpData, addressRegistry, premiums[0]);
     }
