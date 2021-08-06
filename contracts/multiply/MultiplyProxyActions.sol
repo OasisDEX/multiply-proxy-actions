@@ -86,6 +86,38 @@ contract MultiplyProxyActions {
     return lendingPool;
   }
 
+  function takeAFlashLoan(
+    AddressRegistry memory addressRegistry,
+    CdpData memory cdpData,
+    address[] memory assets,
+    uint256[] memory amounts,
+    uint256[] memory modes,
+    bytes memory paramsData
+  ) internal {
+    IManager(addressRegistry.manager).cdpAllow(
+      cdpData.cdpId,
+      addressRegistry.multiplyProxyActions,
+      1
+    );
+
+    ILendingPoolV2 lendingPool = getAaveLendingPool(addressRegistry.aaveLendingPoolProvider);
+    lendingPool.flashLoan(
+      addressRegistry.multiplyProxyActions,
+      assets,
+      amounts,
+      modes,
+      address(this),
+      paramsData,
+      0
+    );
+
+    IManager(addressRegistry.manager).cdpAllow(
+      cdpData.cdpId,
+      addressRegistry.multiplyProxyActions,
+      0
+    );
+  }
+
   function toInt256(uint256 x) internal pure returns (int256 y) {
     y = int256(x);
     require(y >= 0, "int256-overflow");
@@ -248,30 +280,8 @@ contract MultiplyProxyActions {
         drawDaiDebt(cdpData, addressRegistry, cdpData.requiredDebt);
       }
       _increaseMP(exchangeData, cdpData, addressRegistry, 0);
-      //   bool result = this.executeOperation(assets, amounts, premiums, address(this), paramsData);
     } else {
-      IManager(addressRegistry.manager).cdpAllow(
-        cdpData.cdpId,
-        addressRegistry.multiplyProxyActions,
-        1
-      );
-
-      ILendingPoolV2 lendingPool = getAaveLendingPool(addressRegistry.aaveLendingPoolProvider);
-      lendingPool.flashLoan(
-        addressRegistry.multiplyProxyActions,
-        assets,
-        amounts,
-        modes,
-        address(this),
-        paramsData,
-        0
-      );
-
-      IManager(addressRegistry.manager).cdpAllow(
-        cdpData.cdpId,
-        addressRegistry.multiplyProxyActions,
-        0
-      );
+      takeAFlashLoan(addressRegistry, cdpData, assets, amounts, modes, paramsData);
     }
   }
 
@@ -299,32 +309,12 @@ contract MultiplyProxyActions {
     uint256[] memory modes = new uint256[](1);
     modes[0] = 0;
 
+    bytes memory paramsData = abi.encode(0, exchangeData, cdpData, addressRegistry);
+
     if (cdpData.skipFL) {
       _decreaseMP(exchangeData, cdpData, addressRegistry, 0);
     } else {
-      IManager(addressRegistry.manager).cdpAllow(
-        cdpData.cdpId,
-        addressRegistry.multiplyProxyActions,
-        1
-      );
-
-      bytes memory paramsData = abi.encode(0, exchangeData, cdpData, addressRegistry);
-      ILendingPoolV2 lendingPool = getAaveLendingPool(addressRegistry.aaveLendingPoolProvider);
-      lendingPool.flashLoan(
-        addressRegistry.multiplyProxyActions,
-        assets,
-        amounts,
-        modes,
-        address(this),
-        paramsData,
-        0
-      );
-
-      IManager(addressRegistry.manager).cdpAllow(
-        cdpData.cdpId,
-        addressRegistry.multiplyProxyActions,
-        0
-      );
+      takeAFlashLoan(addressRegistry, cdpData, assets, amounts, modes, paramsData);
     }
   }
 
@@ -377,29 +367,9 @@ contract MultiplyProxyActions {
     modes[0] = 0;
 
     bytes memory paramsData = abi.encode(mode, exchangeData, cdpData, addressRegistry);
+
     if (cdpData.skipFL == false) {
-      IManager(addressRegistry.manager).cdpAllow(
-        cdpData.cdpId,
-        addressRegistry.multiplyProxyActions,
-        1
-      );
-
-      ILendingPoolV2 lendingPool = getAaveLendingPool(addressRegistry.aaveLendingPoolProvider);
-      lendingPool.flashLoan(
-        addressRegistry.multiplyProxyActions,
-        assets,
-        amounts,
-        modes,
-        address(this),
-        paramsData,
-        0
-      );
-
-      IManager(addressRegistry.manager).cdpAllow(
-        cdpData.cdpId,
-        addressRegistry.multiplyProxyActions,
-        0
-      );
+      takeAFlashLoan(addressRegistry, cdpData, assets, amounts, modes, paramsData);
     } else {
       if (mode == 2) {
         _closeWithdrawCollateralSkipFL(exchangeData, cdpData, addressRegistry);
