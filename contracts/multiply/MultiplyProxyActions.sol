@@ -820,12 +820,7 @@ contract MultiplyProxyActions {
     uint256 borrowedDaiAmount = amounts[0].add(premiums[0]);
     emit FLData(IERC20(DAI).balanceOf(address(this)), borrowedDaiAmount);
 
-    require(cdpData.requiredDebt == amounts[0], "Invalid declared amount");
-    require(
-      IERC20(DAI).balanceOf(address(this)) == amounts[0],
-      "Declared and actual amount mismatch"
-    );
-    require(amounts[0] + premiums[0] == borrowedDaiAmount, "Flash loan fee mismatch");
+    require(cdpData.requiredDebt == amounts[0], "requested and recieved amounts mismatch");
 
     if (mode == 0) {
       _decreaseMP(exchangeData, cdpData, addressRegistry, premiums[0]);
