@@ -30,8 +30,9 @@ module.exports = {
       mining: {
         auto: true
       },
-      gas: 12000000,
-      blockGasLimit: 14000000,
+      hardfork: "london",
+      gas: "auto",
+      initialBaseFeePerGas: "1000000000",
       allowUnlimitedContractSize: true,
       timeout: 100000,
     },
