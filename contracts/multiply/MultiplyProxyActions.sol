@@ -361,8 +361,10 @@ contract MultiplyProxyActions {
     uint8 mode
   ) private {
     cdpData.ilk = IJoin(cdpData.gemJoin).ilk();
+
     address urn = IManager(addressRegistry.manager).urns(cdpData.cdpId);
     address vat = IManager(addressRegistry.manager).vat();
+    (uint256 ink, ) = IVat(vat).urns(cdpData.ilk, urn);
 
     uint256 wadD = _getWipeAllWad(vat, urn, urn, cdpData.ilk);
     cdpData.requiredDebt = wadD;
@@ -402,7 +404,7 @@ contract MultiplyProxyActions {
       );
     } else {
       if (mode == 2) {
-        _closeWithdrawCollateralSkipFL(exchangeData, cdpData, addressRegistry);
+        _closeWithdrawCollateralSkipFL(exchangeData, cdpData, addressRegistry, ink);
       } else {
         require(false, "this code should be unreachable");
       }
@@ -439,10 +441,11 @@ contract MultiplyProxyActions {
 
     uint256 balance = IERC20(address(gem)).balanceOf(address(this));
     gem.approve(address(cdpData.gemJoin), balance);
-    IJoin(cdpData.gemJoin).join(IManager(manager).urns(cdpData.cdpId), balance);
 
     address urn = IManager(manager).urns(cdpData.cdpId);
     address vat = IManager(manager).vat();
+
+    IJoin(cdpData.gemJoin).join(urn, balance);
 
     IManager(manager).frob(
       cdpData.cdpId,
@@ -454,6 +457,14 @@ contract MultiplyProxyActions {
     IVat(vat).hope(DAIJOIN);
 
     IJoin(DAIJOIN).exit(address(this), borrowedDai);
+  }
+
+  function getInk(address manager, CdpData memory cdpData) internal view returns (uint256) {
+    address urn = IManager(manager).urns(cdpData.cdpId);
+    address vat = IManager(manager).vat();
+
+    (uint256 ink, ) = IVat(vat).urns(cdpData.ilk, urn);
+    return ink;
   }
 
   function _getWipeDart(
@@ -639,13 +650,11 @@ contract MultiplyProxyActions {
   function _closeWithdrawCollateralSkipFL(
     ExchangeData memory exchangeData,
     CdpData memory cdpData,
-    AddressRegistry memory addressRegistry
+    AddressRegistry memory addressRegistry,
+    uint256 ink
   ) private {
     IExchange exchange = IExchange(addressRegistry.exchange);
     address gemAddress = address(IJoin(cdpData.gemJoin).gem());
-    address urn = IManager(addressRegistry.manager).urns(cdpData.cdpId);
-    address vat = IManager(addressRegistry.manager).vat();
-    (uint256 ink, ) = IVat(vat).urns(cdpData.ilk, urn);
 
     wipeAndFreeGem(
       addressRegistry.manager,
@@ -702,13 +711,11 @@ contract MultiplyProxyActions {
     ExchangeData memory exchangeData,
     CdpData memory cdpData,
     AddressRegistry memory addressRegistry,
-    uint256 borrowedDaiAmount
+    uint256 borrowedDaiAmount,
+    uint256 ink
   ) private {
     IExchange exchange = IExchange(addressRegistry.exchange);
     address gemAddress = address(IJoin(cdpData.gemJoin).gem());
-    address urn = IManager(addressRegistry.manager).urns(cdpData.cdpId);
-    address vat = IManager(addressRegistry.manager).vat();
-    (uint256 ink, ) = IVat(vat).urns(cdpData.ilk, urn);
 
     wipeAndFreeGem(
       addressRegistry.manager,
@@ -753,13 +760,11 @@ contract MultiplyProxyActions {
     ExchangeData memory exchangeData,
     CdpData memory cdpData,
     AddressRegistry memory addressRegistry,
-    uint256 borrowedDaiAmount
+    uint256 borrowedDaiAmount,
+    uint256 ink
   ) private {
     IExchange exchange = IExchange(addressRegistry.exchange);
     address gemAddress = address(IJoin(cdpData.gemJoin).gem());
-    address urn = IManager(addressRegistry.manager).urns(cdpData.cdpId);
-    address vat = IManager(addressRegistry.manager).vat();
-    (uint256 ink, ) = IVat(vat).urns(cdpData.ilk, urn);
 
     wipeAndFreeGem(
       addressRegistry.manager,
@@ -820,6 +825,8 @@ contract MultiplyProxyActions {
     uint256 borrowedDaiAmount = amounts[0].add(premiums[0]);
     emit FLData(IERC20(DAI).balanceOf(address(this)), borrowedDaiAmount);
 
+    uint256 ink = getInk(addressRegistry.manager, cdpData);
+
     require(
       cdpData.requiredDebt == IERC20(DAI).balanceOf(address(this)),
       "requested and received amounts mismatch"
@@ -832,16 +839,17 @@ contract MultiplyProxyActions {
       _increaseMP(exchangeData, cdpData, addressRegistry, premiums[0]);
     }
     if (mode == 2) {
-      _closeWithdrawCollateral(exchangeData, cdpData, addressRegistry, borrowedDaiAmount);
+      _closeWithdrawCollateral(exchangeData, cdpData, addressRegistry, borrowedDaiAmount, ink);
     }
     if (mode == 3) {
-      _closeWithdrawDai(exchangeData, cdpData, addressRegistry, borrowedDaiAmount);
+      _closeWithdrawDai(exchangeData, cdpData, addressRegistry, borrowedDaiAmount, ink);
     }
 
-    ILendingPoolV2 lendingPool = getAaveLendingPool(addressRegistry.aaveLendingPoolProvider);
-
     if (cdpData.skipFL == false) {
-      IERC20(assets[0]).approve(address(lendingPool), borrowedDaiAmount);
+      IERC20(assets[0]).approve(
+        address(getAaveLendingPool(addressRegistry.aaveLendingPoolProvider)),
+        borrowedDaiAmount
+      );
     }
 
     return true;
