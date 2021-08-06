@@ -822,7 +822,7 @@ contract MultiplyProxyActions {
 
     require(
       cdpData.requiredDebt == IERC20(DAI).balanceOf(address(this)),
-      "requested and recieved amounts mismatch"
+      "requested and received amounts mismatch"
     );
 
     if (mode == 0) {
