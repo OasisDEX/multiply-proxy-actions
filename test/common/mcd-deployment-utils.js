@@ -237,14 +237,17 @@ const deploySystem = async function (provider, signer, isExchangeDummy = false, 
   const mcdView = await McdView.deploy()
   deployedContracts.mcdViewInstance = await mcdView.deployed()
   if (debug) {
-    console.log('Signer:', await signer.getAddress())
-    console.log('Exchange:', deployedContracts.exchangeInstance.address)
-    console.log('userProxyAddress:', deployedContracts.userProxyAddress)
-    console.log('dsProxy:', deployedContracts.dsProxyInstance.address)
-    console.log('multiplyProxyActions:', deployedContracts.multiplyProxyActionsInstance.address)
-    console.log('mcdView:', deployedContracts.mcdViewInstance.address)
-    console.log('daiToken:', deployedContracts.daiTokenInstance.address)
-    console.log('wethToken:', deployedContracts.gems.wethTokenInstance.address)
+    console.log('Signer address:', await signer.getAddress())
+    console.log('Exchange address:', deployedContracts.exchangeInstance.address)
+    console.log('User Proxy Address:', deployedContracts.userProxyAddress)
+    console.log('DSProxy address:', deployedContracts.dsProxyInstance.address)
+    console.log(
+      'MultiplyProxyActions address:',
+      deployedContracts.multiplyProxyActionsInstance.address,
+    )
+    console.log('MCDView address:', deployedContracts.mcdViewInstance.address)
+    console.log('DAI address:', deployedContracts.daiTokenInstance.address)
+    console.log('WETH address:', deployedContracts.gems.wethTokenInstance.address)
   }
 
   return deployedContracts
