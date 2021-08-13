@@ -198,16 +198,25 @@ const deploySystem = async function (provider, signer, isExchangeDummy = false, 
     deployedContracts.multiplyProxyActionsInstance,
     undefined,
   )
-  let exchange
+
+  const McdView = await ethers.getContractFactory('McdView', signer)
+  const mcdView = await McdView.deploy()
+  deployedContracts.mcdViewInstance = await mcdView.deployed()
+
+  const Exchange = await ethers.getContractFactory('Exchange', signer)
+  const exchange = await Exchange.deploy(
+    multiplyProxyActions.address,
+    incompleteRegistry.feeRecepient,
+    FEE,
+  )
+  const exchangeInstance = await exchange.deployed()
+
+  const DummyExchange = await ethers.getContractFactory('DummyExchange', signer)
+  const dummyExchange = await DummyExchange.deploy()
+  const dummyExchangeInstance = await dummyExchange.deployed()
 
   if (isExchangeDummy == false) {
-    const Exchange = await ethers.getContractFactory('Exchange', signer)
-    exchange = await Exchange.deploy(
-      multiplyProxyActions.address,
-      incompleteRegistry.feeRecepient,
-      FEE,
-    )
-    deployedContracts.exchangeInstance = await exchange.deployed()
+    deployedContracts.exchangeInstance = exchangeInstance
 
     const WETH = new ethers.Contract(MAINNET_ADRESSES.WETH_ADDRESS, WethAbi, provider).connect(
       signer,
@@ -216,26 +225,21 @@ const deploySystem = async function (provider, signer, isExchangeDummy = false, 
     deployedContracts.gems.wethTokenInstance = WETH
     deployedContracts.daiTokenInstance = DAI
   } else {
-    const Exchange = await ethers.getContractFactory('DummyExchange', signer)
-    exchange = await Exchange.deploy()
-    deployedContracts.exchangeInstance = await exchange.deployed()
-    await exchange.setFee(FEE)
+    deployedContracts.exchangeInstance = dummyExchangeInstance
+    await dummyExchangeInstance.setFee(FEE)
     //await exchange.setSlippage(800);//8%
     let { daiC, ethC } = await addFundsDummyExchange(
       provider,
       signer,
       MAINNET_ADRESSES.WETH_ADDRESS,
       MAINNET_ADRESSES.MCD_DAI,
-      exchange,
+      dummyExchangeInstance,
     )
     deployedContracts.gems.wethTokenInstance = ethC
     deployedContracts.daiTokenInstance = daiC
   }
 
   // const mcdView = await deploy("McdView");
-  const McdView = await ethers.getContractFactory('McdView', signer)
-  const mcdView = await McdView.deploy()
-  deployedContracts.mcdViewInstance = await mcdView.deployed()
   if (debug) {
     console.log('Signer address:', await signer.getAddress())
     console.log('Exchange address:', deployedContracts.exchangeInstance.address)
