@@ -10,13 +10,17 @@ require('hardhat-contract-sizer')
 require('solidity-coverage')
 require('hardhat-abi-exporter')
 
-const blockNumber = process.env.BLOCK_NUMBER || '13008355'
+const blockNumber = process.env.BLOCK_NUMBER
+
+if (!blockNumber) {
+  throw new Error(`You must provide a block number.`)
+}
 
 if (!/^\d+$/.test(blockNumber)) {
   throw new Error(`Provide a valid block number. Provided value is ${blockNumber}`)
 }
 
-console.log(`Forking from blocknumber: ${blockNumber}`)
+console.log(`Forking from block number: ${blockNumber}`)
 
 /**
  * @type import('hardhat/config').HardhatUserConfig
