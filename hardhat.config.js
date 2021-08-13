@@ -1,16 +1,26 @@
-const path = require('path');
-require('dotenv').config({path:path.resolve(__dirname,".env")});
-require("@nomiclabs/hardhat-waffle");
-require("@nomiclabs/hardhat-etherscan");
-require("@tenderly/hardhat-tenderly");
-require("@nomiclabs/hardhat-ethers");
+const path = require('path')
+require('dotenv').config({ path: path.resolve(__dirname, '.env') })
+require('@nomiclabs/hardhat-waffle')
+require('@nomiclabs/hardhat-etherscan')
+require('@tenderly/hardhat-tenderly')
+require('@nomiclabs/hardhat-ethers')
 // require("hardhat-gas-reporter");
-require('hardhat-log-remover');
-require('hardhat-contract-sizer');
-require("solidity-coverage");
-require('hardhat-abi-exporter');
+require('hardhat-log-remover')
+require('hardhat-contract-sizer')
+require('solidity-coverage')
+require('hardhat-abi-exporter')
 
+const blockNumber = process.env.BLOCK_NUMBER
 
+if (!blockNumber) {
+  throw new Error(`You must provide a block number.`)
+}
+
+if (!/^\d+$/.test(blockNumber)) {
+  throw new Error(`Provide a valid block number. Provided value is ${blockNumber}`)
+}
+
+console.log(`Forking from block number: ${blockNumber}`)
 
 /**
  * @type import('hardhat/config').HardhatUserConfig
@@ -24,57 +34,55 @@ module.exports = {
     hardhat: {
       forking: {
         url: process.env.ALCHEMY_NODE,
-        blockNumber: 12763570
+        blockNumber: parseInt(blockNumber),
       },
-      chainId: 1,
-      // chainId: 2137,
+      chainId: 2137,
       mining: {
-        auto: true
+        auto: true,
       },
-      hardfork: "london",
-      gas: "auto",
-      initialBaseFeePerGas: "1000000000",
+      hardfork: 'london',
+      gas: 'auto',
+      initialBaseFeePerGas: '1000000000',
       allowUnlimitedContractSize: true,
       timeout: 100000,
     },
     mainnet: {
       url: process.env.ALCHEMY_NODE,
       accounts: [process.env.PRIV_KEY_MAINNET],
-      gasPrice: 40000000000
-    }
+      gasPrice: 40000000000,
+    },
   },
   solidity: {
-    version: "0.7.6",
+    version: '0.7.6',
     settings: {
       optimizer: {
         enabled: true,
-        runs: 200
-      }
+        runs: 200,
+      },
     },
-  },  
+  },
   paths: {
-    sources: "./contracts",
-    tests: "./test",
-    cache: "./cache",
-    artifacts: "./artifacts"
+    sources: './contracts',
+    tests: './test',
+    cache: './cache',
+    artifacts: './artifacts',
   },
   etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY
+    apiKey: process.env.ETHERSCAN_API_KEY,
   },
   tenderly: {
     username: process.env.TENDERLY_USERNAME,
     project: process.env.TENDERLY_PROJECT,
-    forkNetwork: "1"
+    forkNetwork: '1',
   },
   mocha: {
-    timeout: 600000
+    timeout: 600000,
   },
   abiExporter: {
     path: './abi',
     // clear: true,
     flat: true,
     // only: [':ERC20$'],
-    spacing: 2
-  }
-
-};
+    spacing: 2,
+  },
+}
