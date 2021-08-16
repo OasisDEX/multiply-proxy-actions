@@ -250,7 +250,7 @@ describe.only(`Manage vault with a collateral with different than 18 precision`,
 
     let desiredCdpState = {
       requiredDebt:currentDebt,
-      toBorrowCollateralAmount:currentColl,
+      toBorrowCollateralAmount: currentColl,
       fromTokenAmount: currentColl,
       toTokenAmount: currentDebt,
     }
