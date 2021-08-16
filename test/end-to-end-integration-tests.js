@@ -48,7 +48,7 @@ const BASE_SLIPPAGE = 0.08
 const OUR_FEE = FEE / FEE_BASE
 
 const ALLOWED_PROTOCOLS = ['UNISWAP_V3']
-let blockNumber = 12926169
+let blockNumber = process.env.BLOCK_NUMBER
 
 var testVaults = [
   {
@@ -137,7 +137,7 @@ async function runner(tasks) {
 
 runner([
   // testCaseDefinition(testVaults[0], testParams[0]),
-  testCaseDefinition(testVaults[0], testParams[1]),
+ // testCaseDefinition(testVaults[0], testParams[1]),
   testCaseDefinition(testVaults[0], testParams[4]),
   //  testCaseDefinition(testVaults[0], testParams[2]),
   //  testCaseDefinition(testVaults[0], testParams[3]),
@@ -365,7 +365,7 @@ async function testCaseDefinition(testCase, testParam) {
         revertBlockNumber = await provider.getBlockNumber()
       })
 
-      describe.only(`opening Multiply Vault with collateralisation ratio of ${testCase.desiredCDPState.desiredCollRatio}`, async function () {
+      describe(`opening Multiply Vault with collateralisation ratio of ${testCase.desiredCDPState.desiredCollRatio}`, async function () {
         var txResult
         var startBalance
 
@@ -453,7 +453,7 @@ async function testCaseDefinition(testCase, testParam) {
           expect(actualRatio.toNumber()).to.be.lessThanOrEqual(maxAcceptable.toNumber()) //final collaterallisation is off not more than 5% from desired value
         })
 
-        it.only(`it should flash loan correct amount of DAI`, async function () {
+        it(`it should flash loan correct amount of DAI`, async function () {
           precision = 0.1
           console.warn(`\x1b[33m${precision}% margin for collateralisation ratio applied\x1b[0m`)
           var allEvents = txResult.events.map((x) => {
@@ -472,12 +472,12 @@ async function testCaseDefinition(testCase, testParam) {
             (x) =>
               x.firstTopic === '0x9c6641b21946115d10f3f55df9bec5752ec06d40dc9250b1cc6560549764600e',
           )[0]);
-          console.log("expected candidate",testCase.existingCDP.debt)
-          console.log("actual candidate",flDataEvent);
-          var expected = amountToWei(testCase.existingCDP.debt).toNumber()
-          var actual = flDataEvent.args.due.toNumber();
-          actual = amountToWei(actual.dividedBy(TEN.pow(18))).toNumber()
-          expect(actual).to.be.greaterThan(expected * (1 - precision))
+          var expected = amountToWei(testCase.existingCDP.debt);
+          var actual = new BigNumber(flDataEvent.args.due.toString());
+          actual = amountToWei(actual.dividedBy(TEN.pow(18)));
+          expect(actual.gt(expected.multipliedBy(0.98))).to.be.equal(true);
+          expect(expected.gt(actual.multipliedBy(0.98))).to.be.equal(true);
+          
         })
 
         it('it should send fee to beneficiary', async function () {
@@ -610,7 +610,7 @@ async function testCaseDefinition(testCase, testParam) {
           })
         })
 
-        describe(`Decrease Multiple to coll ratio of ${testParam.desiredCollRatioDAI} with DAI withdrawal (${testParam.desiredDAI} DAI)`, async function () {
+        describe.only(`Decrease Multiple to coll ratio of ${testParam.desiredCollRatioDAI} with DAI withdrawal (${testParam.desiredDAI} DAI)`, async function () {
           let daiBefore
           let testCaseCopy
           this.beforeAll(async function () {

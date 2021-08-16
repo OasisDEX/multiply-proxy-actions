@@ -10,11 +10,11 @@ const createSnapshot = async function (provider) {
 
 const restoreSnapshot = async function (provider, id) {
   if (restoreSnapshot.lock) {
-    //console.log('Skiping restore', restoreSnapshot.lock)
-    delete restoreSnapshot.lock
+    console.log('Skiping restore', restoreSnapshot.lock)
+    //delete restoreSnapshot.lock
   } else {
     await provider.send('evm_revert', [id])
-    //console.log('snapshot restored', id, new Date())
+    console.log('snapshot restored', id, new Date())
   }
 }
 
