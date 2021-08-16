@@ -171,12 +171,15 @@ describe('Proxy Action', async function () {
         }
       })
 
-      let flDataEvent = allEvents.filter(
+      let abi = [ "event FLData(uint256 borrowed, uint256 due)" ];
+      let iface = new ethers.utils.Interface(abi);
+
+      var flDataEvent = iface.parseLog(allEvents.filter(
         (x) =>
           x.firstTopic === '0x9c6641b21946115d10f3f55df9bec5752ec06d40dc9250b1cc6560549764600e',
-      )[0]
+      )[0]);
       let expected = amountToWei(testCases[1].desiredCDPState.requiredDebt).toFixed(0)
-      let actual = new BigNumber(flDataEvent.topics[1], 16)
+      var actual = flDataEvent.args.due.toNumber();
       actual = amountToWei(actual.dividedBy(TEN.pow(18))).toFixed(0)
       expect(actual).to.be.deep.equal(expected)
     })
@@ -253,13 +256,15 @@ describe('Proxy Action', async function () {
           name: x.name,
         }
       })
+      let abi = [ "event FLData(uint256 borrowed, uint256 due)" ];
+      let iface = new ethers.utils.Interface(abi);
 
-      let flDataEvent = allEvents.filter(
+      var flDataEvent = iface.parseLog(allEvents.filter(
         (x) =>
           x.firstTopic === '0x9c6641b21946115d10f3f55df9bec5752ec06d40dc9250b1cc6560549764600e',
-      )[0]
+      )[0]);
       let expected = amountToWei(testCases[0].desiredCDPState.requiredDebt)
-      let actual = new BigNumber(flDataEvent.topics[1], 16)
+      var actual = flDataEvent.args.due.toNumber();
       actual = amountToWei(actual.dividedBy(TEN.pow(18)))
       expect(actual.toNumber()).to.be.equal(expected.toNumber())
     })
