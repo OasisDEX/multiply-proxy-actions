@@ -610,7 +610,7 @@ async function testCaseDefinition(testCase, testParam) {
           })
         })
 
-        describe.only(`Decrease Multiple to coll ratio of ${testParam.desiredCollRatioDAI} with DAI withdrawal (${testParam.desiredDAI} DAI)`, async function () {
+        describe(`Decrease Multiple to coll ratio of ${testParam.desiredCollRatioDAI} with DAI withdrawal (${testParam.desiredDAI} DAI)`, async function () {
           let daiBefore
           let testCaseCopy
           this.beforeAll(async function () {
