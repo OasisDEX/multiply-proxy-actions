@@ -12,6 +12,7 @@ async function deploy() {
   let contracts = await deploySystem(provider, signer, shouldUseDummy, true);
   oraclePrice = await getOraclePrice(provider);
   marketPrice = oraclePrice;
+  console.log('---Change price---',oraclePrice.toFixed(0))
   await contracts.exchangeInstance.setPrice(amountToWei(marketPrice).toFixed(0));
   console.log('---System successfully deployed!---')
 }
