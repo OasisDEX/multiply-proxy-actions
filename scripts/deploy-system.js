@@ -1,5 +1,9 @@
 const { init, deploySystem,getOraclePrice } = require('../test/common/mcd-deployment-utils');
 
+const {
+  amountToWei
+} = require('../test/common/params-calculation-utils')
+
 async function deploy() {
   const shouldUseDummy = process.env.USE_DUMMY && process.env.USE_DUMMY === '1'
   console.log('USE_DUMMY', shouldUseDummy)
