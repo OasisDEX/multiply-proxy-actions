@@ -97,6 +97,15 @@ describe('Exchange', async function () {
     await expect(tx).to.revertedWith('Exchange / Unauthorized Caller')
   })
 
+  it.only('should allow beneficiary to update the fee', async function () {
+    const toTransferAmount = "0x"+amountToWei(1,18).toString(16);
+    let tx0 = await signer.populateTransaction({to:feeBeneficiary,value:toTransferAmount});
+    await signer.sendTransaction(tx0);
+    await provider.send("hardhat_impersonateAccount", [feeBeneficiary]);
+    const benef = await ethers.provider.getSigner(feeBeneficiary)
+    let tx = await exchange.connect(benef).setFee('3')
+  })
+
   describe('Asset for DAI', async function () {
     const amount = new BigNumber(10)
     const amountInWei = amountToWei(amount).toFixed(0)

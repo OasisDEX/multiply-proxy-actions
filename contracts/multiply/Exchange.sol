@@ -23,7 +23,7 @@ contract Exchange {
   ) {
     WHITELISTED_CALLERS[authorisedCaller] = true;
     feeBeneficiaryAddress = feeBeneficiary;
-  //  WHITELISTED_CALLERS[feeBeneficiary] = true;
+    WHITELISTED_CALLERS[feeBeneficiary] = true;
     fee = _fee;
   }
 
