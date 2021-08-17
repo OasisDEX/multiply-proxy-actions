@@ -24,6 +24,7 @@ const _ = require('lodash')
 const AGGREGATOR_V3_ADDRESS = '0x11111112542d85b3ef69ae05771c2dccff4faa26'
 
 const ethers = hre.ethers
+const ALLOWED_PROTOCOLS = ['UNISWAP_V2']
 
 function asPercentageValue(value, base) {
   value = convertToBigNumber(value)
@@ -108,6 +109,7 @@ describe('Exchange', async function () {
         amountInWei,
         exchange.address,
         slippage.value.toString(),
+        ALLOWED_PROTOCOLS
       )
       initialDaiWalletBalance = convertToBigNumber(await balanceOf(MAINNET_ADRESSES.ETH, address))
 
@@ -468,6 +470,7 @@ describe('Exchange', async function () {
         amountInWei.toFixed(0),
         slippage.value.toString(),
         exchange.address,
+        ALLOWED_PROTOCOLS
       )
 
       const {
@@ -944,6 +947,7 @@ describe('Exchange', async function () {
         amountInWei,
         exchange.address,
         slippage.value.toString(),
+        ALLOWED_PROTOCOLS
       )
 
       const {
@@ -1057,6 +1061,7 @@ describe('Exchange', async function () {
         amountInWei.toFixed(0),
         slippage.value.toString(),
         exchange.address,
+        ALLOWED_PROTOCOLS
       )
 
       const {
