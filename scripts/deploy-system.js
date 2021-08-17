@@ -1,11 +1,19 @@
-const { init, deploySystem } = require('../test/common/mcd-deployment-utils');
+const { init, deploySystem,getOraclePrice } = require('../test/common/mcd-deployment-utils');
+
+const {
+  amountToWei
+} = require('../test/common/params-calculation-utils')
 
 async function deploy() {
   const shouldUseDummy = process.env.USE_DUMMY && process.env.USE_DUMMY === '1'
   console.log('USE_DUMMY', shouldUseDummy)
   const [provider, signer] = await init();
   console.log('---Deploying the system---')
-  await deploySystem(provider, signer, shouldUseDummy, true);
+  let contracts = await deploySystem(provider, signer, shouldUseDummy, true);
+  oraclePrice = await getOraclePrice(provider);
+  marketPrice = oraclePrice;
+  console.log('---Change price---',oraclePrice.toFixed(0))
+  await contracts.exchangeInstance.setPrice(amountToWei(marketPrice).toFixed(0));
   console.log('---System successfully deployed!---')
 }
 
