@@ -21,7 +21,7 @@ const erc20Abi = require('../abi/IERC20.json')
 
 const ethers = hre.ethers
 
-describe(`Manage vault with a collateral with different than 18 precision`, async function () {
+describe.only(`Manage vault with a collateral with different than 18 precision`, async function () {
   let provider,
     signer,
     address,
@@ -38,7 +38,7 @@ describe(`Manage vault with a collateral with different than 18 precision`, asyn
     slippage
 
   this.beforeAll(async function () {
-    let [_provider, _signer] = await init(12763570)
+    let [_provider, _signer] = await init(process.env.BLOCK_NUMBER)
     provider = _provider
     signer = _signer
     address = await signer.getAddress()
@@ -48,7 +48,7 @@ describe(`Manage vault with a collateral with different than 18 precision`, asyn
     await swapTokens(
       MAINNET_ADRESSES.ETH,
       MAINNET_ADRESSES.WBTC,
-      amountToWei(new BigNumber(40), 18).toFixed(0),
+      amountToWei(new BigNumber(400), 18).toFixed(0),
       received,
       address,
       provider,
@@ -79,7 +79,8 @@ describe(`Manage vault with a collateral with different than 18 precision`, asyn
     await exchange.setFee(OazoFee)
 
     oraclePrice = await getOraclePrice(provider, MAINNET_ADRESSES.PIP_WBTC)
-    marketPrice = new BigNumber(32000)
+    console.log("OracleFee",oraclePrice.toFixed(0));
+    marketPrice = new BigNumber(45352)
     initialCollRatio = new BigNumber(1.8)
     let collAmount = new BigNumber(0.5)
     let debtAmount = new BigNumber(0)
@@ -122,8 +123,10 @@ describe(`Manage vault with a collateral with different than 18 precision`, asyn
 
     await WBTC.approve(userProxyAddress, amountToWei(new BigNumber(10), 8).toFixed(0))
 
+
     let [status, msg] = await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'openMultiplyVault', params)
     if (status === false){
+      console.log(params);
       throw new Error("tx failed");
     }
     vault = await getLastCDP(provider, signer, userProxyAddress)
