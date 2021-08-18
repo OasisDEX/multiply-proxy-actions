@@ -67,7 +67,7 @@ contract MultiplyProxyActions {
   address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
   address public constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
   address public constant DAIJOIN = 0x9759A6Ac90977b93B58547b4A71c78317f391A28;
-  address public constant ETH_ADDR = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+  uint256 constant AAVE_REFERRAL = 197;
 
   modifier logMethodName(
     string memory name,
@@ -109,7 +109,7 @@ contract MultiplyProxyActions {
       modes,
       address(this),
       paramsData,
-      0
+      AAVE_REFERRAL
     );
 
     IManager(addressRegistry.manager).cdpAllow(
