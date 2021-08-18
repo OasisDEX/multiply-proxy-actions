@@ -453,7 +453,7 @@ async function testCaseDefinition(testCase, testParam) {
           expect(actualRatio.toNumber()).to.be.lessThanOrEqual(maxAcceptable.toNumber()) //final collaterallisation is off not more than 5% from desired value
         })
 
-        it(`it should flash loan correct amount of DAI`, async function () {
+        it.only(`it should flash loan correct amount of DAI`, async function () {
           precision = 0.1
           console.warn(`\x1b[33m${precision}% margin for collateralisation ratio applied\x1b[0m`)
           var allEvents = txResult.events.map((x) => {
@@ -465,13 +465,17 @@ async function testCaseDefinition(testCase, testParam) {
               name: x.name,
             }
           })
+          let abi = [ "event FLData(uint256 borrowed, uint256 due)" ];
+          let iface = new ethers.utils.Interface(abi);
 
-          var flDataEvent = allEvents.filter(
+          var flDataEvent = iface.parseLog(allEvents.filter(
             (x) =>
               x.firstTopic === '0x9c6641b21946115d10f3f55df9bec5752ec06d40dc9250b1cc6560549764600e',
-          )[0]
+          )[0]);
+          console.log("expected candidate",testCase.existingCDP.debt)
+          console.log("actual candidate",flDataEvent);
           var expected = amountToWei(testCase.existingCDP.debt).toNumber()
-          var actual = new BigNumber(flDataEvent.topics[1], 16)
+          var actual = flDataEvent.args.due.toNumber();
           actual = amountToWei(actual.dividedBy(TEN.pow(18))).toNumber()
           expect(actual).to.be.greaterThan(expected * (1 - precision))
         })
