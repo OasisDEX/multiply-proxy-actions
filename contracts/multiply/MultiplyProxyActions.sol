@@ -163,10 +163,6 @@ contract MultiplyProxyActions {
   {
     cdpData.ilk = IJoin(cdpData.gemJoin).ilk();
     cdpData.cdpId = IManager(addressRegistry.manager).open(cdpData.ilk, address(this));
-    console.log("fromTokenAddress",exchangeData.fromTokenAddress);
-    console.log("fromTokenAmount",exchangeData.fromTokenAmount);
-    console.log("toTokenAddress",exchangeData.toTokenAddress);
-    console.log("toTokenAmount",exchangeData.toTokenAmount);
     increaseMultipleDepositCollateral(exchangeData, cdpData, addressRegistry);
   }
 

@@ -95,7 +95,7 @@ contract Exchange {
     uint256 receiveAtLeast,
     address callee,
     bytes calldata withData
-  ) public onlyAuthorized {
+  ) public {
     _transferIn(msg.sender, DAI_ADDRESS, amount);
 
     uint256 _amount = _collectFee(DAI_ADDRESS, amount);
@@ -116,7 +116,7 @@ contract Exchange {
     uint256 receiveAtLeast,
     address callee,
     bytes calldata withData
-  ) public onlyAuthorized {
+  ) public  {
     _transferIn(msg.sender, asset, amount);
 
     uint256 balance = _swap(asset, DAI_ADDRESS, amount, receiveAtLeast, callee, withData);

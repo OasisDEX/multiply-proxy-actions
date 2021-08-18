@@ -21,7 +21,7 @@ const erc20Abi = require('../abi/IERC20.json')
 
 const ethers = hre.ethers
 
-describe.only(`Manage vault with a collateral with different than 18 precision`, async function () {
+describe(`Manage vault with a collateral with different than 18 precision`, async function () {
   let provider,
     signer,
     address,
