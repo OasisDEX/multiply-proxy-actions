@@ -122,7 +122,7 @@ describe.only(`Manage vault with a collateral with different than 18 precision`,
 
     await WBTC.approve(userProxyAddress, amountToWei(new BigNumber(10), 8).toFixed(0))
 
-    let [status, ] = await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'openMultiplyVault', params)
+    let [status, msg] = await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'openMultiplyVault', params)
     if (status === false){
       throw new Error("tx failed");
     }

@@ -453,7 +453,7 @@ async function testCaseDefinition(testCase, testParam) {
           expect(actualRatio.toNumber()).to.be.lessThanOrEqual(maxAcceptable.toNumber()) //final collaterallisation is off not more than 5% from desired value
         })
 
-        it.only(`it should flash loan correct amount of DAI`, async function () {
+        it(`it should flash loan correct amount of DAI`, async function () {
           precision = 0.1
           console.warn(`\x1b[33m${precision}% margin for collateralisation ratio applied\x1b[0m`)
           var allEvents = txResult.events.map((x) => {
