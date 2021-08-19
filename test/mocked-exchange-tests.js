@@ -711,8 +711,8 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
     let marketPrice, oraclePrice, currentColl, currentDebt, requiredCollRatio
 
     this.beforeAll(async function () {
-      marketPrice = await new BigNumber(2380)
       oraclePrice = await getOraclePrice(provider)
+      marketPrice = await new BigNumber(2380)
 
       await exchange.setPrice(amountToWei(marketPrice).toFixed(0))
 
@@ -730,7 +730,6 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
 
       desiredCdpState = {
         requiredDebt: 0,
-        toBorrowCollateralAmount: 0,
         toBorrowCollateralAmount: sellCollateralAmount,
         providedCollateral: 0,
         minToTokenAmount: minToTokenAmount,

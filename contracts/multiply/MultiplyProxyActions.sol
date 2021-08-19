@@ -801,7 +801,7 @@ contract MultiplyProxyActions {
     console.log("Ink",ink);
 
     require(
-      cdpData.requiredDebt == IERC20(DAI).balanceOf(address(this)),
+      cdpData.requiredDebt+cdpData.depositDai == IERC20(DAI).balanceOf(address(this)),
       "requested and received amounts mismatch"
     );
 
