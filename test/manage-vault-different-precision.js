@@ -80,7 +80,7 @@ describe.only(`Manage vault with a collateral with different than 18 precision`,
 
     oraclePrice = await getOraclePrice(provider, MAINNET_ADRESSES.PIP_WBTC)
     console.log("OracleFee",oraclePrice.toFixed(0));
-    marketPrice = new BigNumber(45352)
+    marketPrice = oraclePrice
     initialCollRatio = new BigNumber(1.8)
     let collAmount = new BigNumber(0.5)
     let debtAmount = new BigNumber(0)
@@ -243,7 +243,7 @@ describe.only(`Manage vault with a collateral with different than 18 precision`,
       .div(new BigNumber(currentVaultState.debt))
     expect(currentCollRatio.toFixed(3)).to.be.equal(desiredCollRatio.toFixed(3))
   })
-
+  /*
   it('should close vault correctly to DAI',async function(){
     const desiredCollRatio = initialCollRatio.plus(new BigNumber(0.2))
     const info = await getVaultInfo(mcdView, vault.id, vault.ilk)
@@ -282,7 +282,7 @@ describe.only(`Manage vault with a collateral with different than 18 precision`,
 
     console.log("getVaultInfo after",currentVaultState);
   })
-  
+  */
   it('should close vault correctly to collateral',async function(){
     const desiredCollRatio = initialCollRatio.plus(new BigNumber(0.2))
     const info = await getVaultInfo(mcdView, vault.id, vault.ilk)
