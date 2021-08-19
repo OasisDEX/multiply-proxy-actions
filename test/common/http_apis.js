@@ -75,7 +75,6 @@ const exchangeToDAI = async function (
     &slippage=${slippage}
     &disableEstimate=true
     &allowPartialFill=false`.replace(/\n(\s*)/g, '')
-
   var data = await (await fetch(url)).json()
 
   if (!data) {

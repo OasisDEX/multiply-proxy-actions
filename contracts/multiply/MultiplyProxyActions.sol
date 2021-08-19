@@ -818,12 +818,10 @@ contract MultiplyProxyActions {
       _closeWithdrawDai(exchangeData, cdpData, addressRegistry, borrowedDaiAmount, cdpData.borrowCollateral);
     }
 
-    if (cdpData.skipFL == false) {
-      IERC20(assets[0]).approve(
+    IERC20(assets[0]).approve(
         address(getAaveLendingPool(addressRegistry.aaveLendingPoolProvider)),
         borrowedDaiAmount
       );
-    }
 
     return true;
   }
