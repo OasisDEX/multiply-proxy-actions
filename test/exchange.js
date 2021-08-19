@@ -24,6 +24,7 @@ const _ = require('lodash')
 const AGGREGATOR_V3_ADDRESS = '0x11111112542d85b3ef69ae05771c2dccff4faa26'
 
 const ethers = hre.ethers
+const ALLOWED_PROTOCOLS = ['UNISWAP_V2']
 
 function asPercentageValue(value, base) {
   value = convertToBigNumber(value)
@@ -96,6 +97,15 @@ describe('Exchange', async function () {
     await expect(tx).to.revertedWith('Exchange / Unauthorized Caller')
   })
 
+  it.only('should allow beneficiary to update the fee', async function () {
+    const toTransferAmount = "0x"+amountToWei(1,18).toString(16);
+    let tx0 = await signer.populateTransaction({to:feeBeneficiary,value:toTransferAmount});
+    await signer.sendTransaction(tx0);
+    await provider.send("hardhat_impersonateAccount", [feeBeneficiary]);
+    const benef = await ethers.provider.getSigner(feeBeneficiary)
+    let tx = await exchange.connect(benef).setFee('3')
+  })
+
   describe('Asset for DAI', async function () {
     const amount = new BigNumber(10)
     const amountInWei = amountToWei(amount).toFixed(0)
@@ -108,6 +118,7 @@ describe('Exchange', async function () {
         amountInWei,
         exchange.address,
         slippage.value.toString(),
+        ALLOWED_PROTOCOLS
       )
       initialDaiWalletBalance = convertToBigNumber(await balanceOf(MAINNET_ADRESSES.ETH, address))
 
@@ -468,6 +479,7 @@ describe('Exchange', async function () {
         amountInWei.toFixed(0),
         slippage.value.toString(),
         exchange.address,
+        ALLOWED_PROTOCOLS
       )
 
       const {
@@ -944,6 +956,7 @@ describe('Exchange', async function () {
         amountInWei,
         exchange.address,
         slippage.value.toString(),
+        ALLOWED_PROTOCOLS
       )
 
       const {
@@ -1057,6 +1070,7 @@ describe('Exchange', async function () {
         amountInWei.toFixed(0),
         slippage.value.toString(),
         exchange.address,
+        ALLOWED_PROTOCOLS
       )
 
       const {

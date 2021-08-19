@@ -365,7 +365,7 @@ async function testCaseDefinition(testCase, testParam) {
         revertBlockNumber = await provider.getBlockNumber()
       })
 
-      describe.only(`opening Multiply Vault with collateralisation ratio of ${testCase.desiredCDPState.desiredCollRatio}`, async function () {
+      describe(`opening Multiply Vault with collateralisation ratio of ${testCase.desiredCDPState.desiredCollRatio}`, async function () {
         var txResult
         var startBalance
 
