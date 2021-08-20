@@ -354,7 +354,6 @@ contract MultiplyProxyActions {
 
     address urn = IManager(addressRegistry.manager).urns(cdpData.cdpId);
     address vat = IManager(addressRegistry.manager).vat();
-    (uint256 ink, ) = IVat(vat).urns(cdpData.ilk, urn);
 
     uint256 wadD = _getWipeAllWad(vat, urn, urn, cdpData.ilk);
     cdpData.requiredDebt = wadD;
@@ -374,7 +373,7 @@ contract MultiplyProxyActions {
       takeAFlashLoan(addressRegistry, cdpData, assets, amounts, modes, paramsData);
     } else {
       if (mode == 2) {
-        _closeWithdrawCollateralSkipFL(exchangeData, cdpData, addressRegistry, ink);
+        _closeWithdrawCollateralSkipFL(exchangeData, cdpData, addressRegistry, cdpData.borrowCollateral);
       } else {
         require(false, "this code should be unreachable");
       }
@@ -799,7 +798,7 @@ contract MultiplyProxyActions {
     uint256 ink = getInk(addressRegistry.manager, cdpData);
 
     require(
-      cdpData.requiredDebt == IERC20(DAI).balanceOf(address(this)),
+      cdpData.requiredDebt.add(cdpData.depositDai) == IERC20(DAI).balanceOf(address(this)),
       "requested and received amounts mismatch"
     );
 
@@ -810,10 +809,10 @@ contract MultiplyProxyActions {
       _increaseMP(exchangeData, cdpData, addressRegistry, premiums[0]);
     }
     if (mode == 2) {
-      _closeWithdrawCollateral(exchangeData, cdpData, addressRegistry, borrowedDaiAmount, ink);
+      _closeWithdrawCollateral(exchangeData, cdpData, addressRegistry, borrowedDaiAmount, cdpData.borrowCollateral);
     }
     if (mode == 3) {
-      _closeWithdrawDai(exchangeData, cdpData, addressRegistry, borrowedDaiAmount, ink);
+      _closeWithdrawDai(exchangeData, cdpData, addressRegistry, borrowedDaiAmount, cdpData.borrowCollateral);
     }
 
     IERC20(assets[0]).approve(

@@ -21,7 +21,7 @@ const erc20Abi = require('../abi/IERC20.json')
 
 const ethers = hre.ethers
 
-describe(`Manage vault with a collateral with different than 18 precision`, async function () {
+describe.only(`Manage vault with a collateral with different than 18 precision`, async function () {
   let provider,
     signer,
     address,
@@ -38,7 +38,7 @@ describe(`Manage vault with a collateral with different than 18 precision`, asyn
     slippage
 
   this.beforeAll(async function () {
-    let [_provider, _signer] = await init(12763570)
+    let [_provider, _signer] = await init(process.env.BLOCK_NUMBER)
     provider = _provider
     signer = _signer
     address = await signer.getAddress()
@@ -48,7 +48,7 @@ describe(`Manage vault with a collateral with different than 18 precision`, asyn
     await swapTokens(
       MAINNET_ADRESSES.ETH,
       MAINNET_ADRESSES.WBTC,
-      amountToWei(new BigNumber(40), 18).toFixed(0),
+      amountToWei(new BigNumber(400), 18).toFixed(0),
       received,
       address,
       provider,
@@ -79,7 +79,8 @@ describe(`Manage vault with a collateral with different than 18 precision`, asyn
     await exchange.setFee(OazoFee)
 
     oraclePrice = await getOraclePrice(provider, MAINNET_ADRESSES.PIP_WBTC)
-    marketPrice = new BigNumber(32000)
+    console.log("OracleFee",oraclePrice.toFixed(0));
+    marketPrice = oraclePrice
     initialCollRatio = new BigNumber(1.8)
     let collAmount = new BigNumber(0.5)
     let debtAmount = new BigNumber(0)
@@ -122,8 +123,12 @@ describe(`Manage vault with a collateral with different than 18 precision`, asyn
 
     await WBTC.approve(userProxyAddress, amountToWei(new BigNumber(10), 8).toFixed(0))
 
-    await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'openMultiplyVault', params)
 
+    let [status, msg] = await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'openMultiplyVault', params)
+    if (status === false){
+      console.log(params);
+      throw new Error("tx failed");
+    }
     vault = await getLastCDP(provider, signer, userProxyAddress)
 
     snapshotId = await provider.send('evm_snapshot', [])
@@ -180,8 +185,10 @@ describe(`Manage vault with a collateral with different than 18 precision`, asyn
       8,
     )
 
-    await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'increaseMultiple', params)
-
+    let [status, ] = await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'increaseMultiple', params)
+    if (status === false){
+      throw new Error("tx failed");
+    }
     let currentVaultState = await getVaultInfo(mcdView, vault.id, vault.ilk, 8)
     const currentCollRatio = new BigNumber(currentVaultState.coll)
       .times(oraclePrice)
@@ -235,5 +242,89 @@ describe(`Manage vault with a collateral with different than 18 precision`, asyn
       .times(oraclePrice)
       .div(new BigNumber(currentVaultState.debt))
     expect(currentCollRatio.toFixed(3)).to.be.equal(desiredCollRatio.toFixed(3))
+  })
+  /*
+  it('should close vault correctly to DAI',async function(){
+    const desiredCollRatio = initialCollRatio.plus(new BigNumber(0.2))
+    const info = await getVaultInfo(mcdView, vault.id, vault.ilk)
+    console.log("getVaultInfo before",info);
+    const currentColl = new BigNumber(info.coll)
+    const currentDebt = new BigNumber(info.debt)
+
+    let desiredCdpState = {
+      requiredDebt:currentDebt,
+      toBorrowCollateralAmount: currentColl,
+      fromTokenAmount: currentColl,
+      toTokenAmount: currentDebt,
+    }
+
+    let params = prepareMultiplyParameters2(
+      MAINNET_ADRESSES.WBTC,
+      MAINNET_ADRESSES.MCD_DAI,
+      exchangeStub,
+      vault.id,
+      desiredCdpState,
+      multiplyProxyActions.address,
+      exchange.address,
+      address,
+      false,
+      MAINNET_ADRESSES.MCD_JOIN_WBTC_A,
+      8,
+      true,
+    )
+
+    let [status, ] = await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'closeVaultExitDai', params)
+    if (status === false){
+      throw new Error("tx failed");
+    }
+
+    let currentVaultState = await getVaultInfo(mcdView, vault.id, vault.ilk, 8)
+
+    console.log("getVaultInfo after",currentVaultState);
+  })
+  */
+  it('should close vault correctly to collateral',async function(){
+    const desiredCollRatio = initialCollRatio.plus(new BigNumber(0.2))
+    const info = await getVaultInfo(mcdView, vault.id, vault.ilk)
+    console.log("getVaultInfo before",info);
+    const currentColl = new BigNumber(info.coll)
+    const currentDebt = new BigNumber(info.debt)
+    let one = new BigNumber(1);
+
+    const marketPriceSlippage = marketPrice.times(one.minus(slippage))
+    const minToTokenAmount = currentDebt.times(one.plus(OF).plus(FF))
+    const sellCollateralAmount = minToTokenAmount.div(marketPriceSlippage)
+
+    desiredCdpState = {
+      requiredDebt: 0,
+      toBorrowCollateralAmount: 0,
+      toBorrowCollateralAmount: sellCollateralAmount,
+      providedCollateral: 0,
+      minToTokenAmount: minToTokenAmount,
+    }
+
+    let params = prepareMultiplyParameters2(
+      MAINNET_ADRESSES.WBTC,
+      MAINNET_ADRESSES.MCD_DAI,
+      exchangeStub,
+      vault.id,
+      desiredCdpState,
+      multiplyProxyActions.address,
+      exchange.address,
+      address,
+      false,
+      MAINNET_ADRESSES.MCD_JOIN_WBTC_A,
+      8,
+      true,
+    )
+
+    let [status, ] = await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'closeVaultExitCollateral', params)
+    if (status === false){
+      throw new Error("tx failed");
+    }
+
+    let currentVaultState = await getVaultInfo(mcdView, vault.id, vault.ilk, 8)
+
+    console.log("getVaultInfo after",currentVaultState);
   })
 })
