@@ -27,7 +27,6 @@ import "../interfaces/mcd/IJug.sol";
 import "../interfaces/mcd/IDaiJoin.sol";
 import "../interfaces/exchange/IExchange.sol";
 import "./ExchangeData.sol";
-import "hardhat/console.sol";
 
 pragma solidity >=0.7.6;
 pragma abicoder v2;
@@ -798,10 +797,8 @@ contract MultiplyProxyActions {
 
     uint256 ink = getInk(addressRegistry.manager, cdpData);
 
-    console.log("Ink",ink);
-
     require(
-      cdpData.requiredDebt+cdpData.depositDai == IERC20(DAI).balanceOf(address(this)),
+      cdpData.requiredDebt.add(cdpData.depositDai) == IERC20(DAI).balanceOf(address(this)),
       "requested and received amounts mismatch"
     );
 
