@@ -678,7 +678,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
 
       desiredCdpState = {
         requiredDebt: 0,
-        toBorrowCollateralAmount: 0,
+        toBorrowCollateralAmount: sellCollateralAmount,
         fromTokenAmount: sellCollateralAmount,
         toTokenAmount: minToTokenAmount,
         withdrawCollateral: currentColl
