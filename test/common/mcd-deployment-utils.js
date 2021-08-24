@@ -25,17 +25,22 @@ const FEE_BASE = 10000
 const init = async function (blockNumber, provider, signer) {
   blockNumber = parseInt(blockNumber);
   console.log(blockNumber)
-  provider = provider || new hre.ethers.providers.JsonRpcProvider()
-  signer = signer || provider.getSigner(0)
+  if(!provider)
+  {
+    provider = provider || new hre.ethers.providers.JsonRpcProvider()
+    signer = signer || await provider.getSigner(0)
 
-  await provider.send('hardhat_reset', [
-    {
-      forking: {
-        jsonRpcUrl: process.env.ALCHEMY_NODE,
-        blockNumber,
+    await provider.send('hardhat_reset', [
+      {
+        forking: {
+          jsonRpcUrl: process.env.ALCHEMY_NODE,
+          blockNumber,
+        },
       },
-    },
-  ])
+    ])
+  }else{
+    signer = signer || await provider.getSigner(0);
+  }
 
   return [provider, signer]
 }

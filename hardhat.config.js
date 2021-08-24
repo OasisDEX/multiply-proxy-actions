@@ -52,6 +52,11 @@ module.exports = {
       accounts: [process.env.PRIV_KEY_MAINNET],
       gasPrice: 40000000000,
     },
+    rinkeby: {
+      url: process.env.ALCHEMY_NODE_RINKEBY,
+      accounts: [process.env.PRIV_KEY_MAINNET],
+      gasPrice: 40000000000,
+    },
   },
   solidity: {
     version: '0.7.6',
