@@ -7,12 +7,9 @@ const {
 
 async function deploy() {
   const [provider, signer] = await init(undefined,ethers.provider);
+  console.log('Deployer address:',await signer.getAddress());
   console.log('---Deploying the system---')
-  let contracts = await deploySystem(provider, signer, false, true);
-  oraclePrice = await getOraclePrice(provider);
-  marketPrice = oraclePrice;
-  console.log('---Change price---',oraclePrice.toFixed(0))
-  await contracts.exchangeInstance.setPrice(amountToWei(marketPrice).toFixed(0));
+  let contracts = await deploySystem(provider, signer, false, true, false);
   console.log('---System successfully deployed!---')
 }
 

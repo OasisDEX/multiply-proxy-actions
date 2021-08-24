@@ -177,7 +177,7 @@ const addFundsDummyExchange = async function (
   }
 }
 
-const deploySystem = async function (provider, signer, isExchangeDummy = false, debug = false) {
+const deploySystem = async function (provider, signer, isExchangeDummy = false, debug = false, local = true) {
   let deployedContracts = {
     // defined during system deployment
     mcdViewInstance: undefined,
@@ -190,11 +190,17 @@ const deploySystem = async function (provider, signer, isExchangeDummy = false, 
     daiTokenInstance: undefined,
   }
 
-  const userProxyAddress = await getOrCreateProxy(provider, signer)
-  const dsProxy = new ethers.Contract(userProxyAddress, dsProxyAbi, provider).connect(signer)
+  let userProxyAddress;
+  let dsProxy;
+
+  if(local){
+    userProxyAddress = await getOrCreateProxy(provider, signer);
+    dsProxy = new ethers.Contract(userProxyAddress, dsProxyAbi, provider).connect(signer)
+  }
 
   deployedContracts.userProxyAddress = userProxyAddress
   deployedContracts.dsProxyInstance = dsProxy
+
 
   // const multiplyProxyActions = await deploy("MultiplyProxyActions");
   const MPActions = await ethers.getContractFactory('MultiplyProxyActions', signer)
@@ -251,7 +257,9 @@ const deploySystem = async function (provider, signer, isExchangeDummy = false, 
     console.log('Signer address:', await signer.getAddress())
     console.log('Exchange address:', deployedContracts.exchangeInstance.address)
     console.log('User Proxy Address:', deployedContracts.userProxyAddress)
-    console.log('DSProxy address:', deployedContracts.dsProxyInstance.address)
+    if(local){
+      console.log('DSProxy address:', deployedContracts.dsProxyInstance.address)
+    }
     console.log(
       'MultiplyProxyActions address:',
       deployedContracts.multiplyProxyActionsInstance.address,
