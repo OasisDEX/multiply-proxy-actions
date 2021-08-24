@@ -24,7 +24,7 @@ const FEE_BASE = 10000
 
 const init = async function (blockNumber, provider, signer) {
   blockNumber = parseInt(blockNumber);
-  console.log(blockNumber)
+  console.log(`Initializing from ${blockNumber}`)
   provider = provider || new hre.ethers.providers.JsonRpcProvider()
   signer = signer || provider.getSigner(0)
 
