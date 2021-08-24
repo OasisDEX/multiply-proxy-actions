@@ -7,7 +7,7 @@ const {
 async function deploy() {
   const shouldUseDummy = process.env.USE_DUMMY && process.env.USE_DUMMY === '1'
   console.log('USE_DUMMY', shouldUseDummy)
-  const [provider, signer] = await init();
+  const [provider, signer] = await init(process.env.BLOCK_NUMBER);
   console.log('---Deploying the system---')
   let contracts = await deploySystem(provider, signer, shouldUseDummy, true);
   oraclePrice = await getOraclePrice(provider);
