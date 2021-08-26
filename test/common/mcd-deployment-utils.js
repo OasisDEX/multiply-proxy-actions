@@ -19,7 +19,7 @@ let CONTRACTS = {}
 const { balanceOf, TEN, one } = require('../utils')
 const { getVaultInfo } = require('../utils-mcd.js')
 
-const FEE = 2
+const FEE = 20
 const FEE_BASE = 10000
 
 const init = async function (blockNumber, provider, signer) {
@@ -177,7 +177,7 @@ const addFundsDummyExchange = async function (
   }
 }
 
-const deploySystem = async function (provider, signer, isExchangeDummy = false, debug = false, local = true) {
+const deploySystem = async function (provider, signer, isExchangeDummy = false, debug = false, local = true, authorisedCaller = undefined) {
   let deployedContracts = {
     // defined during system deployment
     mcdViewInstance: undefined,
@@ -205,8 +205,14 @@ const deploySystem = async function (provider, signer, isExchangeDummy = false, 
   // const multiplyProxyActions = await deploy("MultiplyProxyActions");
   const MPActions = await ethers.getContractFactory('MultiplyProxyActions', signer)
   const multiplyProxyActions = await MPActions.deploy()
+  if (debug) {
+    console.log("Deploying MPActions....");
+  }
   deployedContracts.multiplyProxyActionsInstance = await multiplyProxyActions.deployed()
 
+  if (debug) {
+    console.log("MPActions deployed....");
+  }
   const incompleteRegistry = addressRegistryFactory(
     deployedContracts.multiplyProxyActionsInstance,
     undefined,
@@ -214,21 +220,48 @@ const deploySystem = async function (provider, signer, isExchangeDummy = false, 
 
   const McdView = await ethers.getContractFactory('McdView', signer)
   const mcdView = await McdView.deploy()
+  if (debug) {
+    console.log("Deploying McdView....");
+  }
   deployedContracts.mcdViewInstance = await mcdView.deployed()
 
-  const Exchange = await ethers.getContractFactory('Exchange', signer)
+  if (debug) {
+    console.log("McdView deployed....");
+  }
+
+  const Exchange = await ethers.getContractFactory('Exchange', signer);
+  if(authorisedCaller == undefined){
+    authorisedCaller = incompleteRegistry.feeRecepient; 
+  }
+  console.log("authorisedCaller:",authorisedCaller);
   const exchange = await Exchange.deploy(
-    multiplyProxyActions.address,
+    authorisedCaller,
     incompleteRegistry.feeRecepient,
     FEE,
   )
+  if (debug) {
+    console.log("Deploying Exchange....");
+  }
   const exchangeInstance = await exchange.deployed()
+  if (debug) {
+    console.log("Exchange deployed....");
+  }
 
-  const DummyExchange = await ethers.getContractFactory('DummyExchange', signer)
-  const dummyExchange = await DummyExchange.deploy()
-  const dummyExchangeInstance = await dummyExchange.deployed()
+  if(local){
 
-  if (isExchangeDummy == false) {
+    const DummyExchange = await ethers.getContractFactory('DummyExchange', signer)
+    const dummyExchange = await DummyExchange.deploy()
+    if (debug) {
+      console.log("Deploying DummyExchange....");
+    }
+    const dummyExchangeInstance = await dummyExchange.deployed()
+    if (debug) {
+      console.log("DummyExchange deployed....");
+    }
+
+  }
+
+  if (isExchangeDummy == false || local == false) {
     deployedContracts.exchangeInstance = exchangeInstance
 
     const WETH = new ethers.Contract(MAINNET_ADRESSES.WETH_ADDRESS, WethAbi, provider).connect(

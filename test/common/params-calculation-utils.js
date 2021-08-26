@@ -13,7 +13,7 @@ const addressRegistryFactory = function (
     manager: '0x5ef30b9986345249bc32d8928B7ee64DE9435E39',
     multiplyProxyActions: multiplyProxyActionsInstanceAddress,
     aaveLendingPoolProvider: '0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5',
-    feeRecepient: '0x79d7176aE8F93A04bC73b9BC710d4b44f9e362Ce',
+    feeRecepient: '0xC7b548AD9Cf38721810246C079b2d8083aba8909',
     exchange: exchangeInstanceAddress,
   }
 }
