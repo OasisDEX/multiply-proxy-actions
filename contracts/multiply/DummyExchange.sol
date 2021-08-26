@@ -19,8 +19,14 @@ contract DummyExchange {
   uint256 public feeBase = 10000;
 
   address public feeBeneficiaryAddress = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8; // second HH address
-  event AssetSwap(address assetIn, address assetOut, uint256 amountIn, uint256 amountOut);
-  event FeePaid(uint256 amount);
+  
+  event AssetSwap(
+    address indexed assetIn,
+    address indexed assetOut,
+    uint256 amountIn,
+    uint256 amountOut
+  );
+  event FeePaid(address indexed beneficiary, uint256 amount);
 
   function mul(uint256 x, uint256 y) internal pure returns (uint256 z) {
     require(y == 0 || (z = x * y) / y == x, "mul-overflow");
@@ -63,7 +69,7 @@ contract DummyExchange {
   function _collectFee(address asset, uint256 fromAmount) public returns (uint256) {
     uint256 feeToTransfer = (fromAmount.mul(fee)).div(feeBase);
     IERC20(asset).transferFrom(address(this), feeBeneficiaryAddress, feeToTransfer);
-    emit FeePaid(feeToTransfer);
+    emit FeePaid(feeBeneficiaryAddress, feeToTransfer);
     return fromAmount.sub(feeToTransfer);
   }
 
