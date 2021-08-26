@@ -148,28 +148,42 @@ const addFundsDummyExchange = async function (
   )
   const WETH = new ethers.Contract(WETH_ADDRESS, WethAbi, provider).connect(signer)
   const DAI = new ethers.Contract(DAI_ADDRESS, Erc20Abi, provider).connect(signer)
+  const address = await signer.getAddress()
 
   let swapParams = {
     tokenIn: MAINNET_ADRESSES.ETH,
     tokenOut: MAINNET_ADRESSES.MCD_DAI,
     fee: 3000,
-    recipient: await signer.getAddress(),
+    recipient: address,
     deadline: 1751366148,
     amountIn: amountToWei(new BigNumber(200)).toFixed(0),
     amountOutMinimum: amountToWei(new BigNumber(300000)).toFixed(0),
     sqrtPriceLimitX96: 0,
   }
-  await uniswapV3.exactInputSingle(swapParams, {
+
+  const uniswapTx = await uniswapV3.exactInputSingle(swapParams, {
     value: amountToWei(new BigNumber(200)).toFixed(0),
   })
-  var address = await signer.getAddress()
-  await WETH.deposit({
+  await uniswapTx.wait()
+
+  const wethDeposit = await WETH.deposit({
     value: amountToWei(new BigNumber(1000)).toFixed(0),
   })
-  await WETH.transfer(exchange.address, amountToWei(new BigNumber(500)).toFixed(0))
-  var balance = await balanceOf(DAI.address, address)
-  console.log(balance.toString())
-  await DAI.transfer(exchange.address, new BigNumber(balance.toString()).dividedBy(2).toFixed(0))
+  await wethDeposit.wait()
+
+  const wethTransferToExchangeTx = await WETH.transfer(
+    exchange.address,
+    amountToWei(new BigNumber(500)).toFixed(0),
+  )
+  await wethTransferToExchangeTx.wait()
+
+  const balance = await balanceOf(DAI.address, address)
+  const daiTransferToExchangeTx = await DAI.transfer(
+    exchange.address,
+    new BigNumber(balance.toString()).dividedBy(2).toFixed(0),
+  )
+  await daiTransferToExchangeTx.wait()
+
   return {
     daiC: DAI,
     ethC: WETH,
