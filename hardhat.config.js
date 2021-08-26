@@ -9,6 +9,7 @@ require('hardhat-log-remover')
 require('hardhat-contract-sizer')
 require('solidity-coverage')
 require('hardhat-abi-exporter')
+require("@nomiclabs/hardhat-etherscan");
 
 const blockNumber = process.env.BLOCK_NUMBER
 
