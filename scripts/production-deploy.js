@@ -9,7 +9,7 @@ async function deploy() {
   const provider = ethers.provider;
   const signer = provider.getSigner(0);
   const authCaller = process.env.AUTH_CALLER;
-  const feeRecipient = '0x79d7176aE8F93A04bC73b9BC710d4b44f9e362Ce';
+  const feeRecipient = process.env.FEE_RECIPIENT;
   const FEE = 20;
 
   console.log('Deployer address:',await signer.getAddress());
