@@ -27,6 +27,7 @@ contract DummyExchange {
     uint256 amountOut
   );
   event FeePaid(address indexed beneficiary, uint256 amount);
+  event SlippageSaved(uint256 minimumPossible, uint256 actualAmount);
 
   function mul(uint256 x, uint256 y) internal pure returns (uint256 z) {
     require(y == 0 || (z = x * y) / y == x, "mul-overflow");
@@ -63,6 +64,7 @@ contract DummyExchange {
     uint256 amount
   ) internal {
     IERC20(asset).safeTransfer(to, amount);
+    emit SlippageSaved(amount, amount);
     console.log("TRANSFER OUT", asset, amount);
   }
 
