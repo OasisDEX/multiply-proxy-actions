@@ -217,16 +217,18 @@ const deploySystem = async function (provider, signer, isExchangeDummy = false, 
     deployedContracts.multiplyProxyActionsInstance,
     undefined,
   )
-
+  
   const McdView = await ethers.getContractFactory('McdView', signer)
-  const mcdView = await McdView.deploy()
-  if (debug) {
-    console.log("Deploying McdView....");
-  }
-  deployedContracts.mcdViewInstance = await mcdView.deployed()
-
-  if (debug) {
-    console.log("McdView deployed....");
+  if(local){
+    const mcdView = await McdView.deploy()
+    if (debug) {
+      console.log("Deploying McdView....");
+    }
+    deployedContracts.mcdViewInstance = await mcdView.deployed()
+  
+    if (debug) {
+      console.log("McdView deployed....");
+    }
   }
 
   const Exchange = await ethers.getContractFactory('Exchange', signer);
@@ -297,7 +299,9 @@ const deploySystem = async function (provider, signer, isExchangeDummy = false, 
       'MultiplyProxyActions address:',
       deployedContracts.multiplyProxyActionsInstance.address,
     )
-    console.log('MCDView address:', deployedContracts.mcdViewInstance.address)
+    if(local){
+      console.log('MCDView address:', deployedContracts.mcdViewInstance.address)
+    }
     console.log('DAI address:', deployedContracts.daiTokenInstance.address)
     console.log('WETH address:', deployedContracts.gems.wethTokenInstance.address)
   }
