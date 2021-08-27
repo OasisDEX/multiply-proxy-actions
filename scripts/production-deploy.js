@@ -1,4 +1,9 @@
 const { ethers } = require('hardhat');
+/*
+In order to verify call
+npx hardhat verify >>address<< --network rinkeby/mainnet
+npx hardhat verify  --constructor-args prod-exchange-params.js >>address<< --network rinkeby/mainnet
+*/
 
 async function deploy() {
   const provider = ethers.provider;
@@ -23,8 +28,8 @@ async function deploy() {
     feeRecipient,
     FEE,
   )
-  const exchange = await exchange.deployed();
-  console.log('---Exchange Deployed---', mpa.address)
+  const exchangeInstance = await exchange.deployed();
+  console.log('---Exchange Deployed---', exchangeInstance.address)
 
 
   console.log('---System successfully deployed!---')
