@@ -15,8 +15,9 @@ contract DummyExchange {
   uint256 price;
 
   uint8 public fee = 0;
-  uint8 public precision = 18;
   uint256 public feeBase = 10000;
+
+  mapping(address => uint8) public precisions;
 
   address public feeBeneficiaryAddress = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8; // second HH address
 
@@ -41,8 +42,8 @@ contract DummyExchange {
     fee = f;
   }
 
-  function setPrecision(uint8 _precision) public {
-    precision = _precision;
+  function setPrecision(address token, uint8 _precision) public {
+    precisions[token] = _precision;
   }
 
   function _transferIn(
@@ -83,6 +84,9 @@ contract DummyExchange {
     address callee,
     bytes calldata withData
   ) public {
+    uint8 precision = precisions[asset];
+    console.log("---SC---- AMOUNT:::", amount);
+    console.log("---SC---- PRECISION:::", precision);
     amount = _collectFee(DAI_ADDRESS, amount);
     uint256 amountOut = (mul(amount, 10**18) / price) / (10**(18 - precision));
     _transferIn(msg.sender, DAI_ADDRESS, amount);
@@ -98,6 +102,7 @@ contract DummyExchange {
     address callee,
     bytes calldata withData
   ) public {
+    uint8 precision = precisions[asset];
     uint256 amountOut = mul(mul(amount, 10**(18 - precision)), price / 10**18);
     amountOut = _collectFee(DAI_ADDRESS, amountOut);
 

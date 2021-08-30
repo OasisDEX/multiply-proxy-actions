@@ -284,6 +284,7 @@ const deploySystem = async function (provider, signer, isExchangeDummy = false, 
   } else {
     deployedContracts.exchangeInstance = dummyExchangeInstance
     await dummyExchangeInstance.setFee(FEE)
+    await dummyExchangeInstance.setPrecision(MAINNET_ADRESSES.ETH, 18)
     //await exchange.setSlippage(800);//8%
     const tokens = [
       { name: 'DAI', address: MAINNET_ADRESSES.MCD_DAI, precision: 18 },
@@ -298,6 +299,13 @@ const deploySystem = async function (provider, signer, isExchangeDummy = false, 
       tokens,
       dummyExchangeInstance,
       debug,
+    )
+
+    // Setting precision for each token that is going to be used.
+    await Promise.all(
+      tokens.map((token) => {
+        return dummyExchangeInstance.setPrecision(token.address, token.precision)
+      }),
     )
   }
 
