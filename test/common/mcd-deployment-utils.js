@@ -352,6 +352,7 @@ const deploySystem = async function (provider, signer, isExchangeDummy = false, 
     deployedContracts.exchangeInstance = exchangeInstance
   } else {
     deployedContracts.exchangeInstance = dummyExchangeInstance
+    await loadDummyExchangeFixtures(provider, signer, dummyExchangeInstance, debug)
   }
 
   if (debug) {
