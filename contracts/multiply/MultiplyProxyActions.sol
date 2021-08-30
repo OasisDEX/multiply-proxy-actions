@@ -802,7 +802,6 @@ contract MultiplyProxyActions {
       "requested and received amounts mismatch"
     );
 
-
     if (mode == 0) {
       _decreaseMP(exchangeData, cdpData, addressRegistry, premiums[0]);
     }
