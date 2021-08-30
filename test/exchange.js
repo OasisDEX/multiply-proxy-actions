@@ -139,6 +139,7 @@ describe('Exchange', async function () {
       await provider.send('evm_revert', [snapshotId])
     })
 
+//skip due to requirements change, removing isAuthorised from swaps
     it.skip('should not happen if it is triggered from unauthorized caller', async () => {
       let tx = exchange
         .connect(provider.getSigner(1))
@@ -494,7 +495,7 @@ describe('Exchange', async function () {
       )
       receiveAtLeastInWei = amountToWei(receiveAtLeast).toFixed(0)
     })
-
+//skip due to requirements change, removing isAuthorised from swaps
     it.skip('should not happen if it is triggered from unauthorized caller', async () => {
       let tx = exchange
         .connect(provider.getSigner(1))
