@@ -139,7 +139,7 @@ describe('Exchange', async function () {
       await provider.send('evm_revert', [snapshotId])
     })
 
-    it('should not happen if it is triggered from unauthorized caller', async () => {
+    it.skip('should not happen if it is triggered from unauthorized caller', async () => {
       let tx = exchange
         .connect(provider.getSigner(1))
         .swapTokenForDai(
@@ -495,7 +495,7 @@ describe('Exchange', async function () {
       receiveAtLeastInWei = amountToWei(receiveAtLeast).toFixed(0)
     })
 
-    it('should not happen if it is triggered from unauthorized caller', async () => {
+    it.skip('should not happen if it is triggered from unauthorized caller', async () => {
       let tx = exchange
         .connect(provider.getSigner(1))
         .swapDaiForToken(
