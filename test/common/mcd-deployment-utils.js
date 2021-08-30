@@ -18,7 +18,7 @@ const UniswapRouterV3Abi = require('../../abi/external/IUniswapRouter.json')
 
 let CONTRACTS = {}
 
-const { balanceOf, TEN, one } = require('../utils')
+const { balanceOf, TEN, one, zero } = require('../utils')
 const { getVaultInfo } = require('../utils-mcd.js')
 const { curry } = require('ramda')
 
@@ -153,7 +153,7 @@ async function exchangeToToken(provider, signer, token) {
     recipient: address,
     deadline: 1751366148,
     amountIn: amountToWei(new BigNumber(200)).toFixed(0),
-    amountOutMinimum: amountToWei(new BigNumber(1), token.precision).toFixed(0),
+    amountOutMinimum: amountToWei(zero, token.precision).toFixed(0),
     sqrtPriceLimitX96: 0,
   }
 
