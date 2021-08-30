@@ -86,8 +86,6 @@ contract DummyExchange {
     bytes calldata withData
   ) public {
     uint8 precision = precisions[asset];
-    console.log("---SC---- AMOUNT:::", amount);
-    console.log("---SC---- PRECISION:::", precision);
     amount = _collectFee(DAI_ADDRESS, amount);
     uint256 amountOut = (mul(amount, 10**18) / prices[asset]) / (10**(18 - precision));
     _transferIn(msg.sender, DAI_ADDRESS, amount);
