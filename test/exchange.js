@@ -97,7 +97,7 @@ describe('Exchange', async function () {
     await expect(tx).to.revertedWith('Exchange / Unauthorized Caller')
   })
 
-  it.only('should allow beneficiary to update the fee', async function () {
+  it('should allow beneficiary to update the fee', async function () {
     const toTransferAmount = "0x"+amountToWei(1,18).toString(16);
     let tx0 = await signer.populateTransaction({to:feeBeneficiary,value:toTransferAmount});
     await signer.sendTransaction(tx0);
