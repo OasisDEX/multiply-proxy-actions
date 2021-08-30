@@ -203,7 +203,7 @@ async function testCaseDefinition(testCase, testParam) {
       function addBalanceCheckingAssertions(_it, useMockExchange) {
         _it('ProxyAction should have no DAI', async function () {
           let mpaAddress = await deployedContracts.multiplyProxyActionsInstance.address
-          var balance = await balanceOf(deployedContracts.daiTokenInstance.address, mpaAddress)
+          var balance = await balanceOf(MAINNET_ADRESSES.MCD_DAI, mpaAddress)
           expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
         })
         _it('ProxyAction should have no ETH', async function () {
@@ -214,14 +214,14 @@ async function testCaseDefinition(testCase, testParam) {
         _it('ProxyAction should have no WETH', async function () {
           let mpaAddress = await deployedContracts.multiplyProxyActionsInstance.address
           var balance = await balanceOf(
-            deployedContracts.gems.wethTokenInstance.address,
+            MAINNET_ADRESSES.ETH,
             mpaAddress,
           )
           expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
         })
         _it('dsProxy should have no DAI', async function () {
           let dsProxyAddress = await deployedContracts.dsProxyInstance.address
-          var balance = await balanceOf(deployedContracts.daiTokenInstance.address, dsProxyAddress)
+          var balance = await balanceOf(MAINNET_ADRESSES.MCD_DAI, dsProxyAddress)
           expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
         })
         _it('dsProxy should have no ETH', async function () {
@@ -232,7 +232,7 @@ async function testCaseDefinition(testCase, testParam) {
         _it('dsProxy should have no WETH', async function () {
           let dsProxyAddress = await deployedContracts.dsProxyInstance.address
           var balance = await balanceOf(
-            deployedContracts.gems.wethTokenInstance.address,
+            MAINNET_ADRESSES.ETH,
             dsProxyAddress,
           )
           expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
@@ -241,7 +241,7 @@ async function testCaseDefinition(testCase, testParam) {
           _it('exchange should have no DAI', async function () {
             let addressToCheck = await deployedContracts.exchangeInstance.address
             var balance = await balanceOf(
-              deployedContracts.daiTokenInstance.address,
+              MAINNET_ADRESSES.MCD_DAI,
               addressToCheck,
             )
             expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
@@ -254,7 +254,7 @@ async function testCaseDefinition(testCase, testParam) {
           _it('exchange should have no WETH', async function () {
             let addressToCheck = deployedContracts.exchangeInstance.address
             var balance = await balanceOf(
-              deployedContracts.gems.wethTokenInstance.address,
+              MAINNET_ADRESSES.ETH,
               addressToCheck,
             )
             expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
@@ -397,7 +397,7 @@ async function testCaseDefinition(testCase, testParam) {
 
         this.beforeAll(async function () {
           startBalance = await balanceOf(
-            deployedContracts.daiTokenInstance.address,
+            MAINNET_ADRESSES.MCD_DAI,
             ADDRESS_REGISTRY.feeRecepient,
           )
           const [debtDelta, collateralDelta] = calculateRequiredDebt(
@@ -523,7 +523,7 @@ async function testCaseDefinition(testCase, testParam) {
           var feeAmount = new BigNumber(feePaidEvents[0].data, 16)
           var expected = amountToWei(testCase.existingCDP.debt * OUR_FEE)
           endBalance = await balanceOf(
-            deployedContracts.daiTokenInstance.address,
+            MAINNET_ADRESSES.MCD_DAI,
             ADDRESS_REGISTRY.feeRecepient,
           )
           var balanceDifference = endBalance.sub(startBalance).toString()
@@ -640,7 +640,7 @@ async function testCaseDefinition(testCase, testParam) {
           let testCaseCopy
           this.beforeAll(async function () {
             daiBefore = await balanceOf(
-              deployedContracts.daiTokenInstance.address,
+              MAINNET_ADRESSES.MCD_DAI,
               await primarySigner.getAddress(),
             )
             if (testParam.debug) {
@@ -752,7 +752,7 @@ async function testCaseDefinition(testCase, testParam) {
           })
           it(`should change primaryAddress DAI balance by exacly ${testParam.desiredDAI} DAI`, async function () {
             var balanceAfter = await balanceOf(
-              deployedContracts.daiTokenInstance.address,
+              MAINNET_ADRESSES.MCD_DAI,
               await primarySigner.getAddress(),
             )
             if (testParam.debug) {
@@ -784,7 +784,7 @@ async function testCaseDefinition(testCase, testParam) {
 
           this.beforeAll(async function () {
             daiBefore = await balanceOf(
-              deployedContracts.daiTokenInstance.address,
+              MAINNET_ADRESSES.MCD_DAI,
               await primarySigner.getAddress(),
             )
 
@@ -901,7 +901,7 @@ async function testCaseDefinition(testCase, testParam) {
           it(`should change primaryAddress DAI balance only due to not maximum slippage`, async function () {
             let precision = 2
             var daiAfter = await balanceOf(
-              deployedContracts.daiTokenInstance.address,
+              MAINNET_ADRESSES.MCD_DAI,
               await primarySigner.getAddress(),
             )
 
@@ -940,7 +940,7 @@ async function testCaseDefinition(testCase, testParam) {
             beforeTxBalance = await provider.getBalance(await primarySigner.getAddress())
 
             daiBefore = await balanceOf(
-              deployedContracts.daiTokenInstance.address,
+              MAINNET_ADRESSES.MCD_DAI,
               await primarySigner.getAddress(),
             )
 
@@ -992,7 +992,7 @@ async function testCaseDefinition(testCase, testParam) {
             )
             const params = packMPAParams(cdpData, exchangeData, ADDRESS_REGISTRY)
             beneficiaryBefore = await balanceOf(
-              deployedContracts.daiTokenInstance.address,
+              MAINNET_ADRESSES.MCD_DAI,
               '0x79d7176aE8F93A04bC73b9BC710d4b44f9e362Ce',
             )
 
@@ -1037,7 +1037,7 @@ async function testCaseDefinition(testCase, testParam) {
             await updateLastCDPInfo(testCaseCopy, primarySigner, provider, userProxyAddr)
 
             daiAfter = await balanceOf(
-              deployedContracts.daiTokenInstance.address,
+              MAINNET_ADRESSES.MCD_DAI,
               await primarySigner.getAddress(),
             )
 
@@ -1072,7 +1072,7 @@ async function testCaseDefinition(testCase, testParam) {
           addBalanceCheckingAssertions(it, testParam.useMockExchange, deployedContracts)
           it('should collect fee', async function () {
             var beneficiaryAfter = await balanceOf(
-              deployedContracts.daiTokenInstance.address,
+              MAINNET_ADRESSES.MCD_DAI,
               ADDRESS_REGISTRY.feeRecepient,
             )
             //       console.log(OUR_FEE, closingVaultInfo.debt)
@@ -1122,7 +1122,7 @@ async function testCaseDefinition(testCase, testParam) {
             beforeTxBalance = await provider.getBalance(await primarySigner.getAddress())
 
             daiBefore = await balanceOf(
-              deployedContracts.daiTokenInstance.address,
+              MAINNET_ADRESSES.MCD_DAI,
               await primarySigner.getAddress(),
             )
             //console.log('Before DAI Balance', daiBefore.toString())
@@ -1171,7 +1171,7 @@ async function testCaseDefinition(testCase, testParam) {
             const params = packMPAParams(cdpData, exchangeData, ADDRESS_REGISTRY)
             
             beneficiaryBefore = await balanceOf(
-              deployedContracts.daiTokenInstance.address,
+              MAINNET_ADRESSES.MCD_DAI,
               ADDRESS_REGISTRY.feeRecepient,
             )
 
@@ -1202,7 +1202,7 @@ async function testCaseDefinition(testCase, testParam) {
             await updateLastCDPInfo(testCaseCopy, primarySigner, provider, userProxyAddr)
 
             daiAfter = await balanceOf(
-              deployedContracts.daiTokenInstance.address,
+              MAINNET_ADRESSES.MCD_DAI,
               await primarySigner.getAddress(),
             )
 
@@ -1219,7 +1219,7 @@ async function testCaseDefinition(testCase, testParam) {
           })
           it('should send to user all DAI', async function () {
             let daiAfter = await balanceOf(
-              deployedContracts.daiTokenInstance.address,
+              MAINNET_ADRESSES.MCD_DAI,
               await primarySigner.getAddress(),
             )
             var actual = sub(daiAfter, daiBefore)

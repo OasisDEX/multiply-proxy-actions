@@ -7,17 +7,20 @@ const getCdpsAbi = require('../../abi/external/get-cdps.json')
 const _ = require('lodash')
 const {
   amountToWei,
+  amountFromWei,
   addressRegistryFactory,
   MAINNET_ADRESSES,
   ensureWeiFormat,
+  convertToBigNumber,
 } = require('./params-calculation-utils')
 
 const UniswapRouterV3Abi = require('../../abi/external/IUniswapRouter.json')
 
 let CONTRACTS = {}
 
-const { balanceOf, TEN, one } = require('../utils')
+const { balanceOf, TEN, one, zero } = require('../utils')
 const { getVaultInfo } = require('../utils-mcd.js')
+const { curry } = require('ramda')
 
 const FEE = 2
 const FEE_BASE = 10000
@@ -135,36 +138,53 @@ const getOrCreateProxy = async function getOrCreateProxy(provider, signer) {
   return proxyAddress
 }
 
-const addFundsDummyExchange = async function (
-  provider,
-  signer,
-  WETH_ADDRESS,
-  DAI_ADDRESS,
-  exchange,
-) {
+async function exchangeToToken(provider, signer, token) {
   const UNISWAP_ROUTER_V3 = '0xe592427a0aece92de3edee1f18e0157c05861564'
   const uniswapV3 = new ethers.Contract(UNISWAP_ROUTER_V3, UniswapRouterV3Abi, provider).connect(
     signer,
   )
-  const WETH = new ethers.Contract(WETH_ADDRESS, WethAbi, provider).connect(signer)
-  const DAI = new ethers.Contract(DAI_ADDRESS, Erc20Abi, provider).connect(signer)
+
   const address = await signer.getAddress()
 
   let swapParams = {
     tokenIn: MAINNET_ADRESSES.ETH,
-    tokenOut: MAINNET_ADRESSES.MCD_DAI,
+    tokenOut: token.address,
     fee: 3000,
     recipient: address,
     deadline: 1751366148,
     amountIn: amountToWei(new BigNumber(200)).toFixed(0),
-    amountOutMinimum: amountToWei(new BigNumber(300000)).toFixed(0),
+    amountOutMinimum: amountToWei(zero, token.precision).toFixed(0),
     sqrtPriceLimitX96: 0,
   }
 
   const uniswapTx = await uniswapV3.exactInputSingle(swapParams, {
     value: amountToWei(new BigNumber(200)).toFixed(0),
   })
+
   await uniswapTx.wait()
+}
+
+async function transferToExchange(provider, signer, exchangeAddress, token, amount) {
+  const Token = new ethers.Contract(token.address, Erc20Abi, provider).connect(signer)
+
+  const tokenTransferToExchangeTx = await Token.transfer(exchangeAddress, amount)
+
+  await tokenTransferToExchangeTx.wait()
+}
+
+const addFundsDummyExchange = async function (
+  provider,
+  signer,
+  WETH_ADDRESS,
+  erc20Tokens,
+  exchange,
+  debug,
+) {
+  const WETH = new ethers.Contract(WETH_ADDRESS, WethAbi, provider).connect(signer)
+  const address = await signer.getAddress()
+
+  const exchangeToTokenCurried = curry(exchangeToToken)(provider, signer)
+  const transferToExchangeCurried = curry(transferToExchange)(provider, signer, exchange.address)
 
   const wethDeposit = await WETH.deposit({
     value: amountToWei(new BigNumber(1000)).toFixed(0),
@@ -177,16 +197,40 @@ const addFundsDummyExchange = async function (
   )
   await wethTransferToExchangeTx.wait()
 
-  const balance = await balanceOf(DAI.address, address)
-  const daiTransferToExchangeTx = await DAI.transfer(
-    exchange.address,
-    new BigNumber(balance.toString()).dividedBy(2).toFixed(0),
-  )
-  await daiTransferToExchangeTx.wait()
+  // Exchange ETH for the `token`
+  await Promise.all(erc20Tokens.map((token) => exchangeToTokenCurried(token)))
 
-  return {
-    daiC: DAI,
-    ethC: WETH,
+  // Transfer half of the accounts balance of each token to the dummy exchange.
+  await Promise.all(
+    erc20Tokens.map(async function (token) {
+      const balance = await balanceOf(token.address, address)
+      const amountToTransfer = new BigNumber(balance.toString()).dividedBy(2).toFixed(0)
+      return transferToExchangeCurried(token, amountToTransfer)
+    }),
+  )
+
+  if (debug) {
+    // Diplays balances of the exchange and account for each token
+    await Promise.all(
+      erc20Tokens.map(async function (token) {
+        const exchangeTokenBalance = convertToBigNumber(
+          await balanceOf(token.address, exchange.address),
+        )
+        const addressTokenBalance = convertToBigNumber(await balanceOf(token.address, address))
+        console.log(
+          `Exchange ${token.name} balance: ${amountFromWei(
+            exchangeTokenBalance,
+            token.precision,
+          ).toString()}`,
+        )
+        console.log(
+          `${address} ${token.name} balance: ${amountFromWei(
+            addressTokenBalance,
+            token.precision,
+          ).toString()}`,
+        )
+      }),
+    )
   }
 }
 
@@ -237,29 +281,26 @@ const deploySystem = async function (provider, signer, isExchangeDummy = false, 
 
   if (isExchangeDummy == false) {
     deployedContracts.exchangeInstance = exchangeInstance
-
-    const WETH = new ethers.Contract(MAINNET_ADRESSES.WETH_ADDRESS, WethAbi, provider).connect(
-      signer,
-    )
-    const DAI = new ethers.Contract(MAINNET_ADRESSES.MCD_DAI, Erc20Abi, provider).connect(signer)
-    deployedContracts.gems.wethTokenInstance = WETH
-    deployedContracts.daiTokenInstance = DAI
   } else {
     deployedContracts.exchangeInstance = dummyExchangeInstance
     await dummyExchangeInstance.setFee(FEE)
     //await exchange.setSlippage(800);//8%
-    let { daiC, ethC } = await addFundsDummyExchange(
+    const tokens = [
+      { name: 'DAI', address: MAINNET_ADRESSES.MCD_DAI, precision: 18 },
+      { name: 'LINK', address: MAINNET_ADRESSES.LINK, precision: 18 },
+      { name: 'WBTC', address: MAINNET_ADRESSES.WBTC, precision: 8 },
+    ]
+
+    await addFundsDummyExchange(
       provider,
       signer,
       MAINNET_ADRESSES.WETH_ADDRESS,
-      MAINNET_ADRESSES.MCD_DAI,
+      tokens,
       dummyExchangeInstance,
+      debug,
     )
-    deployedContracts.gems.wethTokenInstance = ethC
-    deployedContracts.daiTokenInstance = daiC
   }
 
-  // const mcdView = await deploy("McdView");
   if (debug) {
     console.log('Signer address:', await signer.getAddress())
     console.log('Exchange address:', deployedContracts.exchangeInstance.address)
@@ -270,8 +311,10 @@ const deploySystem = async function (provider, signer, isExchangeDummy = false, 
       deployedContracts.multiplyProxyActionsInstance.address,
     )
     console.log('MCDView address:', deployedContracts.mcdViewInstance.address)
-    console.log('DAI address:', deployedContracts.daiTokenInstance.address)
-    console.log('WETH address:', deployedContracts.gems.wethTokenInstance.address)
+    console.log('DAI address:', MAINNET_ADRESSES.MCD_DAI)
+    console.log('WETH address:', MAINNET_ADRESSES.ETH)
+    console.log('LINK address:', MAINNET_ADRESSES.LINK)
+    console.log('WBTC address:', MAINNET_ADRESSES.WBTC)
   }
 
   return deployedContracts
