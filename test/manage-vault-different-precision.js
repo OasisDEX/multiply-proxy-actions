@@ -295,12 +295,14 @@ describe(`Manage vault with a collateral with different than 18 precision`, asyn
     const minToTokenAmount = currentDebt.times(one.plus(OF).plus(FF))
     const sellCollateralAmount = minToTokenAmount.div(marketPriceSlippage)
 
+    console.log(minToTokenAmount.toString(),sellCollateralAmount.toString());
+
     desiredCdpState = {
       requiredDebt: 0,
-      toBorrowCollateralAmount: 0,
       toBorrowCollateralAmount: sellCollateralAmount,
+      fromTokenAmount: sellCollateralAmount,
       providedCollateral: 0,
-      minToTokenAmount: minToTokenAmount,
+      toTokenAmount: minToTokenAmount,
     }
 
     let params = prepareMultiplyParameters2(
@@ -317,6 +319,8 @@ describe(`Manage vault with a collateral with different than 18 precision`, asyn
       8,
       true,
     )
+
+    console.log(params);
 
     let [status, ] = await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'closeVaultExitCollateral', params)
     if (status === false){
