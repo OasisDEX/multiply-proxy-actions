@@ -2,6 +2,8 @@
 
 /// MultiplyProxyActions.sol
 
+// Copyright (C) 2021-2021 Oazo Apps Limited
+
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
@@ -373,7 +375,12 @@ contract MultiplyProxyActions {
       takeAFlashLoan(addressRegistry, cdpData, assets, amounts, modes, paramsData);
     } else {
       if (mode == 2) {
-        _closeWithdrawCollateralSkipFL(exchangeData, cdpData, addressRegistry, cdpData.borrowCollateral);
+        _closeWithdrawCollateralSkipFL(
+          exchangeData,
+          cdpData,
+          addressRegistry,
+          cdpData.borrowCollateral
+        );
       } else {
         require(false, "this code should be unreachable");
       }
@@ -798,7 +805,7 @@ contract MultiplyProxyActions {
     uint256 ink = getInk(addressRegistry.manager, cdpData);
 
     require(
-      cdpData.requiredDebt.add(cdpData.depositDai) == IERC20(DAI).balanceOf(address(this)),
+      cdpData.requiredDebt.add(cdpData.depositDai) >= IERC20(DAI).balanceOf(address(this)),
       "requested and received amounts mismatch"
     );
 
@@ -809,16 +816,28 @@ contract MultiplyProxyActions {
       _increaseMP(exchangeData, cdpData, addressRegistry, premiums[0]);
     }
     if (mode == 2) {
-      _closeWithdrawCollateral(exchangeData, cdpData, addressRegistry, borrowedDaiAmount, cdpData.borrowCollateral);
+      _closeWithdrawCollateral(
+        exchangeData,
+        cdpData,
+        addressRegistry,
+        borrowedDaiAmount,
+        cdpData.borrowCollateral
+      );
     }
     if (mode == 3) {
-      _closeWithdrawDai(exchangeData, cdpData, addressRegistry, borrowedDaiAmount, cdpData.borrowCollateral);
+      _closeWithdrawDai(
+        exchangeData,
+        cdpData,
+        addressRegistry,
+        borrowedDaiAmount,
+        cdpData.borrowCollateral
+      );
     }
 
     IERC20(assets[0]).approve(
-        address(getAaveLendingPool(addressRegistry.aaveLendingPoolProvider)),
-        borrowedDaiAmount
-      );
+      address(getAaveLendingPool(addressRegistry.aaveLendingPoolProvider)),
+      borrowedDaiAmount
+    );
 
     return true;
   }
