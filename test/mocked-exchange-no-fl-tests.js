@@ -131,7 +131,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
       marketPrice = await new BigNumber(2380)
       oraclePrice = await getOraclePrice(provider)
 
-      await exchange.setPrice(amountToWei(marketPrice).toFixed(0))
+      await exchange.setPrice(MAINNET_ADRESSES.ETH, amountToWei(marketPrice).toFixed(0))
 
       currentColl = new BigNumber(100) // STARTING COLLATERAL AMOUNT
       currentDebt = new BigNumber(0) // STARTING VAULT DEBT
@@ -212,7 +212,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
       marketPrice = await new BigNumber(2380)
       oraclePrice = await getOraclePrice(provider)
 
-      await exchange.setPrice(amountToWei(marketPrice).toFixed(0))
+      await exchange.setPrice(MAINNET_ADRESSES.ETH, amountToWei(marketPrice).toFixed(0))
 
       info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
       currentColl = new BigNumber(info.coll)
@@ -285,7 +285,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
       marketPrice = await new BigNumber(2380)
       oraclePrice = await getOraclePrice(provider)
 
-      await exchange.setPrice(amountToWei(marketPrice).toFixed(0))
+      await exchange.setPrice(MAINNET_ADRESSES.ETH, amountToWei(marketPrice).toFixed(0))
 
       info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
       currentColl = new BigNumber(info.coll)
@@ -362,7 +362,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
       marketPrice = await new BigNumber(2380)
       oraclePrice = await getOraclePrice(provider)
 
-      await exchange.setPrice(amountToWei(marketPrice).toFixed(0))
+      await exchange.setPrice(MAINNET_ADRESSES.ETH, amountToWei(marketPrice).toFixed(0))
 
       info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
       currentColl = new BigNumber(info.coll)
@@ -437,7 +437,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
       marketPrice = await new BigNumber(2380)
       oraclePrice = await getOraclePrice(provider)
 
-      await exchange.setPrice(amountToWei(marketPrice).toFixed(0))
+      await exchange.setPrice(MAINNET_ADRESSES.ETH, amountToWei(marketPrice).toFixed(0))
 
       info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
       currentColl = new BigNumber(info.coll)
@@ -510,7 +510,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
       marketPrice = await new BigNumber(2380)
       oraclePrice = await getOraclePrice(provider)
 
-      await exchange.setPrice(amountToWei(marketPrice).toFixed(0))
+      await exchange.setPrice(MAINNET_ADRESSES.ETH, amountToWei(marketPrice).toFixed(0))
 
       info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
       currentColl = new BigNumber(info.coll)
@@ -586,7 +586,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
       marketPrice = await new BigNumber(2380)
       oraclePrice = await getOraclePrice(provider)
 
-      await exchange.setPrice(amountToWei(marketPrice).toFixed(0))
+      await exchange.setPrice(MAINNET_ADRESSES.ETH, amountToWei(marketPrice).toFixed(0))
 
       info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
       currentColl = new BigNumber(info.coll)
@@ -662,7 +662,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
       marketPrice = await new BigNumber(2380)
       oraclePrice = await getOraclePrice(provider)
 
-      await exchange.setPrice(amountToWei(marketPrice).toFixed(0))
+      await exchange.setPrice(MAINNET_ADRESSES.ETH, amountToWei(marketPrice).toFixed(0))
 
       info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
       currentColl = new BigNumber(info.coll)
@@ -670,7 +670,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
     })
 
     it(`should close vault and return  collateral`, async function () {
-      await exchange.setPrice(amountToWei(marketPrice).toFixed(0))
+      await exchange.setPrice(MAINNET_ADRESSES.ETH, amountToWei(marketPrice).toFixed(0))
 
       const marketPriceSlippage = marketPrice.times(one.minus(slippage))
       const minToTokenAmount = currentDebt.times(one.plus(OF).plus(FF))

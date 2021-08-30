@@ -86,7 +86,7 @@ describe.only(`Manage vault with a collateral with different than 18 precision`,
     let debtAmount = new BigNumber(0)
 
     await exchange.setPrecision(MAINNET_ADRESSES.WBTC, 8)
-    await exchange.setPrice(amountToWei(marketPrice).toFixed(0))
+    await exchange.setPrice(MAINNET_ADRESSES.ETH, amountToWei(marketPrice).toFixed(0))
 
     let [requiredDebt, toBorrowCollateralAmount] = calculateParamsIncreaseMP(
       oraclePrice,
