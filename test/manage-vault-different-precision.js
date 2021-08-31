@@ -244,7 +244,7 @@ describe(`Manage vault with a collateral with different than 18 precision`, asyn
     expect(currentCollRatio.toFixed(3)).to.be.equal(desiredCollRatio.toFixed(3))
   })
   
-  it.skip('should close vault correctly to DAI',async function(){
+  it.skip('should close vault correctly to DAI',async function(){//tests where done sequential therefore two close operations are impossible
     const desiredCollRatio = initialCollRatio.plus(new BigNumber(0.2))
     const info = await getVaultInfo(mcdView, vault.id, vault.ilk)
     console.log("getVaultInfo before",info);
