@@ -171,18 +171,20 @@ describe('Proxy Action', async function () {
         }
       })
 
-      let abi = [ "event FLData(uint256 borrowed, uint256 due)" ];
-      let iface = new ethers.utils.Interface(abi);
+      let abi = ['event FLData(uint256 borrowed, uint256 due)']
+      let iface = new ethers.utils.Interface(abi)
 
-      var flDataEvent = iface.parseLog(allEvents.filter(
-        (x) =>
-          x.firstTopic === '0x9c6641b21946115d10f3f55df9bec5752ec06d40dc9250b1cc6560549764600e',
-      )[0]);
-      var expected = amountToWei(vaultInfo.debt);
-      var actual = new BigNumber(flDataEvent.args.due.toString());
-      actual = amountToWei(actual.dividedBy(TEN.pow(18)));
-      expect(actual.gt(expected.multipliedBy(0.98))).to.be.equal(true);
-      expect(expected.gt(actual.multipliedBy(0.98))).to.be.equal(true);
+      var flDataEvent = iface.parseLog(
+        allEvents.filter(
+          (x) =>
+            x.firstTopic === '0x9c6641b21946115d10f3f55df9bec5752ec06d40dc9250b1cc6560549764600e',
+        )[0],
+      )
+      var expected = amountToWei(vaultInfo.debt)
+      var actual = new BigNumber(flDataEvent.args.due.toString())
+      actual = amountToWei(actual.dividedBy(TEN.pow(18)))
+      expect(actual.gt(expected.multipliedBy(0.98))).to.be.equal(true)
+      expect(expected.gt(actual.multipliedBy(0.98))).to.be.equal(true)
     })
 
     it('it should send fee to beneficiary', async function () {
@@ -257,18 +259,20 @@ describe('Proxy Action', async function () {
           name: x.name,
         }
       })
-      let abi = [ "event FLData(uint256 borrowed, uint256 due)" ];
-      let iface = new ethers.utils.Interface(abi);
+      let abi = ['event FLData(uint256 borrowed, uint256 due)']
+      let iface = new ethers.utils.Interface(abi)
 
-      var flDataEvent = iface.parseLog(allEvents.filter(
-        (x) =>
-          x.firstTopic === '0x9c6641b21946115d10f3f55df9bec5752ec06d40dc9250b1cc6560549764600e',
-      )[0]);
-      var expected = amountToWei(vaultInfo.debt);
-      var actual = new BigNumber(flDataEvent.args.due.toString());
-      actual = amountToWei(actual.dividedBy(TEN.pow(18)));
-      expect(actual.gt(expected.multipliedBy(0.98))).to.be.equal(true);
-      expect(expected.gt(actual.multipliedBy(0.98))).to.be.equal(true);
+      var flDataEvent = iface.parseLog(
+        allEvents.filter(
+          (x) =>
+            x.firstTopic === '0x9c6641b21946115d10f3f55df9bec5752ec06d40dc9250b1cc6560549764600e',
+        )[0],
+      )
+      var expected = amountToWei(vaultInfo.debt)
+      var actual = new BigNumber(flDataEvent.args.due.toString())
+      actual = amountToWei(actual.dividedBy(TEN.pow(18)))
+      expect(actual.gt(expected.multipliedBy(0.98))).to.be.equal(true)
+      expect(expected.gt(actual.multipliedBy(0.98))).to.be.equal(true)
     })
 
     it('it should send fee to beneficiary', async function () {

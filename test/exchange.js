@@ -98,10 +98,10 @@ describe('Exchange', async function () {
   })
 
   it('should allow beneficiary to update the fee', async function () {
-    const toTransferAmount = "0x"+amountToWei(1,18).toString(16);
-    let tx0 = await signer.populateTransaction({to:feeBeneficiary,value:toTransferAmount});
-    await signer.sendTransaction(tx0);
-    await provider.send("hardhat_impersonateAccount", [feeBeneficiary]);
+    const toTransferAmount = '0x' + amountToWei(1, 18).toString(16)
+    let tx0 = await signer.populateTransaction({ to: feeBeneficiary, value: toTransferAmount })
+    await signer.sendTransaction(tx0)
+    await provider.send('hardhat_impersonateAccount', [feeBeneficiary])
     const benef = await ethers.provider.getSigner(feeBeneficiary)
     let tx = await exchange.connect(benef).setFee('3')
   })
@@ -118,7 +118,7 @@ describe('Exchange', async function () {
         amountInWei,
         exchange.address,
         slippage.value.toString(),
-        ALLOWED_PROTOCOLS
+        ALLOWED_PROTOCOLS,
       )
       initialDaiWalletBalance = convertToBigNumber(await balanceOf(MAINNET_ADRESSES.ETH, address))
 
@@ -139,7 +139,7 @@ describe('Exchange', async function () {
       await provider.send('evm_revert', [snapshotId])
     })
 
-//skip due to requirements change, removing isAuthorised from swaps
+    //skip due to requirements change, removing isAuthorised from swaps
     it.skip('should not happen if it is triggered from unauthorized caller', async () => {
       let tx = exchange
         .connect(provider.getSigner(1))
@@ -480,7 +480,7 @@ describe('Exchange', async function () {
         amountInWei.toFixed(0),
         slippage.value.toString(),
         exchange.address,
-        ALLOWED_PROTOCOLS
+        ALLOWED_PROTOCOLS,
       )
 
       const {
@@ -495,7 +495,7 @@ describe('Exchange', async function () {
       )
       receiveAtLeastInWei = amountToWei(receiveAtLeast).toFixed(0)
     })
-//skip due to requirements change, removing isAuthorised from swaps
+    //skip due to requirements change, removing isAuthorised from swaps
     it.skip('should not happen if it is triggered from unauthorized caller', async () => {
       let tx = exchange
         .connect(provider.getSigner(1))
@@ -957,7 +957,7 @@ describe('Exchange', async function () {
         amountInWei,
         exchange.address,
         slippage.value.toString(),
-        ALLOWED_PROTOCOLS
+        ALLOWED_PROTOCOLS,
       )
 
       const {
@@ -1071,7 +1071,7 @@ describe('Exchange', async function () {
         amountInWei.toFixed(0),
         slippage.value.toString(),
         exchange.address,
-        ALLOWED_PROTOCOLS
+        ALLOWED_PROTOCOLS,
       )
 
       const {

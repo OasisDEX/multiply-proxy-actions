@@ -221,7 +221,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         true,
       )
 
-      params[1].skipFL = true;
+      params[1].skipFL = true
 
       let [status, result] = await dsproxyExecuteAction(
         multiplyProxyActions,
@@ -298,7 +298,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         address,
         true,
       )
-      params[1].skipFL = true;
+      params[1].skipFL = true
 
       let [status, result] = await dsproxyExecuteAction(
         multiplyProxyActions,
@@ -372,7 +372,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         address,
         true,
       )
-      params[1].skipFL = true;
+      params[1].skipFL = true
 
       let [status, result] = await dsproxyExecuteAction(
         multiplyProxyActions,
@@ -446,7 +446,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         true,
       )
 
-      params[1].skipFL = true;
+      params[1].skipFL = true
       let [status, result] = await dsproxyExecuteAction(
         multiplyProxyActions,
         dsProxy,
@@ -521,7 +521,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         address,
         true,
       )
-      params[1].skipFL = true;
+      params[1].skipFL = true
 
       let [status, result] = await dsproxyExecuteAction(
         multiplyProxyActions,
@@ -597,7 +597,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         address,
         true,
       )
-      params[1].skipFL = true;
+      params[1].skipFL = true
 
       let [status, result] = await dsproxyExecuteAction(
         multiplyProxyActions,
@@ -667,7 +667,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         address,
         true,
       )
-      params[1].skipFL = true;
+      params[1].skipFL = true
 
       let [status, result] = await dsproxyExecuteAction(
         multiplyProxyActions,
