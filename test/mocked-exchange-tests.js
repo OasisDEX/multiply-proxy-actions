@@ -701,11 +701,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         withdrawCollateral: 0
       };
 
-      console.log(desiredCdpState);
-
        params = prepareMultiplyParameters2(MAINNET_ADRESSES.ETH, MAINNET_ADRESSES.MCD_DAI, exchangeDataMock, CDP_ID, desiredCdpState, multiplyProxyActions.address, exchange.address, address);
-
-       console.log(params);
 
        await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'closeVaultExitDai', params);
 
