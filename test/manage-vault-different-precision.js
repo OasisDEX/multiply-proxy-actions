@@ -85,8 +85,8 @@ describe(`Manage vault with a collateral with different than 18 precision`, asyn
     let collAmount = new BigNumber(0.5)
     let debtAmount = new BigNumber(0)
 
-    await exchange.setPrecision(8)
-    await exchange.setPrice(amountToWei(marketPrice).toFixed(0))
+    await exchange.setPrecision(MAINNET_ADRESSES.WBTC, 8)
+    await exchange.setPrice(MAINNET_ADRESSES.ETH, amountToWei(marketPrice).toFixed(0))
 
     let [requiredDebt, toBorrowCollateralAmount] = calculateParamsIncreaseMP(
       oraclePrice,
@@ -243,8 +243,8 @@ describe(`Manage vault with a collateral with different than 18 precision`, asyn
       .div(new BigNumber(currentVaultState.debt))
     expect(currentCollRatio.toFixed(3)).to.be.equal(desiredCollRatio.toFixed(3))
   })
-  /*
-  it('should close vault correctly to DAI',async function(){
+  
+  it.skip('should close vault correctly to DAI',async function(){
     const desiredCollRatio = initialCollRatio.plus(new BigNumber(0.2))
     const info = await getVaultInfo(mcdView, vault.id, vault.ilk)
     console.log("getVaultInfo before",info);
@@ -282,7 +282,7 @@ describe(`Manage vault with a collateral with different than 18 precision`, asyn
 
     console.log("getVaultInfo after",currentVaultState);
   })
-  */
+  
   it('should close vault correctly to collateral',async function(){
     const desiredCollRatio = initialCollRatio.plus(new BigNumber(0.2))
     const info = await getVaultInfo(mcdView, vault.id, vault.ilk)
@@ -319,8 +319,6 @@ describe(`Manage vault with a collateral with different than 18 precision`, asyn
       8,
       true,
     )
-
-    console.log(params);
 
     let [status, ] = await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'closeVaultExitCollateral', params)
     if (status === false){

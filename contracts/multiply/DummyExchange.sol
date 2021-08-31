@@ -15,8 +15,10 @@ contract DummyExchange {
   uint256 price;
 
   uint8 public fee = 0;
-  uint8 public precision = 18;
   uint256 public feeBase = 10000;
+
+  mapping(address => uint8) public precisions;
+  mapping(address => uint256) public prices;
 
   address public feeBeneficiaryAddress = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8; // second HH address
 
@@ -33,16 +35,16 @@ contract DummyExchange {
     require(y == 0 || (z = x * y) / y == x, "mul-overflow");
   }
 
-  function setPrice(uint256 p) public {
-    price = p;
+  function setPrice(address token, uint256 p) public {
+    prices[token] = p;
   }
 
   function setFee(uint8 f) public {
     fee = f;
   }
 
-  function setPrecision(uint8 _precision) public {
-    precision = _precision;
+  function setPrecision(address token, uint8 _precision) public {
+    precisions[token] = _precision;
   }
 
   function _transferIn(
@@ -83,8 +85,9 @@ contract DummyExchange {
     address callee,
     bytes calldata withData
   ) public {
+    uint8 precision = precisions[asset];
     amount = _collectFee(DAI_ADDRESS, amount);
-    uint256 amountOut = (mul(amount, 10**18) / price) / (10**(18 - precision));
+    uint256 amountOut = (mul(amount, 10**18) / prices[asset]) / (10**(18 - precision));
     _transferIn(msg.sender, DAI_ADDRESS, amount);
     emit AssetSwap(DAI_ADDRESS, asset, amount, amountOut);
     _transferOut(asset, msg.sender, amountOut);
@@ -98,7 +101,8 @@ contract DummyExchange {
     address callee,
     bytes calldata withData
   ) public {
-    uint256 amountOut = mul(mul(amount, 10**(18 - precision)), price / 10**18);
+    uint8 precision = precisions[asset];
+    uint256 amountOut = mul(mul(amount, 10**(18 - precision)), prices[asset] / 10**18);
     amountOut = _collectFee(DAI_ADDRESS, amountOut);
 
     _transferIn(msg.sender, asset, amount);
