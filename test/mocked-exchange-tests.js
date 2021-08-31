@@ -14,13 +14,15 @@ const {
   calculateParamsIncreaseMP,
   calculateParamsDecreaseMP,
   prepareMultiplyParameters,
+  prepareMultiplyParameters2
 } = require('./common/params-calculation-utils')
 const { expect } = require('chai')
-const { one } = require('./utils')
+const { one, TEN } = require('./utils')
 
 const UniswapRouterV3Abi = require('../abi/external/IUniswapRouter.json')
 const wethAbi = require('../abi/IWETH.json')
 const erc20Abi = require('../abi/IERC20.json')
+const { getVaultInfoRaw } = require('./utils-mcd')
 
 const ethers = hre.ethers
 
@@ -668,7 +670,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
 
   // To use this test comment out 'Close vault and exit all collateral' as there cannot be two closing actions together
 
-   describe.skip(`Close vault and exit all Dai`, async function() {
+  describe(`Close vault and exit all Dai`, async function() {
 
      let marketPrice, oraclePrice, currentColl, currentDebt, requiredCollRatio;
 
@@ -679,25 +681,36 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
        await exchange.setPrice(amountToWei(marketPrice).toFixed(0));
 
        info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK);
+       console.log(info);
+       rawInfo = await getVaultInfoRaw(mcdView, CDP_ID, CDP_ILK);
+       console.log(rawInfo);
        currentColl = new BigNumber(info.coll);
        currentDebt = new BigNumber(info.debt);
      });
 
      it(`should close vault and return Dai`, async function() {
-       const minToTokenAmount = currentDebt.times(one.plus(OF).plus(FF));
+       const minToTokenAmount = currentColl.times(marketPrice).times(one.minus(slippage)).dividedBy(one.plus(OF).plus(FF));
 
        desiredCdpState = {
-         requiredDebt: 0,
-         toBorrowCollateralAmount: 0,
-         fromTokenAmount: amountToWei(currentColl).toFixed(0),
-         toTokenAmount: minToTokenAmount,
-       };
+        requiredDebt: 0,
+        toBorrowCollateralAmount: (new BigNumber(rawInfo.coll)).dividedBy(TEN.exponentiatedBy(18)).toFixed(18),
+        providedCollateral: 0,
+        fromTokenAmount:  (new BigNumber(rawInfo.coll)).dividedBy(TEN.exponentiatedBy(18)).toFixed(18),
+        toTokenAmount: amountToWei(minToTokenAmount.dividedBy(TEN.exponentiatedBy(18)).dividedBy(one.minus(slippage))).toFixed(18),
+        minToTokenAmount: amountToWei(minToTokenAmount.dividedBy(TEN.exponentiatedBy(18))).toFixed(18),
+        withdrawCollateral: 0
+      };
 
-       params = prepareMultiplyParameters(MAINNET_ADRESSES.ETH, MAINNET_ADRESSES.MCD_DAI, exchangeDataMock, CDP_ID, desiredCdpState, multiplyProxyActions.address, exchange.address, address);
+      console.log(desiredCdpState);
+
+       params = prepareMultiplyParameters2(MAINNET_ADRESSES.ETH, MAINNET_ADRESSES.MCD_DAI, exchangeDataMock, CDP_ID, desiredCdpState, multiplyProxyActions.address, exchange.address, address);
+
+       console.log(params);
 
        await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'closeVaultExitDai', params);
 
        info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK);
+       console.log(info);
        const { daiBalance, collateralBalance } = await checkMPAPostState(MAINNET_ADRESSES.ETH, multiplyProxyActions.address);
 
        expect(daiBalance.toFixed(0)).to.be.equal('0');
@@ -708,7 +721,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
    });
 
   describe.skip(`Close vault and exit all collateral`, async function () {
-    let marketPrice, oraclePrice, currentColl, currentDebt, requiredCollRatio
+    let marketPrice, oraclePrice, currentColl, currentDebt, requiredCollRatio,rawInfo
 
     this.beforeAll(async function () {
       oraclePrice = await getOraclePrice(provider)
@@ -716,7 +729,9 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
 
       await exchange.setPrice(amountToWei(marketPrice).toFixed(0))
 
-      info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
+      info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK);
+      rawInfo = await getVaultInfoRaw(mcdView, CDP_ID, CDP_ILK);
+      console.log(info);
       currentColl = new BigNumber(info.coll)
       currentDebt = new BigNumber(info.debt)
     })
@@ -730,9 +745,11 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
 
       desiredCdpState = {
         requiredDebt: 0,
-        toBorrowCollateralAmount: sellCollateralAmount,
+        toBorrowCollateralAmount: currentColl,
         providedCollateral: 0,
+        toTokenAmount: minToTokenAmount.dividedBy(one.minus(slippage)),
         minToTokenAmount: minToTokenAmount,
+        withdrawCollateral: 0
       }
 
       let { params } = prepareMultiplyParameters(
@@ -746,6 +763,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
       )
 
       info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
+      params[1].borrowCollateral = rawInfo.coll;
       await dsproxyExecuteAction(
         multiplyProxyActions,
         dsProxy,
@@ -755,6 +773,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
       )
 
       info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
+      console.log(info);
       const { daiBalance, collateralBalance } = await checkMPAPostState(
         MAINNET_ADRESSES.ETH,
         multiplyProxyActions.address,
