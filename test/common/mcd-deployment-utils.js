@@ -234,6 +234,75 @@ const addFundsDummyExchange = async function (
   }
 }
 
+const loadDummyExchangeFixtures = async function (provider, signer, dummyExchangeInstance, debug) {
+  const tokens = [
+    {
+      name: 'ETH',
+      address: MAINNET_ADRESSES.ETH,
+      pip: MAINNET_ADRESSES.PIP_ETH,
+      precision: 18,
+    },
+    {
+      name: 'DAI',
+      address: MAINNET_ADRESSES.MCD_DAI,
+      pip: undefined,
+      precision: 18,
+    },
+    {
+      name: 'LINK',
+      address: MAINNET_ADRESSES.LINK,
+      pip: MAINNET_ADRESSES.PIP_LINK,
+      precision: 18,
+    },
+    {
+      name: 'WBTC',
+      address: MAINNET_ADRESSES.WBTC,
+      pip: MAINNET_ADRESSES.PIP_WBTC,
+      precision: 8,
+    },
+  ]
+
+  // Exchanging ETH for other @tokens
+  await addFundsDummyExchange(
+    provider,
+    signer,
+    MAINNET_ADRESSES.WETH_ADDRESS,
+    tokens.filter((token) => token.address !== MAINNET_ADRESSES.ETH),
+    dummyExchangeInstance,
+    debug,
+  )
+
+  // Setting precision for each @token that is going to be used.
+  await Promise.all(
+    tokens.map((token) => {
+      if (debug) {
+        console.log(`${token.name} precision: ${token.precision}`)
+      }
+      return dummyExchangeInstance.setPrecision(token.address, token.precision)
+    }),
+  )
+
+  // Setting price for each @token that has PIP
+  await Promise.all(
+    tokens
+      .filter((token) => !!token.pip)
+      .map(async (token) => {
+        const price = await getOraclePrice(provider, token.pip)
+        const priceInWei = amountToWei(price).toFixed(0)
+        if (debug) {
+          console.log(`${token.name} Price: ${price.toString()} and Price(wei): ${priceInWei}`)
+        }
+        return dummyExchangeInstance.setPrice(token.address, priceInWei)
+      }),
+  )
+
+  if (debug) {
+    tokens.map((token) => {
+      console.log(`${token.name}: ${token.address}`)
+    })
+  }
+}
+
 const deploySystem = async function (provider, signer, isExchangeDummy = false, debug = false) {
   let deployedContracts = {
     // defined during system deployment
@@ -283,22 +352,7 @@ const deploySystem = async function (provider, signer, isExchangeDummy = false, 
     deployedContracts.exchangeInstance = exchangeInstance
   } else {
     deployedContracts.exchangeInstance = dummyExchangeInstance
-    await dummyExchangeInstance.setFee(FEE)
-    //await exchange.setSlippage(800);//8%
-    const tokens = [
-      { name: 'DAI', address: MAINNET_ADRESSES.MCD_DAI, precision: 18 },
-      { name: 'LINK', address: MAINNET_ADRESSES.LINK, precision: 18 },
-      { name: 'WBTC', address: MAINNET_ADRESSES.WBTC, precision: 8 },
-    ]
-
-    await addFundsDummyExchange(
-      provider,
-      signer,
-      MAINNET_ADRESSES.WETH_ADDRESS,
-      tokens,
-      dummyExchangeInstance,
-      debug,
-    )
+    await loadDummyExchangeFixtures(provider, signer, dummyExchangeInstance, debug)
   }
 
   if (debug) {
@@ -311,10 +365,6 @@ const deploySystem = async function (provider, signer, isExchangeDummy = false, 
       deployedContracts.multiplyProxyActionsInstance.address,
     )
     console.log('MCDView address:', deployedContracts.mcdViewInstance.address)
-    console.log('DAI address:', MAINNET_ADRESSES.MCD_DAI)
-    console.log('WETH address:', MAINNET_ADRESSES.ETH)
-    console.log('LINK address:', MAINNET_ADRESSES.LINK)
-    console.log('WBTC address:', MAINNET_ADRESSES.WBTC)
   }
 
   return deployedContracts
@@ -392,6 +442,7 @@ module.exports = {
   getVaultInfo,
   balanceOf,
   addressRegistryFactory,
+  loadDummyExchangeFixtures,
   swapTokens,
   findMPAEvent,
   init,

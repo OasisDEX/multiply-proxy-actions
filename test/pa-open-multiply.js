@@ -89,7 +89,7 @@ describe('Proxy Action', async function () {
     )
 
     ADDRESS_REGISTRY.feeRecepient = '0x70997970C51812dc3A010C7d01b50e0d17dc79C8'
-    exchangeInstance.setPrice(amountToWei(marketPrice).toFixed(0))
+    exchangeInstance.setPrice(MAINNET_ADRESSES.ETH, amountToWei(marketPrice).toFixed(0))
     // the fee is set to 0.0003 and the base is 10000. Doing normal multiplication results in 2.999999999996
     exchangeInstance.setFee(new BigNumber(OUR_FEE).times(new BigNumber(FEE_BASE)).toFixed(0))
 
