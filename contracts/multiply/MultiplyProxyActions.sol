@@ -655,7 +655,7 @@ contract MultiplyProxyActions {
 
     require(cdpData.requiredDebt <= daiLeft, "cannot repay all debt");
     
-    //cdpData.withdrawCollateral = convertTo18(cdpData.gemJoin, cdpData.withdrawCollateral);
+    cdpData.withdrawCollateral = convertTo18(cdpData.gemJoin, cdpData.withdrawCollateral);
 
     wipeAndFreeGem(
       addressRegistry.manager,
