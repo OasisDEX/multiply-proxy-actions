@@ -19,7 +19,6 @@ const { expect } = require('chai')
 const { one } = require('./utils')
 
 const UniswapRouterV3Abi = require('../abi/external/IUniswapRouter.json')
-const wethAbi = require('../abi/IWETH.json')
 const erc20Abi = require('../abi/IERC20.json')
 
 const ethers = hre.ethers
@@ -47,8 +46,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
     FF,
     slippage,
     exchangeDataMock,
-    DAI,
-    WETH
+    DAI
 
   let CDP_ID // this test suite operates on one Vault that is created in first test case (opening Multiply Vault)
   let CDP_ILK
@@ -67,7 +65,6 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
       },
     ])
 
-    WETH = new ethers.Contract(MAINNET_ADRESSES.ETH, wethAbi, provider).connect(signer)
     DAI = new ethers.Contract(MAINNET_ADRESSES.MCD_DAI, erc20Abi, provider).connect(signer)
 
     const deployment = await deploySystem(provider, signer, true)
