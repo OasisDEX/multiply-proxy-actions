@@ -196,7 +196,7 @@ describe('Proxy Action', async function () {
       })
       let feePaidEvents = allEvents.filter(
         (x) =>
-          x.firstTopic === '0x69e27f80547602d16208b028c44d20f25956e1fb7d0f51d62aa02f392426f371',
+          x.firstTopic === '0x075a2720282fdf622141dae0b048ef90a21a7e57c134c76912d19d006b3b3f6f',
       )
       expect(feePaidEvents.length).to.be.deep.equal(1)
       let feeAmount = new BigNumber(feePaidEvents[0].data, 16)
@@ -282,7 +282,7 @@ describe('Proxy Action', async function () {
       })
       let feePaidEvents = allEvents.filter(
         (x) =>
-          x.firstTopic === '0x69e27f80547602d16208b028c44d20f25956e1fb7d0f51d62aa02f392426f371',
+          x.firstTopic === '0x075a2720282fdf622141dae0b048ef90a21a7e57c134c76912d19d006b3b3f6f',
       )
       expect(feePaidEvents.length).to.be.deep.equal(1)
       let feeAmount = new BigNumber(feePaidEvents[0].data, 16)
