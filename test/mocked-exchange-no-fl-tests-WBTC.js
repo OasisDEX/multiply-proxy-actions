@@ -16,10 +16,12 @@ const {
   prepareMultiplyParameters2,
 } = require('./common/params-calculation-utils')
 const { expect } = require('chai')
-const { one } = require('./utils')
+const { one,TEN } = require('./utils')
 
 const UniswapRouterV3Abi = require('../abi/external/IUniswapRouter.json')
 const erc20Abi = require('../abi/IERC20.json')
+const { getVaultInfoRaw } = require('./utils-mcd')
+
 
 const ethers = hre.ethers
 
@@ -48,6 +50,8 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
     exchangeDataMock,
     DAI
 
+  let precision = 8;
+
   let CDP_ID // this test suite operates on one Vault that is created in first test case (opening Multiply Vault)
   let CDP_ILK
 
@@ -66,8 +70,10 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
     ])
 
     DAI = new ethers.Contract(MAINNET_ADRESSES.MCD_DAI, erc20Abi, provider).connect(signer)
+    WBTC = new ethers.Contract(MAINNET_ADRESSES.WBTC, erc20Abi, provider).connect(signer)
 
-    const deployment = await deploySystem(provider, signer, true)
+    const deployment = await deploySystem(provider, signer, true,true)
+    await WBTC.approve(deployment.userProxyAddress, amountToWei(new BigNumber(10), 8).toFixed(0))
 
     // ({ dsProxy, exchange, multiplyProxyActions, mcdView }) = deployment;
     dsProxy = deployment.dsProxyInstance
@@ -95,12 +101,12 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
     let marketPrice, oraclePrice, currentColl, currentDebt, requiredCollRatio
 
     this.beforeAll(async function () {
-      marketPrice = await new BigNumber(2380)
-      oraclePrice = await getOraclePrice(provider)
+      oraclePrice = await getOraclePrice(provider,MAINNET_ADRESSES.PIP_WBTC)
+      marketPrice = oraclePrice;
 
-      await exchange.setPrice(MAINNET_ADRESSES.ETH, amountToWei(marketPrice).toFixed(0))
+      await exchange.setPrice(MAINNET_ADRESSES.WBTC, amountToWei(marketPrice).toFixed(0))
 
-      currentColl = new BigNumber(100) // STARTING COLLATERAL AMOUNT
+      currentColl = new BigNumber(5) // STARTING COLLATERAL AMOUNT
       currentDebt = new BigNumber(0) // STARTING VAULT DEBT
     })
 
@@ -126,7 +132,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
       }
       let params = prepareMultiplyParameters2(
         MAINNET_ADRESSES.MCD_DAI,
-        MAINNET_ADRESSES.ETH,
+        MAINNET_ADRESSES.WBTC,
         exchangeDataMock,
         0,
         desiredCdpState,
@@ -134,7 +140,10 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         exchange.address,
         address,
         true,
+        MAINNET_ADRESSES.MCD_JOIN_WBTC_A,
+        8
       )
+
       let [status, result] = await dsproxyExecuteAction(
         multiplyProxyActions,
         dsProxy,
@@ -155,7 +164,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         .times(oraclePrice)
         .div(new BigNumber(info.debt))
       const { daiBalance, collateralBalance } = await checkMPAPostState(
-        MAINNET_ADRESSES.ETH,
+        MAINNET_ADRESSES.WBTC,
         multiplyProxyActions.address,
       )
 
@@ -176,10 +185,10 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
     let marketPrice, oraclePrice, currentColl, currentDebt, requiredCollRatio
 
     this.beforeAll(async function () {
-      marketPrice = await new BigNumber(2380)
-      oraclePrice = await getOraclePrice(provider)
+      oraclePrice = await getOraclePrice(provider,MAINNET_ADRESSES.PIP_WBTC)
+      marketPrice = oraclePrice;
 
-      await exchange.setPrice(MAINNET_ADRESSES.ETH, amountToWei(marketPrice).toFixed(0))
+      await exchange.setPrice(MAINNET_ADRESSES.WBTC, amountToWei(marketPrice).toFixed(0))
 
       info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
       currentColl = new BigNumber(info.coll)
@@ -208,7 +217,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
 
       let params = prepareMultiplyParameters2(
         MAINNET_ADRESSES.MCD_DAI,
-        MAINNET_ADRESSES.ETH,
+        MAINNET_ADRESSES.WBTC,
         exchangeDataMock,
         CDP_ID,
         desiredCdpState,
@@ -216,10 +225,16 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         exchange.address,
         address,
         true,
+        MAINNET_ADRESSES.MCD_JOIN_WBTC_A,
+        8
       )
 
       params[1].skipFL = true;
 
+      info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
+      const originalCollRatio = new BigNumber(info.coll)
+        .times(oraclePrice)
+        .div(new BigNumber(info.debt))
       let [status, result] = await dsproxyExecuteAction(
         multiplyProxyActions,
         dsProxy,
@@ -232,13 +247,14 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         .times(oraclePrice)
         .div(new BigNumber(info.debt))
       const { daiBalance, collateralBalance } = await checkMPAPostState(
-        MAINNET_ADRESSES.ETH,
+        MAINNET_ADRESSES.WBTC,
         multiplyProxyActions.address,
       )
-
+/*
       let actionEvents = findMPAEvent(result)
       expect(actionEvents.length).to.be.equal(1)
       expect(actionEvents[0].methodName).to.be.equal('increaseMultiple')
+      */
       expect(daiBalance.toFixed(0)).to.be.equal('0')
       expect(collateralBalance.toFixed(0)).to.be.equal('0')
       expect(currentCollRatio.toFixed(3)).to.be.equal(requiredCollRatio.toFixed(3))
@@ -249,10 +265,10 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
     let marketPrice, oraclePrice, currentColl, currentDebt, requiredCollRatio
 
     this.beforeAll(async function () {
-      marketPrice = await new BigNumber(2380)
-      oraclePrice = await getOraclePrice(provider)
+      oraclePrice = await getOraclePrice(provider,MAINNET_ADRESSES.PIP_WBTC)
+      marketPrice = oraclePrice;
 
-      await exchange.setPrice(MAINNET_ADRESSES.ETH, amountToWei(marketPrice).toFixed(0))
+      await exchange.setPrice(MAINNET_ADRESSES.WBTC, amountToWei(marketPrice).toFixed(0))
 
       info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
       currentColl = new BigNumber(info.coll)
@@ -286,7 +302,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
 
       let params = prepareMultiplyParameters2(
         MAINNET_ADRESSES.MCD_DAI,
-        MAINNET_ADRESSES.ETH,
+        MAINNET_ADRESSES.WBTC,
         exchangeDataMock,
         CDP_ID,
         desiredCdpState,
@@ -294,6 +310,8 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         exchange.address,
         address,
         true,
+        MAINNET_ADRESSES.MCD_JOIN_WBTC_A,
+        8
       )
       params[1].skipFL = true;
 
@@ -309,13 +327,14 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         .times(oraclePrice)
         .div(new BigNumber(info.debt))
       const { daiBalance, collateralBalance } = await checkMPAPostState(
-        MAINNET_ADRESSES.ETH,
+        MAINNET_ADRESSES.WBTC,
         multiplyProxyActions.address,
       )
-
+/*
       let actionEvents = findMPAEvent(result)
       expect(actionEvents.length).to.be.equal(1)
       expect(actionEvents[0].methodName).to.be.equal('increaseMultipleDepositDai')
+      */
       expect(daiBalance.toFixed(0)).to.be.equal('0')
       expect(collateralBalance.toFixed(0)).to.be.equal('0')
       expect(currentCollRatio.toFixed(3)).to.be.equal(requiredCollRatio.toFixed(3))
@@ -326,10 +345,10 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
     let marketPrice, oraclePrice, currentColl, currentDebt, requiredCollRatio
 
     this.beforeAll(async function () {
-      marketPrice = await new BigNumber(2380)
-      oraclePrice = await getOraclePrice(provider)
+      oraclePrice = await getOraclePrice(provider,MAINNET_ADRESSES.PIP_WBTC)
+      marketPrice = oraclePrice;
 
-      await exchange.setPrice(MAINNET_ADRESSES.ETH, amountToWei(marketPrice).toFixed(0))
+      await exchange.setPrice(MAINNET_ADRESSES.WBTC, amountToWei(marketPrice).toFixed(0))
 
       info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
       currentColl = new BigNumber(info.coll)
@@ -338,7 +357,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
 
     it(`should increase vault's multiple to required collateralization ratio with additional collateral deposited`, async function () {
       requiredCollRatio = new BigNumber(5)
-      const collateralDeposit = new BigNumber(5)
+      const collateralDeposit = new BigNumber(1)
       ;[requiredDebt, toBorrowCollateralAmount] = calculateParamsIncreaseMP(
         oraclePrice,
         marketPrice,
@@ -360,7 +379,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
 
       let params = prepareMultiplyParameters2(
         MAINNET_ADRESSES.MCD_DAI,
-        MAINNET_ADRESSES.ETH,
+        MAINNET_ADRESSES.WBTC,
         exchangeDataMock,
         CDP_ID,
         desiredCdpState,
@@ -368,6 +387,8 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         exchange.address,
         address,
         true,
+        MAINNET_ADRESSES.MCD_JOIN_WBTC_A,
+        8
       )
       params[1].skipFL = true;
 
@@ -384,13 +405,14 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         .times(oraclePrice)
         .div(new BigNumber(info.debt))
       const { daiBalance, collateralBalance } = await checkMPAPostState(
-        MAINNET_ADRESSES.ETH,
+        MAINNET_ADRESSES.WBTC,
         multiplyProxyActions.address,
       )
-
+/*
       let actionEvents = findMPAEvent(result)
       expect(actionEvents.length).to.be.equal(1)
       expect(actionEvents[0].methodName).to.be.equal('increaseMultipleDepositCollateral')
+      */
       expect(daiBalance.toFixed(0)).to.be.equal('0')
       expect(collateralBalance.toFixed(0)).to.be.equal('0')
       expect(currentCollRatio.toFixed(3)).to.be.equal(requiredCollRatio.toFixed(3))
@@ -401,10 +423,10 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
     let marketPrice, oraclePrice, currentColl, currentDebt, requiredCollRatio
 
     this.beforeAll(async function () {
-      marketPrice = await new BigNumber(2380)
-      oraclePrice = await getOraclePrice(provider)
+      oraclePrice = await getOraclePrice(provider,MAINNET_ADRESSES.PIP_WBTC)
+      marketPrice = oraclePrice;
 
-      await exchange.setPrice(MAINNET_ADRESSES.ETH, amountToWei(marketPrice).toFixed(0))
+      await exchange.setPrice(MAINNET_ADRESSES.WBTC, amountToWei(marketPrice).toFixed(0))
 
       info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
       currentColl = new BigNumber(info.coll)
@@ -412,7 +434,11 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
     })
 
     it(`should decrease vault's multiple to required collateralization ratio`, async function () {
-      requiredCollRatio = new BigNumber(5.2)
+      let cCollRatio = new BigNumber(info.coll)
+        .times(oraclePrice)
+        .div(new BigNumber(info.debt))
+      const requiredCollRatio = cCollRatio.plus(0.1);
+
       ;[requiredDebt, toBorrowCollateralAmount] = calculateParamsDecreaseMP(
         oraclePrice,
         marketPrice,
@@ -422,6 +448,8 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         currentDebt,
         requiredCollRatio,
         slippage,
+        0,
+        false
       )
 
       desiredCdpState = {
@@ -432,7 +460,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
       }
 
       let params = prepareMultiplyParameters2(
-        MAINNET_ADRESSES.ETH,
+        MAINNET_ADRESSES.WBTC,
         MAINNET_ADRESSES.MCD_DAI,
         exchangeDataMock,
         CDP_ID,
@@ -441,9 +469,13 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         exchange.address,
         address,
         true,
+        MAINNET_ADRESSES.MCD_JOIN_WBTC_A,
+        8,
+        true
       )
 
       params[1].skipFL = true;
+
       let [status, result] = await dsproxyExecuteAction(
         multiplyProxyActions,
         dsProxy,
@@ -453,20 +485,21 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
       )
 
       info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
-      const currentCollRatio = new BigNumber(info.coll)
+      cCollRatio = new BigNumber(info.coll)
         .times(oraclePrice)
         .div(new BigNumber(info.debt))
       const { daiBalance, collateralBalance } = await checkMPAPostState(
-        MAINNET_ADRESSES.ETH,
+        MAINNET_ADRESSES.WBTC,
         multiplyProxyActions.address,
       )
-
+/*
       let actionEvents = findMPAEvent(result)
       expect(actionEvents.length).to.be.equal(1)
       expect(actionEvents[0].methodName).to.be.equal('decreaseMultiple')
+*/
       expect(daiBalance.toFixed(0)).to.be.equal('0')
       expect(collateralBalance.toFixed(0)).to.be.equal('0')
-      expect(currentCollRatio.toFixed(3)).to.be.equal(requiredCollRatio.toFixed(3))
+      expect(cCollRatio.toFixed(3)).to.be.equal(requiredCollRatio.toFixed(3))
     })
   })
 
@@ -474,10 +507,10 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
     let marketPrice, oraclePrice, currentColl, currentDebt, requiredCollRatio
 
     this.beforeAll(async function () {
-      marketPrice = await new BigNumber(2380)
-      oraclePrice = await getOraclePrice(provider)
+      oraclePrice = await getOraclePrice(provider,MAINNET_ADRESSES.PIP_WBTC)
+      marketPrice = oraclePrice;
 
-      await exchange.setPrice(MAINNET_ADRESSES.ETH, amountToWei(marketPrice).toFixed(0))
+      await exchange.setPrice(MAINNET_ADRESSES.WBTC, amountToWei(marketPrice).toFixed(0))
 
       info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
       currentColl = new BigNumber(info.coll)
@@ -485,7 +518,11 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
     })
 
     it(`should decrease vault's multiple to required collateralization ratio with additional Dai withdrawn`, async function () {
-      requiredCollRatio = new BigNumber(6)
+      
+      let cCollRatio = new BigNumber(info.coll)
+        .times(oraclePrice)
+        .div(new BigNumber(info.debt))
+      const requiredCollRatio = cCollRatio.plus(0.1);
       const withdrawDai = new BigNumber(100)
 
       ;[requiredDebt, toBorrowCollateralAmount] = calculateParamsDecreaseMP(
@@ -508,7 +545,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
       }
 
       let params = prepareMultiplyParameters2(
-        MAINNET_ADRESSES.ETH,
+        MAINNET_ADRESSES.WBTC,
         MAINNET_ADRESSES.MCD_DAI,
         exchangeDataMock,
         CDP_ID,
@@ -517,6 +554,9 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         exchange.address,
         address,
         true,
+        MAINNET_ADRESSES.MCD_JOIN_WBTC_A,
+        8,
+        true
       )
       params[1].skipFL = true;
 
@@ -533,13 +573,16 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         .times(oraclePrice)
         .div(new BigNumber(info.debt))
       const { daiBalance, collateralBalance } = await checkMPAPostState(
-        MAINNET_ADRESSES.ETH,
+        MAINNET_ADRESSES.WBTC,
         multiplyProxyActions.address,
       )
 
+      /*
       let actionEvents = findMPAEvent(result)
       expect(actionEvents.length).to.be.equal(1)
       expect(actionEvents[0].methodName).to.be.equal('decreaseMultipleWithdrawDai')
+      */
+
       expect(daiBalance.toFixed(0)).to.be.equal('0')
       expect(collateralBalance.toFixed(0)).to.be.equal('0')
       expect(currentCollRatio.toFixed(2)).to.be.equal(requiredCollRatio.toFixed(2))
@@ -550,10 +593,10 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
     let marketPrice, oraclePrice, currentColl, currentDebt, requiredCollRatio
 
     this.beforeAll(async function () {
-      marketPrice = await new BigNumber(2380)
-      oraclePrice = await getOraclePrice(provider)
+      oraclePrice = await getOraclePrice(provider,MAINNET_ADRESSES.PIP_WBTC)
+      marketPrice = oraclePrice;
 
-      await exchange.setPrice(MAINNET_ADRESSES.ETH, amountToWei(marketPrice).toFixed(0))
+      await exchange.setPrice(MAINNET_ADRESSES.WBTC, amountToWei(marketPrice).toFixed(0))
 
       info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
       currentColl = new BigNumber(info.coll)
@@ -561,7 +604,12 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
     })
 
     it(`should decrease vault's multiple to required collateralization ratio with additional collateral withdrawn`, async function () {
-      requiredCollRatio = new BigNumber(7)
+      
+      let cCollRatio = new BigNumber(info.coll)
+        .times(oraclePrice)
+        .div(new BigNumber(info.debt))
+      const requiredCollRatio = cCollRatio.plus(0.1);
+
       const withdrawCollateral = new BigNumber(1)
 
       ;[requiredDebt, toBorrowCollateralAmount] = calculateParamsDecreaseMP(
@@ -584,7 +632,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
       }
 
       let params = prepareMultiplyParameters2(
-        MAINNET_ADRESSES.ETH,
+        MAINNET_ADRESSES.WBTC,
         MAINNET_ADRESSES.MCD_DAI,
         exchangeDataMock,
         CDP_ID,
@@ -593,6 +641,9 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         exchange.address,
         address,
         true,
+        MAINNET_ADRESSES.MCD_JOIN_WBTC_A,
+        8,
+        true
       )
       params[1].skipFL = true;
 
@@ -609,13 +660,16 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         .times(oraclePrice)
         .div(new BigNumber(info.debt))
       const { daiBalance, collateralBalance } = await checkMPAPostState(
-        MAINNET_ADRESSES.ETH,
+        MAINNET_ADRESSES.WBTC,
         multiplyProxyActions.address,
       )
 
+      /*
       let actionEvents = findMPAEvent(result)
       expect(actionEvents.length).to.be.equal(1)
       expect(actionEvents[0].methodName).to.be.equal('decreaseMultipleWithdrawCollateral')
+      */
+
       expect(daiBalance.toFixed(0)).to.be.equal('0')
       expect(collateralBalance.toFixed(0)).to.be.equal('0')
       expect(currentCollRatio.toFixed(2)).to.be.equal(requiredCollRatio.toFixed(2))
@@ -623,25 +677,33 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
   })
 
   describe(`Close vault and exit all collateral`, async function () {
-    let marketPrice, oraclePrice, currentColl, currentDebt, requiredCollRatio
+    let marketPrice, currentColl, currentDebt;
 
     this.beforeAll(async function () {
-      marketPrice = await new BigNumber(2380)
-      oraclePrice = await getOraclePrice(provider)
+      oraclePrice = await getOraclePrice(provider,MAINNET_ADRESSES.PIP_WBTC)
+      marketPrice = oraclePrice;
 
-      await exchange.setPrice(MAINNET_ADRESSES.ETH, amountToWei(marketPrice).toFixed(0))
+      await exchange.setPrice(MAINNET_ADRESSES.WBTC, amountToWei(marketPrice).toFixed(0))
 
       info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
-      currentColl = new BigNumber(info.coll)
+      let infoRaw =  await getVaultInfoRaw(mcdView, CDP_ID, CDP_ILK);
+      console.log(infoRaw);
+      console.log(info);
+      currentColl = (new BigNumber(infoRaw.coll)).dividedBy(TEN.exponentiatedBy(18));//it is normalized collateral
       currentDebt = new BigNumber(info.debt)
     })
 
     it(`should close vault and return  collateral`, async function () {
-      await exchange.setPrice(MAINNET_ADRESSES.ETH, amountToWei(marketPrice).toFixed(0))
+      await exchange.setPrice(MAINNET_ADRESSES.WBTC, amountToWei(marketPrice).toFixed(0))
 
       const marketPriceSlippage = marketPrice.times(one.minus(slippage))
       const minToTokenAmount = currentDebt.times(one.plus(OF).plus(FF))
-      const sellCollateralAmount = minToTokenAmount.div(marketPriceSlippage)
+      console.log("Market Price",marketPriceSlippage.toString());
+      console.log("Debt to Pay",minToTokenAmount.toString());
+      console.log("Collateral available",currentColl.toString());
+      const sellCollateralAmount = minToTokenAmount.div(marketPriceSlippage);
+
+      console.log("Collateral To Sell",sellCollateralAmount.toString());
 
       desiredCdpState = {
         requiredDebt: 0,
@@ -649,12 +711,11 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         fromTokenAmount: sellCollateralAmount,
         toTokenAmount: minToTokenAmount,
         withdrawCollateral: currentColl
-          .minus(sellCollateralAmount)
-          .minus(0.00001) /* some ackward rounding errors*/,
+          .minus(sellCollateralAmount),
       }
 
       let params = prepareMultiplyParameters2(
-        MAINNET_ADRESSES.ETH,
+        MAINNET_ADRESSES.WBTC,
         MAINNET_ADRESSES.MCD_DAI,
         exchangeDataMock,
         CDP_ID,
@@ -663,8 +724,13 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         exchange.address,
         address,
         true,
+        MAINNET_ADRESSES.MCD_JOIN_WBTC_A,
+        8,
+        true
       )
       params[1].skipFL = true;
+
+      console.log(params);
 
       let [status, result] = await dsproxyExecuteAction(
         multiplyProxyActions,
@@ -674,15 +740,18 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         params,
       )
 
-      info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
+      info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK);
       const { daiBalance, collateralBalance } = await checkMPAPostState(
-        MAINNET_ADRESSES.ETH,
+        MAINNET_ADRESSES.WBTC,
         multiplyProxyActions.address,
       )
 
+      /*
       let actionEvents = findMPAEvent(result)
       expect(actionEvents.length).to.be.equal(1)
       expect(actionEvents[0].methodName).to.be.equal('closeVaultExitCollateral')
+*/
+
       expect(daiBalance.toFixed(0)).to.be.equal('0')
       expect(collateralBalance.toString()).to.be.equal('0')
       expect(info.debt.toString()).to.be.equal('0')
