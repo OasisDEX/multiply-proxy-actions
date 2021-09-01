@@ -160,7 +160,7 @@ runner([
   //  testCaseDefinition(testVaults[0], testParams[3]),
   //testCaseDefinition(testVaults[0],testParams[0])
   // runTestCase(testVaults[0],OracleMarketDifference)
-  testCaseDefinition(testVaults[1], testParams[4]),//skipFL == true on small operations 
+  testCaseDefinition(testVaults[1], testParams[4]), //skipFL == true on small operations
 ])
 
 async function testCaseDefinition(testCase, testParam) {
@@ -203,7 +203,7 @@ async function testCaseDefinition(testCase, testParam) {
       function addBalanceCheckingAssertions(_it, useMockExchange) {
         _it('ProxyAction should have no DAI', async function () {
           let mpaAddress = await deployedContracts.multiplyProxyActionsInstance.address
-          var balance = await balanceOf(deployedContracts.daiTokenInstance.address, mpaAddress)
+          var balance = await balanceOf(MAINNET_ADRESSES.MCD_DAI, mpaAddress)
           expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
         })
         _it('ProxyAction should have no ETH', async function () {
@@ -213,15 +213,12 @@ async function testCaseDefinition(testCase, testParam) {
         })
         _it('ProxyAction should have no WETH', async function () {
           let mpaAddress = await deployedContracts.multiplyProxyActionsInstance.address
-          var balance = await balanceOf(
-            deployedContracts.gems.wethTokenInstance.address,
-            mpaAddress,
-          )
+          var balance = await balanceOf(MAINNET_ADRESSES.ETH, mpaAddress)
           expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
         })
         _it('dsProxy should have no DAI', async function () {
           let dsProxyAddress = await deployedContracts.dsProxyInstance.address
-          var balance = await balanceOf(deployedContracts.daiTokenInstance.address, dsProxyAddress)
+          var balance = await balanceOf(MAINNET_ADRESSES.MCD_DAI, dsProxyAddress)
           expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
         })
         _it('dsProxy should have no ETH', async function () {
@@ -231,19 +228,13 @@ async function testCaseDefinition(testCase, testParam) {
         })
         _it('dsProxy should have no WETH', async function () {
           let dsProxyAddress = await deployedContracts.dsProxyInstance.address
-          var balance = await balanceOf(
-            deployedContracts.gems.wethTokenInstance.address,
-            dsProxyAddress,
-          )
+          var balance = await balanceOf(MAINNET_ADRESSES.ETH, dsProxyAddress)
           expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
         })
         if (useMockExchange == false) {
           _it('exchange should have no DAI', async function () {
             let addressToCheck = await deployedContracts.exchangeInstance.address
-            var balance = await balanceOf(
-              deployedContracts.daiTokenInstance.address,
-              addressToCheck,
-            )
+            var balance = await balanceOf(MAINNET_ADRESSES.MCD_DAI, addressToCheck)
             expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
           })
           _it('exchange should have no ETH', async function () {
@@ -253,10 +244,7 @@ async function testCaseDefinition(testCase, testParam) {
           })
           _it('exchange should have no WETH', async function () {
             let addressToCheck = deployedContracts.exchangeInstance.address
-            var balance = await balanceOf(
-              deployedContracts.gems.wethTokenInstance.address,
-              addressToCheck,
-            )
+            var balance = await balanceOf(MAINNET_ADRESSES.ETH, addressToCheck)
             expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
           })
         }
@@ -346,7 +334,7 @@ async function testCaseDefinition(testCase, testParam) {
         if (blockNumber == 0 || testParam.useMockExchange == false) {
           blockNumber = await getCurrentBlockNumber()
         }
-       // await resetNetworkToBlock(provider, blockNumber - 6)
+        // await resetNetworkToBlock(provider, blockNumber - 6)
         await getSignerWithDetails(provider)
 
         deployedContracts = await deploySystem(
@@ -363,9 +351,9 @@ async function testCaseDefinition(testCase, testParam) {
 
         ADDRESS_REGISTRY.feeRecepient =
           await deployedContracts.exchangeInstance.feeBeneficiaryAddress()
-        
-        if(testParam.skipFL == true){
-          ADDRESS_REGISTRY.aaveLendingPoolProvider = ADDRESS_REGISTRY.feeRecepient;//some correct address that do not have FL functionality
+
+        if (testParam.skipFL == true) {
+          ADDRESS_REGISTRY.aaveLendingPoolProvider = ADDRESS_REGISTRY.feeRecepient //some correct address that do not have FL functionality
         }
 
         oraclePrice = await getOraclePrice(provider)
@@ -396,10 +384,7 @@ async function testCaseDefinition(testCase, testParam) {
         })
 
         this.beforeAll(async function () {
-          startBalance = await balanceOf(
-            deployedContracts.daiTokenInstance.address,
-            ADDRESS_REGISTRY.feeRecepient,
-          )
+          startBalance = await balanceOf(MAINNET_ADRESSES.MCD_DAI, ADDRESS_REGISTRY.feeRecepient)
           const [debtDelta, collateralDelta] = calculateRequiredDebt(
             'mul',
             testCase.existingCDP,
@@ -433,7 +418,7 @@ async function testCaseDefinition(testCase, testParam) {
           const params = packMPAParams(cdpData, exchangeData, ADDRESS_REGISTRY)
 
           let status
-          cdpData.skipFL = testParam.skipFL;
+          cdpData.skipFL = testParam.skipFL
           ;[status, txResult] = await dsproxyExecuteAction(
             deployedContracts.multiplyProxyActionsInstance,
             deployedContracts.dsProxyInstance,
@@ -488,19 +473,21 @@ async function testCaseDefinition(testCase, testParam) {
               name: x.name,
             }
           })
-          let abi = [ "event FLData(uint256 borrowed, uint256 due)" ];
-          let iface = new ethers.utils.Interface(abi);
+          let abi = ['event FLData(uint256 borrowed, uint256 due)']
+          let iface = new ethers.utils.Interface(abi)
 
-          var flDataEvent = iface.parseLog(allEvents.filter(
-            (x) =>
-              x.firstTopic === '0x9c6641b21946115d10f3f55df9bec5752ec06d40dc9250b1cc6560549764600e',
-          )[0]);
-          var expected = amountToWei(testCase.existingCDP.debt);
-          var actual = new BigNumber(flDataEvent.args.due.toString());
-          actual = amountToWei(actual.dividedBy(TEN.pow(18)));
-          expect(actual.gt(expected.multipliedBy(0.98))).to.be.equal(true);
-          expect(expected.gt(actual.multipliedBy(0.98))).to.be.equal(true);
-          
+          var flDataEvent = iface.parseLog(
+            allEvents.filter(
+              (x) =>
+                x.firstTopic ===
+                '0x9c6641b21946115d10f3f55df9bec5752ec06d40dc9250b1cc6560549764600e',
+            )[0],
+          )
+          var expected = amountToWei(testCase.existingCDP.debt)
+          var actual = new BigNumber(flDataEvent.args.due.toString())
+          actual = amountToWei(actual.dividedBy(TEN.pow(18)))
+          expect(actual.gt(expected.multipliedBy(0.98))).to.be.equal(true)
+          expect(expected.gt(actual.multipliedBy(0.98))).to.be.equal(true)
         })
 
         it('it should send fee to beneficiary', async function () {
@@ -518,14 +505,11 @@ async function testCaseDefinition(testCase, testParam) {
             (x) =>
               x.firstTopic === '0x075a2720282fdf622141dae0b048ef90a21a7e57c134c76912d19d006b3b3f6f',
           )
-          console.log("Events count",allEvents.length);
+          console.log('Events count', allEvents.length)
           expect(feePaidEvents.length).to.be.deep.equal(1)
           var feeAmount = new BigNumber(feePaidEvents[0].data, 16)
           var expected = amountToWei(testCase.existingCDP.debt * OUR_FEE)
-          endBalance = await balanceOf(
-            deployedContracts.daiTokenInstance.address,
-            ADDRESS_REGISTRY.feeRecepient,
-          )
+          endBalance = await balanceOf(MAINNET_ADRESSES.MCD_DAI, ADDRESS_REGISTRY.feeRecepient)
           var balanceDifference = endBalance.sub(startBalance).toString()
           expect(feeAmount.toNumber()).to.be.greaterThanOrEqual(
             expected.toNumber() * (1 - precision / 100),
@@ -579,7 +563,7 @@ async function testCaseDefinition(testCase, testParam) {
             const params = packMPAParams(cdpData, exchangeData, ADDRESS_REGISTRY)
 
             let status
-            cdpData.skipFL = testParam.skipFL;
+            cdpData.skipFL = testParam.skipFL
             ;[status, inTxResult] = await dsproxyExecuteAction(
               deployedContracts.multiplyProxyActionsInstance,
               deployedContracts.dsProxyInstance,
@@ -639,10 +623,7 @@ async function testCaseDefinition(testCase, testParam) {
           let daiBefore
           let testCaseCopy
           this.beforeAll(async function () {
-            daiBefore = await balanceOf(
-              deployedContracts.daiTokenInstance.address,
-              await primarySigner.getAddress(),
-            )
+            daiBefore = await balanceOf(MAINNET_ADRESSES.MCD_DAI, await primarySigner.getAddress())
             if (testParam.debug) {
               console.log(
                 'DAI Balance of',
@@ -695,7 +676,7 @@ async function testCaseDefinition(testCase, testParam) {
             const params = packMPAParams(cdpData, exchangeData, ADDRESS_REGISTRY)
 
             let status
-            cdpData.skipFL = testParam.skipFL;
+            cdpData.skipFL = testParam.skipFL
             ;[status, inTxResult] = await dsproxyExecuteAction(
               deployedContracts.multiplyProxyActionsInstance,
               deployedContracts.dsProxyInstance,
@@ -752,7 +733,7 @@ async function testCaseDefinition(testCase, testParam) {
           })
           it(`should change primaryAddress DAI balance by exacly ${testParam.desiredDAI} DAI`, async function () {
             var balanceAfter = await balanceOf(
-              deployedContracts.daiTokenInstance.address,
+              MAINNET_ADRESSES.MCD_DAI,
               await primarySigner.getAddress(),
             )
             if (testParam.debug) {
@@ -783,10 +764,7 @@ async function testCaseDefinition(testCase, testParam) {
           let testCaseCopy
 
           this.beforeAll(async function () {
-            daiBefore = await balanceOf(
-              deployedContracts.daiTokenInstance.address,
-              await primarySigner.getAddress(),
-            )
+            daiBefore = await balanceOf(MAINNET_ADRESSES.MCD_DAI, await primarySigner.getAddress())
 
             internalSnapshotId = await createSnapshot(provider)
 
@@ -834,7 +812,7 @@ async function testCaseDefinition(testCase, testParam) {
             )
             let status
             minAcceptableAmount = exchangeData.minToTokenAmount
-            cdpData.skipFL = testParam.skipFL;
+            cdpData.skipFL = testParam.skipFL
             ;[status, inTxResult] = await dsproxyExecuteAction(
               deployedContracts.multiplyProxyActionsInstance,
               deployedContracts.dsProxyInstance,
@@ -848,13 +826,13 @@ async function testCaseDefinition(testCase, testParam) {
               throw 'Tx failed'
             }
 
-            if(testParam.skipFL == false){
+            if (testParam.skipFL == false) {
               actualSwappedAmount = findExchangeTransferEvent(
                 deployedContracts.exchangeInstance.address,
                 deployedContracts.multiplyProxyActionsInstance.address,
                 inTxResult,
               )
-            }else{
+            } else {
               actualSwappedAmount = findExchangeTransferEvent(
                 deployedContracts.exchangeInstance.address,
                 deployedContracts.userProxyAddress,
@@ -901,7 +879,7 @@ async function testCaseDefinition(testCase, testParam) {
           it(`should change primaryAddress DAI balance only due to not maximum slippage`, async function () {
             let precision = 2
             var daiAfter = await balanceOf(
-              deployedContracts.daiTokenInstance.address,
+              MAINNET_ADRESSES.MCD_DAI,
               await primarySigner.getAddress(),
             )
 
@@ -936,13 +914,10 @@ async function testCaseDefinition(testCase, testParam) {
           this.beforeAll(async function () {
             await updateLastCDPInfo(testCase, primarySigner, provider, userProxyAddr)
             closingVaultInfo = testCase.existingCDP
-            console.log("CDP state before",closingVaultInfo);
+            console.log('CDP state before', closingVaultInfo)
             beforeTxBalance = await provider.getBalance(await primarySigner.getAddress())
 
-            daiBefore = await balanceOf(
-              deployedContracts.daiTokenInstance.address,
-              await primarySigner.getAddress(),
-            )
+            daiBefore = await balanceOf(MAINNET_ADRESSES.MCD_DAI, await primarySigner.getAddress())
 
             internalSnapshotId = await createSnapshot(provider)
 
@@ -969,7 +944,10 @@ async function testCaseDefinition(testCase, testParam) {
             cdpData.withdrawDai = 0
 
             exchangeData.toTokenAmount = ensureWeiFormat(
-              mul(mul(testCaseCopy.existingCDP.debt, add(add(1, AAVE_FEE), OUR_FEE)),add(1, testParam.slippage)),
+              mul(
+                mul(testCaseCopy.existingCDP.debt, add(add(1, AAVE_FEE), OUR_FEE)),
+                add(1, testParam.slippage),
+              ),
             )
             exchangeData.minToTokenAmount = ensureWeiFormat(
               mul(testCaseCopy.existingCDP.debt, add(add(1, AAVE_FEE), OUR_FEE)),
@@ -978,10 +956,9 @@ async function testCaseDefinition(testCase, testParam) {
               div(exchangeData.toTokenAmount, mul(marketPrice, sub(1, testParam.slippage))),
             )
 
+            minTokenAmount = exchangeData.minToTokenAmount
 
-            minTokenAmount = exchangeData.minToTokenAmount;
-
-            cdpData.borrowCollateral = ensureWeiFormat(testCaseCopy.existingCDP.coll );
+            cdpData.borrowCollateral = ensureWeiFormat(testCaseCopy.existingCDP.coll)
             cdpData.requiredDebt = exchangeData.minToTokenAmount
 
             await fillExchangeData(
@@ -992,12 +969,12 @@ async function testCaseDefinition(testCase, testParam) {
             )
             const params = packMPAParams(cdpData, exchangeData, ADDRESS_REGISTRY)
             beneficiaryBefore = await balanceOf(
-              deployedContracts.daiTokenInstance.address,
+              MAINNET_ADRESSES.MCD_DAI,
               '0x79d7176aE8F93A04bC73b9BC710d4b44f9e362Ce',
             )
 
             let status
-            cdpData.skipFL = testParam.skipFL;
+            cdpData.skipFL = testParam.skipFL
             ;[status, inTxResult] = await dsproxyExecuteAction(
               deployedContracts.multiplyProxyActionsInstance,
               deployedContracts.dsProxyInstance,
@@ -1010,13 +987,13 @@ async function testCaseDefinition(testCase, testParam) {
               restoreSnapshot.lock = true
               throw 'Tx failed'
             }
-            if(testParam.skipFL == false){
+            if (testParam.skipFL == false) {
               actualSwappedAmount = findExchangeTransferEvent(
                 deployedContracts.exchangeInstance.address,
                 deployedContracts.multiplyProxyActionsInstance.address,
                 inTxResult,
               )
-            }else{
+            } else {
               actualSwappedAmount = findExchangeTransferEvent(
                 deployedContracts.exchangeInstance.address,
                 deployedContracts.userProxyAddress,
@@ -1036,10 +1013,7 @@ async function testCaseDefinition(testCase, testParam) {
 
             await updateLastCDPInfo(testCaseCopy, primarySigner, provider, userProxyAddr)
 
-            daiAfter = await balanceOf(
-              deployedContracts.daiTokenInstance.address,
-              await primarySigner.getAddress(),
-            )
+            daiAfter = await balanceOf(MAINNET_ADRESSES.MCD_DAI, await primarySigner.getAddress())
 
             afterTxBalance = await provider.getBalance(await primarySigner.getAddress())
             closedVaultInfo = testCaseCopy.existingCDP
@@ -1064,7 +1038,7 @@ async function testCaseDefinition(testCase, testParam) {
           })
           it('should send to user no more DAI than positive slippage', async function () {
             var expected = sub(add(daiBefore, actualSwappedAmount), minTokenAmount).toFixed(0)
-            console.log(expected,daiAfter, daiBefore);
+            console.log(expected, daiAfter, daiBefore)
             var ratio = div(sub(daiAfter, daiBefore), sub(expected, daiBefore))
             expect(ratio.toNumber()).to.be.lessThan(1.01)
             expect(ratio.toNumber()).to.be.greaterThan(0.99)
@@ -1072,7 +1046,7 @@ async function testCaseDefinition(testCase, testParam) {
           addBalanceCheckingAssertions(it, testParam.useMockExchange, deployedContracts)
           it('should collect fee', async function () {
             var beneficiaryAfter = await balanceOf(
-              deployedContracts.daiTokenInstance.address,
+              MAINNET_ADRESSES.MCD_DAI,
               ADDRESS_REGISTRY.feeRecepient,
             )
             //       console.log(OUR_FEE, closingVaultInfo.debt)
@@ -1105,8 +1079,8 @@ async function testCaseDefinition(testCase, testParam) {
           })
         })
         describe('Close Vault, withdraw DAI', async function () {
-          if(testParam.skipFL){
-            return;
+          if (testParam.skipFL) {
+            return
           }
           let closingVaultInfo
           let closedVaultInfo
@@ -1121,10 +1095,7 @@ async function testCaseDefinition(testCase, testParam) {
             closingVaultInfo = testCase.existingCDP
             beforeTxBalance = await provider.getBalance(await primarySigner.getAddress())
 
-            daiBefore = await balanceOf(
-              deployedContracts.daiTokenInstance.address,
-              await primarySigner.getAddress(),
-            )
+            daiBefore = await balanceOf(MAINNET_ADRESSES.MCD_DAI, await primarySigner.getAddress())
             //console.log('Before DAI Balance', daiBefore.toString())
 
             internalSnapshotId = await createSnapshot(provider)
@@ -1148,19 +1119,23 @@ async function testCaseDefinition(testCase, testParam) {
             cdpData.withdrawCollateral = 0
             cdpData.withdrawDai = 0
 
-            exchangeData.fromTokenAmount = ensureWeiFormat(testCaseCopy.existingCDP.coll );
+            exchangeData.fromTokenAmount = ensureWeiFormat(testCaseCopy.existingCDP.coll)
 
-            let worstPossibleDaiValueOfExistingCollateral = mul(testCaseCopy.existingCDP.coll,mul(marketPrice,sub(1,testParam.slippage)));
-            
-            daiOutAfterOF = mul(worstPossibleDaiValueOfExistingCollateral,sub(1,OUR_FEE))
+            let worstPossibleDaiValueOfExistingCollateral = mul(
+              testCaseCopy.existingCDP.coll,
+              mul(marketPrice, sub(1, testParam.slippage)),
+            )
 
-            exchangeData.minToTokenAmount =  ensureWeiFormat(daiOutAfterOF);
+            daiOutAfterOF = mul(worstPossibleDaiValueOfExistingCollateral, sub(1, OUR_FEE))
 
-            exchangeData.toTokenAmount = ensureWeiFormat(div(exchangeData.minToTokenAmount,sub(1,testParam.slippage)));
+            exchangeData.minToTokenAmount = ensureWeiFormat(daiOutAfterOF)
 
+            exchangeData.toTokenAmount = ensureWeiFormat(
+              div(exchangeData.minToTokenAmount, sub(1, testParam.slippage)),
+            )
 
-            cdpData.borrowCollateral = ensureWeiFormat(testCaseCopy.existingCDP.coll );
-            cdpData.requiredDebt =  ensureWeiFormat(mul(testCaseCopy.existingCDP.debt,1.0001));
+            cdpData.borrowCollateral = ensureWeiFormat(testCaseCopy.existingCDP.coll)
+            cdpData.requiredDebt = ensureWeiFormat(mul(testCaseCopy.existingCDP.debt, 1.0001))
 
             await fillExchangeData(
               testParam,
@@ -1169,14 +1144,14 @@ async function testCaseDefinition(testCase, testParam) {
               ALLOWED_PROTOCOLS,
             )
             const params = packMPAParams(cdpData, exchangeData, ADDRESS_REGISTRY)
-            
+
             beneficiaryBefore = await balanceOf(
-              deployedContracts.daiTokenInstance.address,
+              MAINNET_ADRESSES.MCD_DAI,
               ADDRESS_REGISTRY.feeRecepient,
             )
 
             let status
-            cdpData.skipFL = testParam.skipFL;
+            cdpData.skipFL = testParam.skipFL
             ;[status, inTxResult] = await dsproxyExecuteAction(
               deployedContracts.multiplyProxyActionsInstance,
               deployedContracts.dsProxyInstance,
@@ -1195,16 +1170,13 @@ async function testCaseDefinition(testCase, testParam) {
             }
             if (!status) {
               restoreSnapshot.lock = true
-              console.log(inTxResult);
+              console.log(inTxResult)
               throw 'Tx failed'
             }
 
             await updateLastCDPInfo(testCaseCopy, primarySigner, provider, userProxyAddr)
 
-            daiAfter = await balanceOf(
-              deployedContracts.daiTokenInstance.address,
-              await primarySigner.getAddress(),
-            )
+            daiAfter = await balanceOf(MAINNET_ADRESSES.MCD_DAI, await primarySigner.getAddress())
 
             afterTxBalance = await provider.getBalance(await primarySigner.getAddress())
             closedVaultInfo = testCaseCopy.existingCDP
@@ -1219,7 +1191,7 @@ async function testCaseDefinition(testCase, testParam) {
           })
           it('should send to user all DAI', async function () {
             let daiAfter = await balanceOf(
-              deployedContracts.daiTokenInstance.address,
+              MAINNET_ADRESSES.MCD_DAI,
               await primarySigner.getAddress(),
             )
             var actual = sub(daiAfter, daiBefore)

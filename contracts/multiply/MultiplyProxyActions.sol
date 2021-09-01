@@ -375,7 +375,12 @@ contract MultiplyProxyActions {
       takeAFlashLoan(addressRegistry, cdpData, assets, amounts, modes, paramsData);
     } else {
       if (mode == 2) {
-        _closeWithdrawCollateralSkipFL(exchangeData, cdpData, addressRegistry, cdpData.borrowCollateral);
+        _closeWithdrawCollateralSkipFL(
+          exchangeData,
+          cdpData,
+          addressRegistry,
+          cdpData.borrowCollateral
+        );
       } else {
         require(false, "this code should be unreachable");
       }
@@ -810,16 +815,28 @@ contract MultiplyProxyActions {
       _increaseMP(exchangeData, cdpData, addressRegistry, premiums[0]);
     }
     if (mode == 2) {
-      _closeWithdrawCollateral(exchangeData, cdpData, addressRegistry, borrowedDaiAmount, cdpData.borrowCollateral);
+      _closeWithdrawCollateral(
+        exchangeData,
+        cdpData,
+        addressRegistry,
+        borrowedDaiAmount,
+        cdpData.borrowCollateral
+      );
     }
     if (mode == 3) {
-      _closeWithdrawDai(exchangeData, cdpData, addressRegistry, borrowedDaiAmount, cdpData.borrowCollateral);
+      _closeWithdrawDai(
+        exchangeData,
+        cdpData,
+        addressRegistry,
+        borrowedDaiAmount,
+        cdpData.borrowCollateral
+      );
     }
 
     IERC20(assets[0]).approve(
-        address(getAaveLendingPool(addressRegistry.aaveLendingPoolProvider)),
-        borrowedDaiAmount
-      );
+      address(getAaveLendingPool(addressRegistry.aaveLendingPoolProvider)),
+      borrowedDaiAmount
+    );
 
     return true;
   }

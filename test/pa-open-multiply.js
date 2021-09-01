@@ -89,7 +89,7 @@ describe('Proxy Action', async function () {
     )
 
     ADDRESS_REGISTRY.feeRecepient = '0x70997970C51812dc3A010C7d01b50e0d17dc79C8'
-    exchangeInstance.setPrice(amountToWei(marketPrice).toFixed(0))
+    exchangeInstance.setPrice(MAINNET_ADRESSES.ETH, amountToWei(marketPrice).toFixed(0))
     // the fee is set to 0.0003 and the base is 10000. Doing normal multiplication results in 2.999999999996
     exchangeInstance.setFee(new BigNumber(OUR_FEE).times(new BigNumber(FEE_BASE)).toFixed(0))
 
@@ -171,18 +171,20 @@ describe('Proxy Action', async function () {
         }
       })
 
-      let abi = [ "event FLData(uint256 borrowed, uint256 due)" ];
-      let iface = new ethers.utils.Interface(abi);
+      let abi = ['event FLData(uint256 borrowed, uint256 due)']
+      let iface = new ethers.utils.Interface(abi)
 
-      var flDataEvent = iface.parseLog(allEvents.filter(
-        (x) =>
-          x.firstTopic === '0x9c6641b21946115d10f3f55df9bec5752ec06d40dc9250b1cc6560549764600e',
-      )[0]);
-      var expected = amountToWei(vaultInfo.debt);
-      var actual = new BigNumber(flDataEvent.args.due.toString());
-      actual = amountToWei(actual.dividedBy(TEN.pow(18)));
-      expect(actual.gt(expected.multipliedBy(0.98))).to.be.equal(true);
-      expect(expected.gt(actual.multipliedBy(0.98))).to.be.equal(true);
+      var flDataEvent = iface.parseLog(
+        allEvents.filter(
+          (x) =>
+            x.firstTopic === '0x9c6641b21946115d10f3f55df9bec5752ec06d40dc9250b1cc6560549764600e',
+        )[0],
+      )
+      var expected = amountToWei(vaultInfo.debt)
+      var actual = new BigNumber(flDataEvent.args.due.toString())
+      actual = amountToWei(actual.dividedBy(TEN.pow(18)))
+      expect(actual.gt(expected.multipliedBy(0.98))).to.be.equal(true)
+      expect(expected.gt(actual.multipliedBy(0.98))).to.be.equal(true)
     })
 
     it('it should send fee to beneficiary', async function () {
@@ -196,7 +198,7 @@ describe('Proxy Action', async function () {
       })
       let feePaidEvents = allEvents.filter(
         (x) =>
-          x.firstTopic === '0x69e27f80547602d16208b028c44d20f25956e1fb7d0f51d62aa02f392426f371',
+          x.firstTopic === '0x075a2720282fdf622141dae0b048ef90a21a7e57c134c76912d19d006b3b3f6f',
       )
       expect(feePaidEvents.length).to.be.deep.equal(1)
       let feeAmount = new BigNumber(feePaidEvents[0].data, 16)
@@ -257,18 +259,20 @@ describe('Proxy Action', async function () {
           name: x.name,
         }
       })
-      let abi = [ "event FLData(uint256 borrowed, uint256 due)" ];
-      let iface = new ethers.utils.Interface(abi);
+      let abi = ['event FLData(uint256 borrowed, uint256 due)']
+      let iface = new ethers.utils.Interface(abi)
 
-      var flDataEvent = iface.parseLog(allEvents.filter(
-        (x) =>
-          x.firstTopic === '0x9c6641b21946115d10f3f55df9bec5752ec06d40dc9250b1cc6560549764600e',
-      )[0]);
-      var expected = amountToWei(vaultInfo.debt);
-      var actual = new BigNumber(flDataEvent.args.due.toString());
-      actual = amountToWei(actual.dividedBy(TEN.pow(18)));
-      expect(actual.gt(expected.multipliedBy(0.98))).to.be.equal(true);
-      expect(expected.gt(actual.multipliedBy(0.98))).to.be.equal(true);
+      var flDataEvent = iface.parseLog(
+        allEvents.filter(
+          (x) =>
+            x.firstTopic === '0x9c6641b21946115d10f3f55df9bec5752ec06d40dc9250b1cc6560549764600e',
+        )[0],
+      )
+      var expected = amountToWei(vaultInfo.debt)
+      var actual = new BigNumber(flDataEvent.args.due.toString())
+      actual = amountToWei(actual.dividedBy(TEN.pow(18)))
+      expect(actual.gt(expected.multipliedBy(0.98))).to.be.equal(true)
+      expect(expected.gt(actual.multipliedBy(0.98))).to.be.equal(true)
     })
 
     it('it should send fee to beneficiary', async function () {
@@ -282,7 +286,7 @@ describe('Proxy Action', async function () {
       })
       let feePaidEvents = allEvents.filter(
         (x) =>
-          x.firstTopic === '0x69e27f80547602d16208b028c44d20f25956e1fb7d0f51d62aa02f392426f371',
+          x.firstTopic === '0x075a2720282fdf622141dae0b048ef90a21a7e57c134c76912d19d006b3b3f6f',
       )
       expect(feePaidEvents.length).to.be.deep.equal(1)
       let feeAmount = new BigNumber(feePaidEvents[0].data, 16)

@@ -24,34 +24,6 @@ const erc20Abi = require('../abi/IERC20.json')
 
 const ethers = hre.ethers
 
-async function addFundsDummyExchange(provider, signer, address, WETH, DAI, exchange) {
-  const UNISWAP_ROUTER_V3 = '0xe592427a0aece92de3edee1f18e0157c05861564'
-  const uniswapV3 = new ethers.Contract(UNISWAP_ROUTER_V3, UniswapRouterV3Abi, provider).connect(
-    signer,
-  )
-
-  let swapParams = {
-    tokenIn: MAINNET_ADRESSES.ETH,
-    tokenOut: MAINNET_ADRESSES.MCD_DAI,
-    fee: 3000,
-    recipient: address,
-    deadline: 1751366148,
-    amountIn: amountToWei(new BigNumber(200)).toFixed(0),
-    amountOutMinimum: amountToWei(new BigNumber(400000)).toFixed(0),
-    sqrtPriceLimitX96: 0,
-  }
-  await uniswapV3.exactInputSingle(swapParams, {
-    value: amountToWei(new BigNumber(200)).toFixed(0),
-  })
-
-  await WETH.deposit({
-    value: amountToWei(new BigNumber(1000)).toFixed(0),
-  })
-
-  await WETH.transfer(exchange.address, amountToWei(new BigNumber(500)).toFixed(0))
-  await DAI.transfer(exchange.address, amountToWei(new BigNumber(400000)).toFixed(0))
-}
-
 async function checkMPAPostState(tokenAddress, mpaAddress) {
   const daiBalance = await balanceOf(MAINNET_ADRESSES.MCD_DAI, mpaAddress)
   const collateralBalance = await balanceOf(tokenAddress, mpaAddress)
@@ -109,14 +81,12 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
     // Replace real Exchange contract with DummyExchange contract for testing purposes
     exchange = deployment.exchangeInstance
 
-    await addFundsDummyExchange(provider, signer, address, WETH, DAI, exchange)
-
     exchangeDataMock = {
       to: exchange.address,
       data: 0,
     }
 
-    const OazoFee = 2 // divided by base (10000), 1 = 0.02%;
+    const OazoFee = 20 // divided by base (10000), 1 = 0.02%;
     OF = new BigNumber(OazoFee / 10000) // OAZO FEE
     FF = new BigNumber(0) // FLASHLOAN FEE
     slippage = new BigNumber(0.001) // Percent
@@ -131,7 +101,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
       marketPrice = await new BigNumber(2380)
       oraclePrice = await getOraclePrice(provider)
 
-      await exchange.setPrice(amountToWei(marketPrice).toFixed(0))
+      await exchange.setPrice(MAINNET_ADRESSES.ETH, amountToWei(marketPrice).toFixed(0))
 
       currentColl = new BigNumber(100) // STARTING COLLATERAL AMOUNT
       currentDebt = new BigNumber(0) // STARTING VAULT DEBT
@@ -212,7 +182,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
       marketPrice = await new BigNumber(2380)
       oraclePrice = await getOraclePrice(provider)
 
-      await exchange.setPrice(amountToWei(marketPrice).toFixed(0))
+      await exchange.setPrice(MAINNET_ADRESSES.ETH, amountToWei(marketPrice).toFixed(0))
 
       info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
       currentColl = new BigNumber(info.coll)
@@ -251,7 +221,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         true,
       )
 
-      params[1].skipFL = true;
+      params[1].skipFL = true
 
       let [status, result] = await dsproxyExecuteAction(
         multiplyProxyActions,
@@ -285,7 +255,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
       marketPrice = await new BigNumber(2380)
       oraclePrice = await getOraclePrice(provider)
 
-      await exchange.setPrice(amountToWei(marketPrice).toFixed(0))
+      await exchange.setPrice(MAINNET_ADRESSES.ETH, amountToWei(marketPrice).toFixed(0))
 
       info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
       currentColl = new BigNumber(info.coll)
@@ -328,7 +298,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         address,
         true,
       )
-      params[1].skipFL = true;
+      params[1].skipFL = true
 
       let [status, result] = await dsproxyExecuteAction(
         multiplyProxyActions,
@@ -362,7 +332,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
       marketPrice = await new BigNumber(2380)
       oraclePrice = await getOraclePrice(provider)
 
-      await exchange.setPrice(amountToWei(marketPrice).toFixed(0))
+      await exchange.setPrice(MAINNET_ADRESSES.ETH, amountToWei(marketPrice).toFixed(0))
 
       info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
       currentColl = new BigNumber(info.coll)
@@ -402,7 +372,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         address,
         true,
       )
-      params[1].skipFL = true;
+      params[1].skipFL = true
 
       let [status, result] = await dsproxyExecuteAction(
         multiplyProxyActions,
@@ -437,7 +407,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
       marketPrice = await new BigNumber(2380)
       oraclePrice = await getOraclePrice(provider)
 
-      await exchange.setPrice(amountToWei(marketPrice).toFixed(0))
+      await exchange.setPrice(MAINNET_ADRESSES.ETH, amountToWei(marketPrice).toFixed(0))
 
       info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
       currentColl = new BigNumber(info.coll)
@@ -476,7 +446,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         true,
       )
 
-      params[1].skipFL = true;
+      params[1].skipFL = true
       let [status, result] = await dsproxyExecuteAction(
         multiplyProxyActions,
         dsProxy,
@@ -510,7 +480,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
       marketPrice = await new BigNumber(2380)
       oraclePrice = await getOraclePrice(provider)
 
-      await exchange.setPrice(amountToWei(marketPrice).toFixed(0))
+      await exchange.setPrice(MAINNET_ADRESSES.ETH, amountToWei(marketPrice).toFixed(0))
 
       info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
       currentColl = new BigNumber(info.coll)
@@ -551,7 +521,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         address,
         true,
       )
-      params[1].skipFL = true;
+      params[1].skipFL = true
 
       let [status, result] = await dsproxyExecuteAction(
         multiplyProxyActions,
@@ -586,7 +556,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
       marketPrice = await new BigNumber(2380)
       oraclePrice = await getOraclePrice(provider)
 
-      await exchange.setPrice(amountToWei(marketPrice).toFixed(0))
+      await exchange.setPrice(MAINNET_ADRESSES.ETH, amountToWei(marketPrice).toFixed(0))
 
       info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
       currentColl = new BigNumber(info.coll)
@@ -627,7 +597,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         address,
         true,
       )
-      params[1].skipFL = true;
+      params[1].skipFL = true
 
       let [status, result] = await dsproxyExecuteAction(
         multiplyProxyActions,
@@ -662,7 +632,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
       marketPrice = await new BigNumber(2380)
       oraclePrice = await getOraclePrice(provider)
 
-      await exchange.setPrice(amountToWei(marketPrice).toFixed(0))
+      await exchange.setPrice(MAINNET_ADRESSES.ETH, amountToWei(marketPrice).toFixed(0))
 
       info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
       currentColl = new BigNumber(info.coll)
@@ -670,7 +640,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
     })
 
     it(`should close vault and return  collateral`, async function () {
-      await exchange.setPrice(amountToWei(marketPrice).toFixed(0))
+      await exchange.setPrice(MAINNET_ADRESSES.ETH, amountToWei(marketPrice).toFixed(0))
 
       const marketPriceSlippage = marketPrice.times(one.minus(slippage))
       const minToTokenAmount = currentDebt.times(one.plus(OF).plus(FF))
@@ -678,7 +648,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
 
       desiredCdpState = {
         requiredDebt: 0,
-        toBorrowCollateralAmount: 0,
+        toBorrowCollateralAmount: sellCollateralAmount,
         fromTokenAmount: sellCollateralAmount,
         toTokenAmount: minToTokenAmount,
         withdrawCollateral: currentColl
@@ -697,7 +667,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         address,
         true,
       )
-      params[1].skipFL = true;
+      params[1].skipFL = true
 
       let [status, result] = await dsproxyExecuteAction(
         multiplyProxyActions,

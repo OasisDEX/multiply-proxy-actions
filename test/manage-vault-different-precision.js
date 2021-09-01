@@ -21,7 +21,7 @@ const erc20Abi = require('../abi/IERC20.json')
 
 const ethers = hre.ethers
 
-describe.only(`Manage vault with a collateral with different than 18 precision`, async function () {
+describe(`Manage vault with a collateral with different than 18 precision`, async function () {
   let provider,
     signer,
     address,
@@ -79,14 +79,14 @@ describe.only(`Manage vault with a collateral with different than 18 precision`,
     await exchange.setFee(OazoFee)
 
     oraclePrice = await getOraclePrice(provider, MAINNET_ADRESSES.PIP_WBTC)
-    console.log("OracleFee",oraclePrice.toFixed(0));
+    console.log('OracleFee', oraclePrice.toFixed(0))
     marketPrice = oraclePrice
     initialCollRatio = new BigNumber(1.8)
     let collAmount = new BigNumber(0.5)
     let debtAmount = new BigNumber(0)
 
-    await exchange.setPrecision(8)
-    await exchange.setPrice(amountToWei(marketPrice).toFixed(0))
+    await exchange.setPrecision(MAINNET_ADRESSES.WBTC, 8)
+    await exchange.setPrice(MAINNET_ADRESSES.ETH, amountToWei(marketPrice).toFixed(0))
 
     let [requiredDebt, toBorrowCollateralAmount] = calculateParamsIncreaseMP(
       oraclePrice,
@@ -123,11 +123,16 @@ describe.only(`Manage vault with a collateral with different than 18 precision`,
 
     await WBTC.approve(userProxyAddress, amountToWei(new BigNumber(10), 8).toFixed(0))
 
-
-    let [status, msg] = await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'openMultiplyVault', params)
-    if (status === false){
-      console.log(params);
-      throw new Error("tx failed");
+    let [status, msg] = await dsproxyExecuteAction(
+      multiplyProxyActions,
+      dsProxy,
+      address,
+      'openMultiplyVault',
+      params,
+    )
+    if (status === false) {
+      console.log(params)
+      throw new Error('tx failed')
     }
     vault = await getLastCDP(provider, signer, userProxyAddress)
 
@@ -185,9 +190,15 @@ describe.only(`Manage vault with a collateral with different than 18 precision`,
       8,
     )
 
-    let [status, ] = await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'increaseMultiple', params)
-    if (status === false){
-      throw new Error("tx failed");
+    let [status] = await dsproxyExecuteAction(
+      multiplyProxyActions,
+      dsProxy,
+      address,
+      'increaseMultiple',
+      params,
+    )
+    if (status === false) {
+      throw new Error('tx failed')
     }
     let currentVaultState = await getVaultInfo(mcdView, vault.id, vault.ilk, 8)
     const currentCollRatio = new BigNumber(currentVaultState.coll)
@@ -243,16 +254,17 @@ describe.only(`Manage vault with a collateral with different than 18 precision`,
       .div(new BigNumber(currentVaultState.debt))
     expect(currentCollRatio.toFixed(3)).to.be.equal(desiredCollRatio.toFixed(3))
   })
-  /*
-  it('should close vault correctly to DAI',async function(){
+
+  it.skip('should close vault correctly to DAI', async function () {
+    //tests where done sequential therefore two close operations are impossible
     const desiredCollRatio = initialCollRatio.plus(new BigNumber(0.2))
     const info = await getVaultInfo(mcdView, vault.id, vault.ilk)
-    console.log("getVaultInfo before",info);
+    console.log('getVaultInfo before', info)
     const currentColl = new BigNumber(info.coll)
     const currentDebt = new BigNumber(info.debt)
 
     let desiredCdpState = {
-      requiredDebt:currentDebt,
+      requiredDebt: currentDebt,
       toBorrowCollateralAmount: currentColl,
       fromTokenAmount: currentColl,
       toTokenAmount: currentDebt,
@@ -273,34 +285,42 @@ describe.only(`Manage vault with a collateral with different than 18 precision`,
       true,
     )
 
-    let [status, ] = await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'closeVaultExitDai', params)
-    if (status === false){
-      throw new Error("tx failed");
+    let [status] = await dsproxyExecuteAction(
+      multiplyProxyActions,
+      dsProxy,
+      address,
+      'closeVaultExitDai',
+      params,
+    )
+    if (status === false) {
+      throw new Error('tx failed')
     }
 
     let currentVaultState = await getVaultInfo(mcdView, vault.id, vault.ilk, 8)
 
-    console.log("getVaultInfo after",currentVaultState);
+    console.log('getVaultInfo after', currentVaultState)
   })
-  */
-  it('should close vault correctly to collateral',async function(){
+
+  it('should close vault correctly to collateral', async function () {
     const desiredCollRatio = initialCollRatio.plus(new BigNumber(0.2))
     const info = await getVaultInfo(mcdView, vault.id, vault.ilk)
-    console.log("getVaultInfo before",info);
+    console.log('getVaultInfo before', info)
     const currentColl = new BigNumber(info.coll)
     const currentDebt = new BigNumber(info.debt)
-    let one = new BigNumber(1);
+    let one = new BigNumber(1)
 
     const marketPriceSlippage = marketPrice.times(one.minus(slippage))
     const minToTokenAmount = currentDebt.times(one.plus(OF).plus(FF))
     const sellCollateralAmount = minToTokenAmount.div(marketPriceSlippage)
 
+    console.log(minToTokenAmount.toString(), sellCollateralAmount.toString())
+
     desiredCdpState = {
       requiredDebt: 0,
-      toBorrowCollateralAmount: 0,
       toBorrowCollateralAmount: sellCollateralAmount,
+      fromTokenAmount: sellCollateralAmount,
       providedCollateral: 0,
-      minToTokenAmount: minToTokenAmount,
+      toTokenAmount: minToTokenAmount,
     }
 
     let params = prepareMultiplyParameters2(
@@ -318,13 +338,19 @@ describe.only(`Manage vault with a collateral with different than 18 precision`,
       true,
     )
 
-    let [status, ] = await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'closeVaultExitCollateral', params)
-    if (status === false){
-      throw new Error("tx failed");
+    let [status] = await dsproxyExecuteAction(
+      multiplyProxyActions,
+      dsProxy,
+      address,
+      'closeVaultExitCollateral',
+      params,
+    )
+    if (status === false) {
+      throw new Error('tx failed')
     }
 
     let currentVaultState = await getVaultInfo(mcdView, vault.id, vault.ilk, 8)
 
-    console.log("getVaultInfo after",currentVaultState);
+    console.log('getVaultInfo after', currentVaultState)
   })
 })

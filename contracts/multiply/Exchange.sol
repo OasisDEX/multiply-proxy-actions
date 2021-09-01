@@ -134,7 +134,7 @@ contract Exchange {
     uint256 receiveAtLeast,
     address callee,
     bytes calldata withData
-  ) public  {
+  ) public {
     _transferIn(msg.sender, asset, amount);
 
     uint256 balance = _swap(asset, DAI_ADDRESS, amount, receiveAtLeast, callee, withData);

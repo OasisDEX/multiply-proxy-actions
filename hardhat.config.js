@@ -25,6 +25,16 @@ console.log(`Forking from block number: ${blockNumber}`)
 /**
  * @type import('hardhat/config').HardhatUserConfig
  */
+
+let mining = {
+  auto: true,
+}
+
+if (process.env.AUTO_MINING === '0') {
+  mining.auto = false
+  mining.interval = [1000, 2000]
+}
+
 module.exports = {
   networks: {
     local: {
@@ -37,10 +47,7 @@ module.exports = {
         blockNumber: parseInt(blockNumber),
       },
       chainId: 2137,
-      mining: {
-        auto: false,
-        interval:[1000,2000]
-      },
+      mining,
       hardfork: 'london',
       gas: 'auto',
       initialBaseFeePerGas: '1000000000',
