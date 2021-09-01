@@ -21,6 +21,7 @@ let CONTRACTS = {}
 const { balanceOf, TEN, one, zero } = require('../utils')
 const { getVaultInfo } = require('../utils-mcd.js')
 const { curry } = require('ramda')
+const { getMarketPrice } = require('./http_apis')
 
 const FEE = 2
 const FEE_BASE = 10000
@@ -287,7 +288,7 @@ const loadDummyExchangeFixtures = async function (provider, signer, dummyExchang
     tokens
       .filter((token) => !!token.pip)
       .map(async (token) => {
-        const price = await getOraclePrice(provider, token.pip)
+        const price = await getMarketPrice(token.address, MAINNET_ADRESSES.MCD_DAI, token.precision)
         const priceInWei = amountToWei(price).toFixed(0)
         if (debug) {
           console.log(`${token.name} Price: ${price.toString()} and Price(wei): ${priceInWei}`)
