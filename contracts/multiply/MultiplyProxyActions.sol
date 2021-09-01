@@ -649,8 +649,7 @@ contract MultiplyProxyActions {
     uint256 daiLeft = IERC20(DAI).balanceOf(address(this));
 
     require(cdpData.requiredDebt <= daiLeft, "cannot repay all debt");
-    cdpData.withdrawCollateral = convertTo18(cdpData.gemJoin, cdpData.withdrawCollateral);
-
+    
     wipeAndFreeGem(
       addressRegistry.manager,
       cdpData.gemJoin,
