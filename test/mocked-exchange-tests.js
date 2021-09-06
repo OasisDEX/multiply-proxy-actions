@@ -227,6 +227,10 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
 
       await exchange.setPrice(MAINNET_ADRESSES.ETH, amountToWei(marketPrice).toFixed(0))
 
+      console.log("transfering DAI");
+      await DAI.transfer(multiplyProxyActions.address,amountToWei(1).toFixed(0));
+      console.log("DAI transfered");
+      
       info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
       currentColl = new BigNumber(info.coll)
       currentDebt = new BigNumber(info.debt)
@@ -448,6 +452,10 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
       oraclePrice = await getOraclePrice(provider)
 
       await exchange.setPrice(MAINNET_ADRESSES.ETH, amountToWei(marketPrice).toFixed(0))
+
+      console.log("transfering DAI");
+      await DAI.transfer(multiplyProxyActions.address,amountToWei(1).toFixed(0));
+      console.log("DAI transfered");
 
       info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
       currentColl = new BigNumber(info.coll)
