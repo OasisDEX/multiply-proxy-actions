@@ -9,7 +9,8 @@ const getMarketPrice = async function (from, to, fromPrecision = 18, toPrecision
   const endpoint = `https://api.1inch.exchange/v3.0/1/quote?fromTokenAddress=${from}&toTokenAddress=${to}&amount=${ethers.utils.parseUnits(
     '0.1',
     fromPrecision,
-  )}`
+  )}&protocols=UNISWAP_V3`
+
   const response = await fetch(endpoint)
   const result = await response.json()
 
