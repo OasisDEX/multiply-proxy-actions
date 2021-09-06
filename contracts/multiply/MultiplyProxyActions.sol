@@ -799,7 +799,7 @@ contract MultiplyProxyActions {
     uint256 ink = getInk(addressRegistry.manager, cdpData);
 
     require(
-      cdpData.requiredDebt.add(cdpData.depositDai) >= IERC20(DAI).balanceOf(address(this)),
+      cdpData.requiredDebt.add(cdpData.depositDai) <= IERC20(DAI).balanceOf(address(this)),
       "requested and received amounts mismatch"
     );
 
