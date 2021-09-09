@@ -38,8 +38,7 @@ module.exports = {
       },
       chainId: 2137,
       mining: {
-        auto: false,
-        interval:[1000,2000]
+        auto: true,
       },
       hardfork: 'london',
       gas: 'auto',
