@@ -1,4 +1,7 @@
 
+
+## Documentation
+[Multiply Smart Contracts Documentation](https://docs.google.com/document/d/1hCYIiWDc_Zm4oJasRfSZqiTk2xXpt1k7OXa52Lqd45I/edit)
 ## To install
 Run `npm install` or `yarn` in the repo folder.
 You will also need to create a .env file and fill it in with appropriate api keys.
