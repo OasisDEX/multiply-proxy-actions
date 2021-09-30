@@ -30,6 +30,9 @@ import "../interfaces/mcd/IDaiJoin.sol";
 import "../interfaces/exchange/IExchange.sol";
 import "./ExchangeData.sol";
 
+import "./../flashMint/flash.sol";
+import "hardhat/console.sol";
+
 pragma solidity >=0.7.6;
 pragma abicoder v2;
 
@@ -52,7 +55,7 @@ struct AddressRegistry {
   address jug;
   address manager;
   address multiplyProxyActions;
-  address aaveLendingPoolProvider;
+  address lender;
   address exchange;
 }
 
@@ -91,9 +94,6 @@ contract MultiplyProxyActions {
   function takeAFlashLoan(
     AddressRegistry memory addressRegistry,
     CdpData memory cdpData,
-    address[] memory assets,
-    uint256[] memory amounts,
-    uint256[] memory modes,
     bytes memory paramsData
   ) internal {
     IManager(addressRegistry.manager).cdpAllow(
@@ -102,15 +102,11 @@ contract MultiplyProxyActions {
       1
     );
 
-    ILendingPoolV2 lendingPool = getAaveLendingPool(addressRegistry.aaveLendingPoolProvider);
-    lendingPool.flashLoan(
-      addressRegistry.multiplyProxyActions,
-      assets,
-      amounts,
-      modes,
-      address(this),
-      paramsData,
-      AAVE_REFERRAL
+    DssFlash(addressRegistry.lender).flashLoan(
+      IERC3156FlashBorrower(addressRegistry.multiplyProxyActions),
+      DAI,
+      cdpData.requiredDebt,
+      paramsData
     );
 
     IManager(addressRegistry.manager).cdpAllow(
@@ -260,13 +256,6 @@ contract MultiplyProxyActions {
   ) internal {
     cdpData.ilk = IJoin(cdpData.gemJoin).ilk();
 
-    address[] memory assets = new address[](1);
-    assets[0] = DAI;
-    uint256[] memory amounts = new uint256[](1);
-    amounts[0] = cdpData.requiredDebt;
-    uint256[] memory modes = new uint256[](1);
-    modes[0] = 0;
-
     bytes memory paramsData = abi.encode(1, exchangeData, cdpData, addressRegistry);
 
     if (cdpData.skipFL) {
@@ -283,7 +272,7 @@ contract MultiplyProxyActions {
       }
       _increaseMP(exchangeData, cdpData, addressRegistry, 0);
     } else {
-      takeAFlashLoan(addressRegistry, cdpData, assets, amounts, modes, paramsData);
+      takeAFlashLoan(addressRegistry, cdpData, paramsData);
     }
   }
 
@@ -302,21 +291,12 @@ contract MultiplyProxyActions {
   ) internal {
     cdpData.ilk = IJoin(cdpData.gemJoin).ilk();
 
-    address[] memory assets = new address[](1);
-    assets[0] = DAI;
-
-    uint256[] memory amounts = new uint256[](1);
-    amounts[0] = cdpData.requiredDebt;
-
-    uint256[] memory modes = new uint256[](1);
-    modes[0] = 0;
-
     bytes memory paramsData = abi.encode(0, exchangeData, cdpData, addressRegistry);
 
     if (cdpData.skipFL) {
       _decreaseMP(exchangeData, cdpData, addressRegistry, 0);
     } else {
-      takeAFlashLoan(addressRegistry, cdpData, assets, amounts, modes, paramsData);
+      takeAFlashLoan(addressRegistry, cdpData, paramsData);
     }
   }
 
@@ -360,19 +340,10 @@ contract MultiplyProxyActions {
     uint256 wadD = _getWipeAllWad(vat, urn, urn, cdpData.ilk);
     cdpData.requiredDebt = wadD;
 
-    address[] memory assets = new address[](1);
-    assets[0] = DAI;
-
-    uint256[] memory amounts = new uint256[](1);
-    amounts[0] = wadD;
-
-    uint256[] memory modes = new uint256[](1);
-    modes[0] = 0;
-
     bytes memory paramsData = abi.encode(mode, exchangeData, cdpData, addressRegistry);
 
     if (cdpData.skipFL == false) {
-      takeAFlashLoan(addressRegistry, cdpData, assets, amounts, modes, paramsData);
+      takeAFlashLoan(addressRegistry, cdpData, paramsData);
     } else {
       if (mode == 2) {
         _closeWithdrawCollateralSkipFL(
@@ -785,35 +756,36 @@ contract MultiplyProxyActions {
     );
   }
 
-  function executeOperation(
-    address[] calldata assets,
-    uint256[] calldata amounts,
-    uint256[] calldata premiums,
+  function onFlashLoan(
     address initiator,
+    address token,
+    uint256 amount,
+    uint256 fee,
     bytes calldata params
-  ) external returns (bool) {
+  ) public returns (bytes32) {
     (
       uint8 mode,
       ExchangeData memory exchangeData,
       CdpData memory cdpData,
       AddressRegistry memory addressRegistry
     ) = abi.decode(params, (uint8, ExchangeData, CdpData, AddressRegistry));
-    uint256 borrowedDaiAmount = amounts[0].add(premiums[0]);
 
+    require(msg.sender == address(addressRegistry.lender), "mpa-untrusted-lender");
+    // TODO: Check how to get the initiated (it should be the proxy address ) require(initiator == proxyAddress, "mpa-untrusted-borrower");
+
+    uint256 borrowedDaiAmount = amount.add(fee);
     emit FLData(IERC20(DAI).balanceOf(address(this)).sub(cdpData.depositDai), borrowedDaiAmount);
-
-    uint256 ink = getInk(addressRegistry.manager, cdpData);
 
     require(
       cdpData.requiredDebt.add(cdpData.depositDai) >= IERC20(DAI).balanceOf(address(this)),
-      "requested and received amounts mismatch"
+      "mpa-receive-requested-amount-mismatch"
     );
 
     if (mode == 0) {
-      _decreaseMP(exchangeData, cdpData, addressRegistry, premiums[0]);
+      _decreaseMP(exchangeData, cdpData, addressRegistry, fee);
     }
     if (mode == 1) {
-      _increaseMP(exchangeData, cdpData, addressRegistry, premiums[0]);
+      _increaseMP(exchangeData, cdpData, addressRegistry, fee);
     }
     if (mode == 2) {
       _closeWithdrawCollateral(
@@ -834,12 +806,9 @@ contract MultiplyProxyActions {
       );
     }
 
-    IERC20(assets[0]).approve(
-      address(getAaveLendingPool(addressRegistry.aaveLendingPoolProvider)),
-      borrowedDaiAmount
-    );
+    IERC20(token).approve(addressRegistry.lender, borrowedDaiAmount);
 
-    return true;
+    return keccak256("ERC3156FlashBorrower.onFlashLoan");
   }
 
   event FLData(uint256 borrowed, uint256 due);
