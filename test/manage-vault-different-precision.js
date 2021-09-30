@@ -21,7 +21,9 @@ const erc20Abi = require('../abi/IERC20.json')
 
 const ethers = hre.ethers
 
-describe.only(`Manage vault with a collateral with different than 18 precision`, async function () {
+const LENDER_FEE = new BigNumber(0.0000)
+
+describe(`Manage vault with a collateral with different than 18 precision`, async function () {
   let provider,
     signer,
     address,
@@ -73,7 +75,7 @@ describe.only(`Manage vault with a collateral with different than 18 precision`,
 
     const OazoFee = 2 // divided by base (10000), 1 = 0.01%;
     OF = new BigNumber(OazoFee / 10000) // OAZO FEE
-    FF = new BigNumber(0.0009) // FLASHLOAN FEE
+    FF = LENDER_FEE // FLASHLOAN FEE
     slippage = new BigNumber(0.0001) // Percent
 
     await exchange.setFee(OazoFee)
@@ -86,7 +88,7 @@ describe.only(`Manage vault with a collateral with different than 18 precision`,
     let debtAmount = new BigNumber(0)
 
     await exchange.setPrecision(MAINNET_ADRESSES.WBTC, 8)
-    await exchange.setPrice(MAINNET_ADRESSES.ETH, amountToWei(marketPrice).toFixed(0))
+    await exchange.setPrice(MAINNET_ADRESSES.WBTC, amountToWei(marketPrice).toFixed(0))
 
     let [requiredDebt, toBorrowCollateralAmount] = calculateParamsIncreaseMP(
       oraclePrice,
@@ -284,10 +286,7 @@ describe.only(`Manage vault with a collateral with different than 18 precision`,
   })
   */
   it('should close vault correctly to collateral',async function(){
-    const desiredCollRatio = initialCollRatio.plus(new BigNumber(0.2))
     const info = await getVaultInfo(mcdView, vault.id, vault.ilk)
-    console.log("getVaultInfo before",info);
-    const currentColl = new BigNumber(info.coll)
     const currentDebt = new BigNumber(info.debt)
     let one = new BigNumber(1);
 
@@ -297,8 +296,9 @@ describe.only(`Manage vault with a collateral with different than 18 precision`,
 
     desiredCdpState = {
       requiredDebt: 0,
-      toBorrowCollateralAmount: 0,
       toBorrowCollateralAmount: sellCollateralAmount,
+      fromTokenAmount: sellCollateralAmount,
+      toTokenAmount: minToTokenAmount,
       providedCollateral: 0,
       minToTokenAmount: minToTokenAmount,
     }
@@ -319,6 +319,7 @@ describe.only(`Manage vault with a collateral with different than 18 precision`,
     )
 
     let [status, ] = await dsproxyExecuteAction(multiplyProxyActions, dsProxy, address, 'closeVaultExitCollateral', params)
+    
     if (status === false){
       throw new Error("tx failed");
     }

@@ -12,7 +12,7 @@ const addressRegistryFactory = function (
     jug: '0x19c0976f590D67707E62397C87829d896Dc0f1F1',
     manager: '0x5ef30b9986345249bc32d8928B7ee64DE9435E39',
     multiplyProxyActions: multiplyProxyActionsInstanceAddress,
-    aaveLendingPoolProvider: '0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5',
+    lender: '0x1EB4CF3A948E7D72A198fe073cCb8C7a948cD853',
     feeRecepient: '0x79d7176aE8F93A04bC73b9BC710d4b44f9e362Ce',
     exchange: exchangeInstanceAddress,
   }
