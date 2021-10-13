@@ -35,7 +35,7 @@ describe('Proxy Action', async function () {
   let initialSetupSnapshotId
   let ADDRESS_REGISTRY
   const baseCollateralAmountInETH = new BigNumber(10)
-  const AAVE_FEE = 0.0009
+  const LENDER_FEE = 0.0000
   const BASE_SLIPPAGE = new BigNumber(0.08)
   const OUR_FEE = 0.0003 // todo: fetch it from exchange once implemented
   let oraclePrice
@@ -71,7 +71,7 @@ describe('Proxy Action', async function () {
       {
         forking: {
           jsonRpcUrl: process.env.ALCHEMY_NODE,
-          blockNumber: 12763570,
+          blockNumber: 13274574,
         },
       },
     ])
@@ -102,7 +102,7 @@ describe('Proxy Action', async function () {
         oraclePrice,
         marketPrice,
         OUR_FEE,
-        AAVE_FEE,
+        LENDER_FEE,
         baseCollateralAmountInETH,
         new BigNumber(data.currentDebt),
         new BigNumber(data.desiredCollRatio),

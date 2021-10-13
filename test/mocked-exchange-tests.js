@@ -23,6 +23,7 @@ const wethAbi = require('../abi/IWETH.json')
 const erc20Abi = require('../abi/IERC20.json')
 
 const ethers = hre.ethers
+const LENDER_FEE = new BigNumber(0.0)
 
 async function checkMPAPostState(tokenAddress, mpaAddress) {
   const daiBalance = await balanceOf(MAINNET_ADRESSES.MCD_DAI, mpaAddress)
@@ -66,7 +67,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
       {
         forking: {
           jsonRpcUrl: process.env.ALCHEMY_NODE,
-          blockNumber: 12763570,
+          blockNumber: 13274574,
         },
       },
     ])
@@ -86,7 +87,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
 
     const OazoFee = 2 // divided by base (10000), 1 = 0.01%;
     OF = new BigNumber(OazoFee / 10000) // OAZO FEE
-    FF = new BigNumber(0.0009) // FLASHLOAN FEE
+    FF = LENDER_FEE // FLASHLOAN FEE
     slippage = new BigNumber(0.0001) // Percent
 
     //await exchange.setSlippage(0);
@@ -721,7 +722,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
       currentDebt = new BigNumber(info.debt)
     })
 
-    it(`should close vault and return  collateral`, async function () {
+    it(`should close vault and leave the remaining collateral`, async function () {
       await exchange.setPrice(MAINNET_ADRESSES.ETH, amountToWei(marketPrice).toFixed(0))
 
       const marketPriceSlippage = marketPrice.times(one.minus(slippage))
@@ -745,7 +746,9 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         CDP_ID,
       )
 
-      info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
+      info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)      
+      const expectedVaultCollateral = new BigNumber(info.coll).minus(parseFloat(sellCollateralAmount.toString()))
+     
       await dsproxyExecuteAction(
         multiplyProxyActions,
         dsProxy,
@@ -763,7 +766,9 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
       expect(daiBalance.toFixed(0), 'dai left in MPA').to.be.equal('0')
       expect(collateralBalance.toFixed(0), 'collateral left in MPA').to.be.equal('0')
       expect(info.debt.toString(), 'debt left in Vault').to.be.equal('0')
-      expect(info.coll.toString(), 'collateral left in Vault').to.be.equal('0')
+      expect(info.coll.toString(), 'collateral left in Vault').to.be.equal(
+        expectedVaultCollateral.toString(),
+      )
     })
   })
 })
