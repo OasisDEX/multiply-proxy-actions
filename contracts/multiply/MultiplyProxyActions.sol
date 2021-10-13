@@ -29,7 +29,6 @@ import "../interfaces/exchange/IExchange.sol";
 import "./ExchangeData.sol";
 
 import "./../flashMint/flash.sol";
-import "hardhat/console.sol";
 
 pragma solidity >=0.7.6;
 pragma abicoder v2;
