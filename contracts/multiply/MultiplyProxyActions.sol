@@ -762,7 +762,6 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     ) = abi.decode(params, (uint8, ExchangeData, CdpData, AddressRegistry));
 
     require(msg.sender == address(addressRegistry.lender), "mpa-untrusted-lender");
-    // TODO: Check how to get the initiated (it should be the proxy address ) require(initiator == proxyAddress, "mpa-untrusted-borrower");
 
     uint256 borrowedDaiAmount = amount.add(fee);
     emit FLData(IERC20(DAI).balanceOf(address(this)).sub(cdpData.depositDai), borrowedDaiAmount);
