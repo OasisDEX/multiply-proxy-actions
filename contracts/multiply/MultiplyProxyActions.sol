@@ -28,7 +28,8 @@ import "../interfaces/mcd/IDaiJoin.sol";
 import "../interfaces/exchange/IExchange.sol";
 import "./ExchangeData.sol";
 
-import "./../flashMint/flash.sol";
+import "./../flashMint/interface/IERC3156FlashBorrower.sol";
+import "./../flashMint/interface/IERC3156FlashLender.sol";
 
 pragma solidity >=0.7.6;
 pragma abicoder v2;
@@ -60,7 +61,7 @@ struct AddressRegistry {
 // WARNING: These functions meant to be used as a a library for a DSProxy. Some are unsafe if you call them directly.
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-contract MultiplyProxyActions {
+contract MultiplyProxyActions is IERC3156FlashBorrower {
   using SafeMath for uint256;
 
   uint256 constant RAY = 10**27;
@@ -92,7 +93,7 @@ contract MultiplyProxyActions {
       1
     );
 
-    DssFlash(addressRegistry.lender).flashLoan(
+    IERC3156FlashLender(addressRegistry.lender).flashLoan(
       IERC3156FlashBorrower(addressRegistry.multiplyProxyActions),
       DAI,
       cdpData.requiredDebt,
@@ -752,7 +753,7 @@ contract MultiplyProxyActions {
     uint256 amount,
     uint256 fee,
     bytes calldata params
-  ) public returns (bytes32) {
+  ) public override returns (bytes32) {
     (
       uint8 mode,
       ExchangeData memory exchangeData,
