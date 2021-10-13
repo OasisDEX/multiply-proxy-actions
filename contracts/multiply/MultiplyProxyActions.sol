@@ -85,12 +85,6 @@ contract MultiplyProxyActions {
     data.methodName = "";
   }
 
-  function getAaveLendingPool(address lendingPoolProvider) private view returns (ILendingPoolV2) {
-    ILendingPoolAddressesProviderV2 provider = ILendingPoolAddressesProviderV2(lendingPoolProvider);
-    ILendingPoolV2 lendingPool = ILendingPoolV2(provider.getLendingPool());
-    return lendingPool;
-  }
-
   function takeAFlashLoan(
     AddressRegistry memory addressRegistry,
     CdpData memory cdpData,
