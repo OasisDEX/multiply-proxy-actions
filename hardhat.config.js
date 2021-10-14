@@ -49,7 +49,7 @@ module.exports = {
     mainnet: {
       url: process.env.ALCHEMY_NODE,
       accounts: [process.env.PRIV_KEY_MAINNET],
-      gasPrice: 40000000000,
+      gasPrice: 60000000000,
     },
     rinkeby: {
       url: process.env.ALCHEMY_NODE_RINKEBY,

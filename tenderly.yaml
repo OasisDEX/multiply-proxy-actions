@@ -1,4 +1,4 @@
-account_id: 9ca71014-70dd-44bd-943b-16cb06a6569b
+account_id: 
 exports:
   hardhat:
     chain_config:
@@ -13,6 +13,6 @@ exports:
       petersburg_block: 0
       berlin_block: 0
     forked_network: mainnet
-    project_slug: jinx/project
+    project_slug: fenris85tend/project
     protocol: ""
     rpc_address: 127.0.0.1:8545
