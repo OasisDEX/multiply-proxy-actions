@@ -1,0 +1,46 @@
+on:
+  push:
+    branches:
+      - develop
+
+name: Docker Build and Push
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    env:
+      LATEST_TAG: latest
+      ENVIRONMENT_TAG: develop
+      REPO_NAME: ${{ github.event.repository.name }}
+      DOCKERHUB_ORG: "oasisdexorg"
+
+    steps:
+    -
+      name: Checkout
+      uses: actions/checkout@v2
+    -
+      name: Login into Dockerhub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+    -
+      name: Extract commit hash
+      id: vars
+      shell: bash
+      run: |
+        echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
+    -
+      name: Build, tag, and push image to Amazon ECR
+      id: build-n-push-image
+      env:
+        SHA_TAG: ${{ steps.vars.outputs.sha_short }}
+      run: |
+        # Build a docker image and
+        # push it to Dockerhub
+        docker build -t $DOCKERHUB_ORG/$REPO_NAME:$SHA_TAG \
+                     -t $DOCKERHUB_ORG/$REPO_NAME:$LATEST_TAG \
+                     -t $DOCKERHUB_ORG/$REPO_NAME:$ENVIRONMENT_TAG \
+                     .
+        docker push $DOCKERHUB_ORG/$REPO_NAME --all-tags

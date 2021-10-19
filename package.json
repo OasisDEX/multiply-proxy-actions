@@ -8,11 +8,14 @@
     "deploy": "cmd/run_deploy",
     "test": "cmd/run_test",
     "verify": "cmd/run_verify",
-    "lint": "./node_modules/.bin/solhint -f table contracts/**/*.sol",
-    "pretty": "./node_modules/.bin/prettier --write contracts/**/*.sol",
+    "lint": "./node_modules/.bin/solhint -f table contracts/multiply/**/*.sol",
+    "pretty": "./node_modules/.bin/prettier --write contracts/multiply/**/*.sol test/**/*.js scripts/**/*.js",
     "flatten-all": "sol-merger@3.1.0 \"./contracts/*.sol\" ./build",
     "flatten": "npx sol-merger@3.1.0"
   },
+  "pre-commit": [
+    "pretty"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/OasisDEX/multiply-proxy-actions"
@@ -31,14 +34,15 @@
     "dotenv": "^8.2.0",
     "ethereum-waffle": "^3.1.1",
     "ethers": "^5.0.19",
-    "hardhat": "^2.3.3",
+    "hardhat": "^2.5.0",
     "hardhat-abi-exporter": "^2.2.1",
     "hardhat-contract-sizer": "^2.0.1",
     "hardhat-gas-reporter": "^1.0.1",
     "hardhat-log-remover": "^2.0.0",
     "husky": "^4.3.0",
+    "pre-commit": "^1.2.2",
     "prettier": "^2.1.2",
-    "prettier-plugin-solidity": "^1.0.0-alpha.59",
+    "prettier-plugin-solidity": "^1.0.0-beta.17",
     "solhint": "^3.2.2",
     "solhint-plugin-prettier": "0.0.5",
     "solidity-coverage": "^0.7.13",
@@ -51,6 +55,7 @@
     "@ethersproject/solidity": "^5.4.0",
     "bignumber.js": "^9.0.1",
     "chalk": "^4.1.1",
+    "lodash": "^4.17.21",
     "ramda": "^0.27.1"
   }
 }
