@@ -654,8 +654,7 @@ contract MultiplyProxyActions {
     uint256 daiLeft = IERC20(DAI).balanceOf(address(this));
 
     require(cdpData.requiredDebt <= daiLeft, "cannot repay all debt");
-    cdpData.withdrawCollateral = convertTo18(cdpData.gemJoin, cdpData.withdrawCollateral);
-
+    
     wipeAndFreeGem(
       addressRegistry.manager,
       cdpData.gemJoin,
@@ -805,7 +804,7 @@ contract MultiplyProxyActions {
     uint256 ink = getInk(addressRegistry.manager, cdpData);
 
     require(
-      cdpData.requiredDebt.add(cdpData.depositDai) >= IERC20(DAI).balanceOf(address(this)),
+      cdpData.requiredDebt.add(cdpData.depositDai) <= IERC20(DAI).balanceOf(address(this)),
       "requested and received amounts mismatch"
     );
 
