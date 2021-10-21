@@ -365,7 +365,7 @@ async function testCaseDefinition(testCase, testParam) {
           await deployedContracts.exchangeInstance.feeBeneficiaryAddress()
         
         if(testParam.skipFL == true){
-          ADDRESS_REGISTRY.aaveLendingPoolProvider = ADDRESS_REGISTRY.feeRecepient;//some correct address that do not have FL functionality
+          ADDRESS_REGISTRY.lender = ADDRESS_REGISTRY.feeRecepient;//some correct address that do not have FL functionality
         }
 
         oraclePrice = await getOraclePrice(provider)
