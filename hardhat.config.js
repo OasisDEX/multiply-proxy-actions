@@ -10,6 +10,8 @@ require('hardhat-contract-sizer')
 require('solidity-coverage')
 require('hardhat-abi-exporter')
 
+const mainnet = require("./addresses/mainnet.json");
+
 const blockNumber = process.env.BLOCK_NUMBER
 
 if (!blockNumber) {
@@ -21,7 +23,68 @@ if (!/^\d+$/.test(blockNumber)) {
 }
 
 console.log(`Forking from block number: ${blockNumber}`)
+task("updatevowner", "Impersonates account and changes owner")
+  .addParam("vaultid", "Id of vault that should change user")
+  .addParam("oldowner", "user to be impersonated")
+  .addParam("dsproxy", "dsproxy of a user that is supposed to be impersonated")
+  .setAction(async (taskArgs) => {
+    
+    const proxyAbi = ['function execute(address _target, bytes _data) payable returns (bytes32 response)']
+    const dssAbi = ['function giveToProxy(address proxyRegistry, address manager, uint cdp, address dst)']
+    const dssProxyAddress = mainnet.PROXY_ACTIONS;
+    const proxyRegistry = mainnet.PROXY_REGISTRY;
+    const manager = mainnet.CDP_MANAGER;
+    const vaultId = parseInt(await taskArgs.vaultid);
+    const oldowner = await taskArgs.oldowner;
+    const dsproxy = await taskArgs.dsproxy;
 
+    const oldSigner = await ethers.getSigner(0);
+    provider = ethers.getDefaultProvider();
+
+    const proxyInterface = new ethers.utils.Interface(proxyAbi);
+    const dssProxyInterface = new ethers.utils.Interface(dssAbi);
+
+    const dssData = dssProxyInterface.encodeFunctionData("giveToProxy",[
+      proxyRegistry,
+      manager,
+      vaultId,
+      oldSigner.address
+    ])
+
+    console.log("dssData", dssData);
+
+    const proxyData = proxyInterface.encodeFunctionData("execute",[
+      dssProxyAddress,
+      dssData
+    ])
+
+    console.log("proxyData", proxyData);
+
+    await oldSigner.sendTransaction({
+      from: oldSigner.address,
+      to: oldowner,
+      value: ethers.utils.parseEther("1"),
+      gasLimit: ethers.utils.hexlify(1000000)
+    })
+
+    console.log(`impersonate=${oldowner}`);
+
+    await hre.network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [oldowner],
+    });
+
+    const newSigner = await ethers.getSigner(oldowner);
+    console.log(`newSigner=${newSigner.address} oldSigner=${oldSigner.address}`);
+    await newSigner.sendTransaction({
+      from: oldowner,
+      to: dsproxy,
+      data: proxyData,
+      gasLimit: ethers.utils.hexlify(10000000)
+    })
+
+    console.log("Impersonation done");
+  });
 /**
  * @type import('hardhat/config').HardhatUserConfig
  */
