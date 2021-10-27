@@ -261,6 +261,12 @@ const loadDummyExchangeFixtures = async function (provider, signer, dummyExchang
       pip: MAINNET_ADRESSES.PIP_WBTC,
       precision: 8,
     },
+    {
+      name: 'USDC',
+      address: MAINNET_ADRESSES.USDC,
+      pip: MAINNET_ADRESSES.PIP_USDC,
+      precision: 6,
+    },
   ]
 
   // Exchanging ETH for other @tokens
@@ -315,6 +321,7 @@ const deploySystem = async function (provider, signer, isExchangeDummy = false, 
       wethTokenInstance: undefined,
     },
     daiTokenInstance: undefined,
+    guni: undefined,
   }
 
   const userProxyAddress = await getOrCreateProxy(provider, signer)
@@ -322,6 +329,12 @@ const deploySystem = async function (provider, signer, isExchangeDummy = false, 
 
   deployedContracts.userProxyAddress = userProxyAddress
   deployedContracts.dsProxyInstance = dsProxy
+
+   // GUNI DEPLOYMENT
+
+   const GUni = await ethers.getContractFactory('GuniMultiplyProxyActions', signer)
+   const guni = await GUni.deploy()
+   deployedContracts.guni = await guni.deployed()
 
   // const multiplyProxyActions = await deploy("MultiplyProxyActions");
   const MPActions = await ethers.getContractFactory('MultiplyProxyActions', signer)
