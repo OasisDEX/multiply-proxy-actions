@@ -213,28 +213,30 @@ describe('GUNI Multiply Proxy Action Wrapper with Mocked Exchange', async functi
     const usdcAmount = await guni.getOtherTokenAmount(guniDaiUsdc, gUniResolver, amountToWei(leveragedAmount).toFixed(0), 6);
 
     cdpData.gemJoin = "0xbFD445A97e7459b0eBb34cfbd3245750Dba4d7a4";
-    cdpData.skipFL = true;
     cdpData.requiredDebt = amountToWei(flAmount).toFixed(0);
+    cdpData.token0Amount = amountToWei(daiBal).toFixed(0); 
 
     exchangeData.fromTokenAmount = usdcAmount.toString(); //amountToWei(daiBal).toFixed(0); // assuming 1 dai = 1 usdc . TO DO: change to DAI USDC swap with slippage
     exchangeData.fromTokenAddress = MAINNET_ADRESSES.MCD_DAI;
     exchangeData.minToTokenAmount = usdcAmount.toString();
     exchangeData.toTokenAddress = MAINNET_ADRESSES.USDC;
 
-    guniAddressRegistry = {
-      'guni': '0xAbDDAfB225e10B90D798bB8A886238Fb835e2053',
-      'resolver': '0x0317650Af6f184344D7368AC8bB0bEbA5EDB214a',
-      'router': '0x14E6D67F824C3a7b4329d3228807f8654294e4bd',
-      'guniProxyActions': guni.address,
-      'otherToken': MAINNET_ADRESSES.USDC,
+    const guniAddressRegistry = {
+      guni: '0xAbDDAfB225e10B90D798bB8A886238Fb835e2053',
+      resolver: '0x0317650Af6f184344D7368AC8bB0bEbA5EDB214a',
+      router: '0x14E6D67F824C3a7b4329d3228807f8654294e4bd',
+      guniProxyActions: guni.address,
+      otherToken: MAINNET_ADRESSES.USDC,
+      exchange: exchange.address,
+      jug: '0x19c0976f590D67707E62397C87829d896Dc0f1F1',
+      manager: '0x5ef30b9986345249bc32d8928B7ee64DE9435E39',
+      lender: '0x1EB4CF3A948E7D72A198fe073cCb8C7a948cD853',
     }
 
     let params2 = [
       exchangeData,
       cdpData,
-      addressRegistry,
       guniAddressRegistry,
-      amountToWei(daiBal).toFixed(0)
     ]
 
     var [status, result] = await dsproxyExecuteAction(
@@ -279,7 +281,6 @@ describe('GUNI Multiply Proxy Action Wrapper with Mocked Exchange', async functi
     let params4 = [
       exchangeData,
       cdpData,
-      addressRegistry,
       guniAddressRegistry
     ]
 

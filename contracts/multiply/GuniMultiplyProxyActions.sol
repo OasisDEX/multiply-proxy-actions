@@ -24,21 +24,8 @@ struct CdpData {
   uint256 cdpId;
   bytes32 ilk;
   uint256 requiredDebt;
-  uint256 borrowCollateral;
-  uint256 withdrawCollateral;
-  uint256 withdrawDai;
-  uint256 depositDai;
-  uint256 depositCollateral;
-  bool skipFL;
+  uint256 token0Amount;
   string methodName;
-}
-
-struct AddressRegistry {
-  address jug;
-  address manager;
-  address multiplyProxyActions;
-  address lender;
-  address exchange;
 }
 
 struct GuniAddressRegistry {
@@ -47,14 +34,10 @@ struct GuniAddressRegistry {
   address resolver;
   address guniProxyActions;
   address otherToken;
-}
-
-interface IMPA {
-  function increaseMultipleDepositCollateral(
-    ExchangeData calldata exchangeData,
-    CdpData memory cdpData,
-    AddressRegistry calldata addressRegistry
-  ) external payable;
+  address exchange;
+  address jug;
+  address manager;
+  address lender;
 }
 
 contract GuniMultiplyProxyActions is IERC3156FlashBorrower {
@@ -62,136 +45,99 @@ contract GuniMultiplyProxyActions is IERC3156FlashBorrower {
   uint256 constant RAY = 10**27;
   address public constant DAIJOIN = 0x9759A6Ac90977b93B58547b4A71c78317f391A28;
   address public constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+  IERC20 public constant daiContract = IERC20(DAI);
 
-  IERC20 public immutable dai;
-
-  constructor() {
-    dai = IERC20(DAI);
+  modifier logMethodName(
+    string memory name,
+    CdpData memory data,
+    address destination
+  ) {
+    if (bytes(data.methodName).length == 0) {
+      data.methodName = name;
+    }
+    _;
+    data.methodName = "";
   }
 
   function openMultiplyGuniVault(
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
-    AddressRegistry calldata addressRegistry,
-    GuniAddressRegistry calldata guniAddressRegistry,
-    uint256 token0Amount
-  ) public {
+    GuniAddressRegistry calldata guniAddressRegistry
+  ) public logMethodName("openMultiplyGuniVault", cdpData, guniAddressRegistry.guniProxyActions) {
     cdpData.ilk = IJoin(cdpData.gemJoin).ilk();
-    cdpData.cdpId = IManager(addressRegistry.manager).open(cdpData.ilk, address(this));
+    cdpData.cdpId = IManager(guniAddressRegistry.manager).open(cdpData.ilk, address(this));
 
-    increaseMultipleGuni(
-      exchangeData,
-      cdpData,
-      addressRegistry,
-      guniAddressRegistry,
-      token0Amount
-    );
+    increaseMultipleGuni(exchangeData, cdpData, guniAddressRegistry);
   }
 
   function increaseMultipleGuni(
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
-    AddressRegistry calldata addressRegistry,
-    GuniAddressRegistry calldata guniAddressRegistry,
-    uint256 token0Amount
-  ) public {
-    dai.transferFrom(msg.sender, guniAddressRegistry.guniProxyActions, token0Amount);
+    GuniAddressRegistry calldata guniAddressRegistry
+  ) public logMethodName("increaseMultipleGuni", cdpData, guniAddressRegistry.guniProxyActions) {
+    daiContract.transferFrom(msg.sender, guniAddressRegistry.guniProxyActions, cdpData.token0Amount);
+    takeAFlashLoan(exchangeData, cdpData, guniAddressRegistry, 1);
+  }
 
-    takeAFlashLoan(exchangeData, cdpData, addressRegistry, guniAddressRegistry, 1);
+  function closeGuniVaultExitDai(
+    ExchangeData calldata exchangeData,
+    CdpData memory cdpData,
+    GuniAddressRegistry calldata guniAddressRegistry
+  ) public logMethodName("closeGuniVaultExitDai", cdpData, guniAddressRegistry.guniProxyActions) {
+    cdpData.ilk = IJoin(cdpData.gemJoin).ilk();
+
+    address urn = IManager(guniAddressRegistry.manager).urns(cdpData.cdpId);
+    address vat = IManager(guniAddressRegistry.manager).vat();
+
+    uint256 wadD = _getWipeAllWad(vat, urn, urn, cdpData.ilk);
+    cdpData.requiredDebt = wadD;
+
+    takeAFlashLoan(exchangeData, cdpData, guniAddressRegistry, 0);
   }
 
   function takeAFlashLoan(
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
-    AddressRegistry calldata addressRegistry,
     GuniAddressRegistry calldata guniAddressRegistry,
     uint256 action
   ) internal {
-    bytes memory paramsData = abi.encode(
-      action,
-      exchangeData,
-      cdpData,
-      addressRegistry,
-      guniAddressRegistry
-    );
+    bytes memory paramsData = abi.encode(action, exchangeData, cdpData, guniAddressRegistry);
 
-    IManager(addressRegistry.manager).cdpAllow(
-      cdpData.cdpId,
-      addressRegistry.multiplyProxyActions,
-      1
-    );
-
-    IManager(addressRegistry.manager).cdpAllow(
+    IManager(guniAddressRegistry.manager).cdpAllow(
       cdpData.cdpId,
       guniAddressRegistry.guniProxyActions,
       1
     );
 
-    IERC3156FlashLender(addressRegistry.lender).flashLoan(
+    IERC3156FlashLender(guniAddressRegistry.lender).flashLoan(
       IERC3156FlashBorrower(guniAddressRegistry.guniProxyActions),
       DAI,
       cdpData.requiredDebt,
       paramsData
     );
 
-    IManager(addressRegistry.manager).cdpAllow(
-      cdpData.cdpId,
-      addressRegistry.multiplyProxyActions,
-      0
-    );
-
-    IManager(addressRegistry.manager).cdpAllow(
+    IManager(guniAddressRegistry.manager).cdpAllow(
       cdpData.cdpId,
       guniAddressRegistry.guniProxyActions,
       0
     );
   }
 
-  function closeGuniVaultExitDai(
-    ExchangeData calldata exchangeData,
-    CdpData memory cdpData,
-    AddressRegistry calldata addressRegistry,
-    GuniAddressRegistry calldata guniAddressRegistry
-  ) public {
-    cdpData.ilk = IJoin(cdpData.gemJoin).ilk();
-
-    address urn = IManager(addressRegistry.manager).urns(cdpData.cdpId);
-    address vat = IManager(addressRegistry.manager).vat();
-
-    uint256 wadD = _getWipeAllWad(vat, urn, urn, cdpData.ilk);
-    cdpData.requiredDebt = wadD;
-
-    takeAFlashLoan(exchangeData, cdpData, addressRegistry, guniAddressRegistry, 0);
-  }
-
   function _increaseMPGuni(
     ExchangeData memory exchangeData,
     CdpData memory cdpData,
-    AddressRegistry memory addressRegistry,
     GuniAddressRegistry memory guniAddressRegistry,
     uint256 borrowedDaiAmount
   ) internal {
     IGUNIToken guni = IGUNIToken(guniAddressRegistry.guni);
     IERC20 otherToken = IERC20(guniAddressRegistry.otherToken);
 
-    uint256 bal0 = dai.balanceOf(address(this));
-    uint256 swapAmount;
+    uint256 bal0 = daiContract.balanceOf(address(this));
 
     {
-      uint256 otherTokenTo18Conversion = 10**(18 - otherToken.decimals());
-      (uint256 sqrtPriceX96, , , , , , ) = IUniPool(guni.pool()).slot0();
-      IGUNIResolver resolver = IGUNIResolver(guniAddressRegistry.resolver);
-      (, swapAmount) = resolver.getRebalanceParams(
-        address(guni),
-        guni.token0() == address(dai) ? bal0 : 0,
-        guni.token1() == address(dai) ? bal0 : 0,
-        ((((sqrtPriceX96 * sqrtPriceX96) >> 96) * 1e18) >> 96) * otherTokenTo18Conversion
-      );
-    }
-    {
-      IExchange exchange = IExchange(addressRegistry.exchange);
+      IExchange exchange = IExchange(guniAddressRegistry.exchange);
 
-      dai.approve(address(exchange), exchangeData.fromTokenAmount);
+      daiContract.approve(address(exchange), exchangeData.fromTokenAmount);
 
       exchange.swapDaiForToken(
         exchangeData.toTokenAddress,
@@ -202,30 +148,20 @@ contract GuniMultiplyProxyActions is IERC3156FlashBorrower {
       );
     }
 
-    exchangeData.fromTokenAmount = 0;
-    exchangeData.minToTokenAmount = 0;
-    cdpData.requiredDebt = 0;
-
     uint256 guniBalance;
-    uint256 bal1 = otherToken.balanceOf(address(this));
+    uint256 bal1 = otherToken.balanceOf(address(this)); //120k
+    bal0 = daiContract.balanceOf(address(this)); //80 k
 
     {
       IGUNIRouter router = IGUNIRouter(guniAddressRegistry.router);
-      dai.approve(address(router), bal0);
+      daiContract.approve(address(router), bal0);
       otherToken.approve(address(router), bal1);
 
       (, , guniBalance) = router.addLiquidity(address(guni), bal0, bal1, 0, 0, address(this));
     }
 
-    cdpData.depositCollateral = guniBalance;
-    cdpData.borrowCollateral = 0;
-    guni.approve(addressRegistry.multiplyProxyActions, cdpData.depositCollateral);
-    IMPA(addressRegistry.multiplyProxyActions).increaseMultipleDepositCollateral(
-      exchangeData,
-      cdpData,
-      addressRegistry
-    );
-    drawDaiDebt(cdpData, addressRegistry, borrowedDaiAmount);
+    guni.approve(guniAddressRegistry.guniProxyActions, guniBalance);
+    joinDrawDebt(cdpData, borrowedDaiAmount, guniAddressRegistry.manager, guniAddressRegistry.jug);
 
     uint256 daiLeft = IERC20(DAI).balanceOf(address(this)).sub(borrowedDaiAmount);
     uint256 otherTokenLeft = otherToken.balanceOf(address(this));
@@ -241,16 +177,15 @@ contract GuniMultiplyProxyActions is IERC3156FlashBorrower {
   function _closeToDaiMPGuni(
     ExchangeData memory exchangeData,
     CdpData memory cdpData,
-    AddressRegistry memory addressRegistry,
     GuniAddressRegistry memory guniAddressRegistry,
     uint256 borrowedDaiAmount
   ) internal {
-    IExchange exchange = IExchange(addressRegistry.exchange);
+    IExchange exchange = IExchange(guniAddressRegistry.exchange);
     IERC20 otherToken = IERC20(guniAddressRegistry.otherToken);
-    uint256 ink = getInk(addressRegistry.manager, cdpData);
+    uint256 ink = getInk(guniAddressRegistry.manager, cdpData);
 
     wipeAndFreeGem(
-      addressRegistry.manager,
+      guniAddressRegistry.manager,
       cdpData.gemJoin,
       cdpData.cdpId,
       cdpData.requiredDebt,
@@ -298,35 +233,29 @@ contract GuniMultiplyProxyActions is IERC3156FlashBorrower {
       uint256 mode,
       ExchangeData memory exchangeData,
       CdpData memory cdpData,
-      AddressRegistry memory addressRegistry,
       GuniAddressRegistry memory guniAddressRegistry
-    ) = abi.decode(params, (uint256, ExchangeData, CdpData, AddressRegistry, GuniAddressRegistry));
+    ) = abi.decode(params, (uint256, ExchangeData, CdpData, GuniAddressRegistry));
 
+    require(msg.sender == address(guniAddressRegistry.lender), "mpa-untrusted-lender");
     uint256 borrowedDaiAmount;
     {
       borrowedDaiAmount = amount.add(fee);
     }
+    emit FLData(IERC20(DAI).balanceOf(address(this)).sub(cdpData.token0Amount), borrowedDaiAmount);
+
+    require(
+      cdpData.requiredDebt.add(cdpData.token0Amount) <= IERC20(DAI).balanceOf(address(this)),
+      "mpa-receive-requested-amount-mismatch"
+    );
 
     if (mode == 1) {
-      _increaseMPGuni(
-        exchangeData,
-        cdpData,
-        addressRegistry,
-        guniAddressRegistry,
-        borrowedDaiAmount
-      );
+      _increaseMPGuni(exchangeData, cdpData, guniAddressRegistry, borrowedDaiAmount);
     }
     if (mode == 0) {
-      _closeToDaiMPGuni(
-        exchangeData,
-        cdpData,
-        addressRegistry,
-        guniAddressRegistry,
-        borrowedDaiAmount
-      );
+      _closeToDaiMPGuni(exchangeData, cdpData, guniAddressRegistry, borrowedDaiAmount);
     }
 
-    IERC20(token).approve(addressRegistry.lender, borrowedDaiAmount);
+    IERC20(token).approve(guniAddressRegistry.lender, borrowedDaiAmount);
 
     return keccak256("ERC3156FlashBorrower.onFlashLoan");
   }
@@ -343,8 +272,8 @@ contract GuniMultiplyProxyActions is IERC3156FlashBorrower {
 
     (, amount) = resolver.getRebalanceParams(
       address(guni),
-      guni.token0() == address(dai) ? bal0 : 0,
-      guni.token1() == address(dai) ? bal0 : 0,
+      guni.token0() == DAI ? bal0 : 0,
+      guni.token1() == DAI ? bal0 : 0,
       ((((sqrtPriceX96 * sqrtPriceX96) >> 96) * 1e18) >> 96) * otherTokenTo18Conv
     );
   }
@@ -402,24 +331,32 @@ contract GuniMultiplyProxyActions is IERC3156FlashBorrower {
     dart = uint256(dart) <= art ? -dart : -toInt256(art);
   }
 
-  function drawDaiDebt(
+  function joinDrawDebt(
     CdpData memory cdpData,
-    AddressRegistry memory addressRegistry,
-    uint256 amount
-  ) internal {
-    address urn = IManager(addressRegistry.manager).urns(cdpData.cdpId);
-    address vat = IManager(addressRegistry.manager).vat();
-    IManager(addressRegistry.manager).frob(
-      cdpData.cdpId,
-      0,
-      _getDrawDart(vat, addressRegistry.jug, urn, cdpData.ilk, amount)
-    );
-    IManager(addressRegistry.manager).move(cdpData.cdpId, address(this), toRad(amount));
-    if (IVat(vat).can(address(this), address(DAIJOIN)) == 0) {
-      IVat(vat).hope(DAIJOIN);
-    }
+    uint256 borrowedDai,
+    address manager,
+    address jug
+  ) private {
+    IGem gem = IJoin(cdpData.gemJoin).gem();
 
-    IJoin(DAIJOIN).exit(address(this), amount);
+    uint256 balance = IERC20(address(gem)).balanceOf(address(this));
+    gem.approve(address(cdpData.gemJoin), balance);
+
+    address urn = IManager(manager).urns(cdpData.cdpId);
+    address vat = IManager(manager).vat();
+
+    IJoin(cdpData.gemJoin).join(urn, balance);
+
+    IManager(manager).frob(
+      cdpData.cdpId,
+      toInt256(convertTo18(cdpData.gemJoin, balance)),
+      _getDrawDart(vat, jug, urn, cdpData.ilk, borrowedDai)
+    );
+    IManager(manager).move(cdpData.cdpId, address(this), borrowedDai.mul(RAY));
+
+    IVat(vat).hope(DAIJOIN);
+
+    IJoin(DAIJOIN).exit(address(this), borrowedDai);
   }
 
   function _getDrawDart(
@@ -472,4 +409,14 @@ contract GuniMultiplyProxyActions is IERC3156FlashBorrower {
     // If the rad precision has some dust, it will need to request for 1 extra wad wei
     wad = wad.mul(RAY) < rad ? wad + 1 : wad;
   }
+
+  event FLData(uint256 borrowed, uint256 due);
+  event MultipleActionCalled(
+    string methodName,
+    uint256 indexed cdpId,
+    uint256 swapMinAmount,
+    uint256 swapOptimistAmount,
+    uint256 collateralLeft,
+    uint256 daiLeft
+  );
 }
