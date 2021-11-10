@@ -23,7 +23,7 @@ const { getVaultInfo } = require('../utils-mcd.js')
 const { curry } = require('ramda')
 const { getMarketPrice } = require('./http_apis')
 
-const FEE = 2
+const FEE = 20
 const FEE_BASE = 10000
 
 const init = async function (blockNumber, provider, signer) {
@@ -330,11 +330,11 @@ const deploySystem = async function (provider, signer, isExchangeDummy = false, 
   deployedContracts.userProxyAddress = userProxyAddress
   deployedContracts.dsProxyInstance = dsProxy
 
-   // GUNI DEPLOYMENT
+  // GUNI DEPLOYMENT
 
-   const GUni = await ethers.getContractFactory('GuniMultiplyProxyActions', signer)
-   const guni = await GUni.deploy()
-   deployedContracts.guni = await guni.deployed()
+  const GUni = await ethers.getContractFactory('GuniMultiplyProxyActions', signer)
+  const guni = await GUni.deploy()
+  deployedContracts.guni = await guni.deployed()
 
   // const multiplyProxyActions = await deploy("MultiplyProxyActions");
   const MPActions = await ethers.getContractFactory('MultiplyProxyActions', signer)
