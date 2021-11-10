@@ -616,7 +616,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     uint256 daiLeft = IERC20(DAI).balanceOf(address(this));
 
     require(cdpData.requiredDebt <= daiLeft, "cannot repay all debt");
-    
+
     wipeAndFreeGem(
       addressRegistry.manager,
       cdpData.gemJoin,

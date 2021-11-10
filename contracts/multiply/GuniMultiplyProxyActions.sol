@@ -107,7 +107,11 @@ contract GuniMultiplyProxyActions is IERC3156FlashBorrower {
     uint256 action
   ) internal {
     bytes memory paramsData = abi.encode(action, exchangeData, cdpData, guniAddressRegistry);
-
+    console.log(
+      "DEBUG DAI BALANCE before FL GUNIPA",
+      IERC20(DAI).balanceOf(guniAddressRegistry.guniProxyActions)
+    );
+    console.log("DEBUG DAI BALANCE before FL - DSPROXY", IERC20(DAI).balanceOf(address(this)));
     IManager(guniAddressRegistry.manager).cdpAllow(
       cdpData.cdpId,
       guniAddressRegistry.guniProxyActions,
@@ -171,7 +175,12 @@ contract GuniMultiplyProxyActions is IERC3156FlashBorrower {
     console.log("DEBUG: GUNI BALANCE", guniBalance);
     console.log("DEBUG: DAI BALANCE OF ", IERC20(DAI).balanceOf(address(this)));
     guni.approve(guniAddressRegistry.guniProxyActions, guniBalance);
-    joinDrawDebt(cdpData, borrowedDaiAmount.sub(IERC20(DAI).balanceOf(address(this))), guniAddressRegistry.manager, guniAddressRegistry.jug);
+    joinDrawDebt(
+      cdpData,
+      borrowedDaiAmount.sub(IERC20(DAI).balanceOf(address(this))),
+      guniAddressRegistry.manager,
+      guniAddressRegistry.jug
+    );
 
     uint256 daiLeft = IERC20(DAI).balanceOf(address(this)).sub(borrowedDaiAmount);
     uint256 otherTokenLeft = otherToken.balanceOf(address(this));
@@ -248,6 +257,8 @@ contract GuniMultiplyProxyActions is IERC3156FlashBorrower {
       CdpData memory cdpData,
       GuniAddressRegistry memory guniAddressRegistry
     ) = abi.decode(params, (uint256, ExchangeData, CdpData, GuniAddressRegistry));
+
+    console.log("DEBUG: ON FLASH LOAN DAI BALANCE", IERC20(DAI).balanceOf(address(this)));
 
     require(msg.sender == address(guniAddressRegistry.lender), "mpa-untrusted-lender");
     uint256 borrowedDaiAmount;
