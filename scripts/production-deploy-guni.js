@@ -9,15 +9,15 @@ async function deploy() {
   const provider = ethers.provider;
   const signer = provider.getSigner(0);
 
-  console.log('Deployer address:',await signer.getAddress());
+  console.log('Deployer address:', await signer.getAddress());
   console.log('---Deploying GUNI---')
 
   const GUNIMPActions = await ethers.getContractFactory('GuniMultiplyProxyActions', signer)
   console.log('---Deploying guniMultiplyProxyActions---')
   const guniMultiplyProxyActions = await GUNIMPActions.deploy()
-  let mpa =await guniMultiplyProxyActions.deployed();
+  let mpa = await guniMultiplyProxyActions.deployed();
   console.log('---guniMultiplyProxyActions Deployed---', mpa.address)
-  
+
 }
 
 deploy()
