@@ -75,7 +75,11 @@ contract GuniMultiplyProxyActions is IERC3156FlashBorrower {
     CdpData memory cdpData,
     GuniAddressRegistry calldata guniAddressRegistry
   ) public logMethodName("increaseMultipleGuni", cdpData, guniAddressRegistry.guniProxyActions) {
-    daiContract.transferFrom(msg.sender, guniAddressRegistry.guniProxyActions, cdpData.token0Amount);
+    daiContract.transferFrom(
+      msg.sender,
+      guniAddressRegistry.guniProxyActions,
+      cdpData.token0Amount
+    );
     takeAFlashLoan(exchangeData, cdpData, guniAddressRegistry, 1);
   }
 
@@ -161,7 +165,12 @@ contract GuniMultiplyProxyActions is IERC3156FlashBorrower {
     }
 
     guni.approve(guniAddressRegistry.guniProxyActions, guniBalance);
-    joinDrawDebt(cdpData, borrowedDaiAmount, guniAddressRegistry.manager, guniAddressRegistry.jug);
+    joinDrawDebt(
+      cdpData,
+      borrowedDaiAmount.sub(IERC20(DAI).balanceOf(address(this))),
+      guniAddressRegistry.manager,
+      guniAddressRegistry.jug
+    );
 
     uint256 daiLeft = IERC20(DAI).balanceOf(address(this)).sub(borrowedDaiAmount);
     uint256 otherTokenLeft = otherToken.balanceOf(address(this));
