@@ -21,6 +21,8 @@ const BigNumber = require('bignumber.js')
 const { zero } = require('./utils')
 const _ = require('lodash')
 
+BigNumber.config({ EXPONENTIAL_AT: 100 })
+
 const AGGREGATOR_V3_ADDRESS = '0x11111112542d85b3ef69ae05771c2dccff4faa26'
 
 const ethers = hre.ethers
@@ -39,7 +41,8 @@ function asPercentageValue(value, base) {
 }
 
 describe('Exchange', async function () {
-  let provider, signer, address, exchange, WETH, DAI, feeBeneficiary, slippage, fee, snapshotId
+  let provider, signer, address, exchange, WETH, DAI, feeBeneficiary, slippage, snapshotId
+  let fee = asPercentageValue(FEE, FEE_BASE)
 
   this.beforeAll(async function () {
     let [_provider, _signer] = await init(undefined, provider, signer)
@@ -49,7 +52,6 @@ describe('Exchange', async function () {
 
     feeBeneficiary = addressRegistryFactory(undefined, undefined).feeRecepient
     slippage = asPercentageValue(8, 100)
-    fee = asPercentageValue(FEE, FEE_BASE)
 
     const Exchange = await ethers.getContractFactory('Exchange', signer)
     exchange = await Exchange.deploy(address, feeBeneficiary, fee.value.toString())
@@ -97,11 +99,11 @@ describe('Exchange', async function () {
     await expect(tx).to.revertedWith('Exchange / Unauthorized Caller')
   })
 
-  it.only('should allow beneficiary to update the fee', async function () {
-    const toTransferAmount = "0x"+amountToWei(1,18).toString(16);
-    let tx0 = await signer.populateTransaction({to:feeBeneficiary,value:toTransferAmount});
-    await signer.sendTransaction(tx0);
-    await provider.send("hardhat_impersonateAccount", [feeBeneficiary]);
+  it('should allow beneficiary to update the fee', async function () {
+    const toTransferAmount = '0x' + amountToWei(1, 18).toString(16)
+    let tx0 = await signer.populateTransaction({ to: feeBeneficiary, value: toTransferAmount })
+    await signer.sendTransaction(tx0)
+    await provider.send('hardhat_impersonateAccount', [feeBeneficiary])
     const benef = await ethers.provider.getSigner(feeBeneficiary)
     let tx = await exchange.connect(benef).setFee('3')
   })
@@ -118,7 +120,7 @@ describe('Exchange', async function () {
         amountInWei,
         exchange.address,
         slippage.value.toString(),
-        ALLOWED_PROTOCOLS
+        ALLOWED_PROTOCOLS,
       )
       initialDaiWalletBalance = convertToBigNumber(await balanceOf(MAINNET_ADRESSES.ETH, address))
 
@@ -137,19 +139,6 @@ describe('Exchange', async function () {
 
     this.afterEach(async function () {
       await provider.send('evm_revert', [snapshotId])
-    })
-
-    it('should not happen if it is triggered from unauthorized caller', async () => {
-      let tx = exchange
-        .connect(provider.getSigner(1))
-        .swapTokenForDai(
-          MAINNET_ADRESSES.ETH,
-          amountToWei(1).toFixed(0),
-          amountFromWei(1).toFixed(0),
-          AGGREGATOR_V3_ADDRESS,
-          0,
-        )
-      await expect(tx).to.revertedWith('Exchange / Unauthorized Caller')
     })
 
     describe('when transferring an exact amount to the exchange', async function () {
@@ -468,18 +457,18 @@ describe('Exchange', async function () {
   })
 
   describe('DAI for Asset', async function () {
-    let initialDaiWalletBalance, amountWithFeeInWei
+    let initialDaiWalletBalance, amountInWei, amountWithFeeInWei
 
     this.beforeAll(async function () {
-      const amountInWei = amountToWei(new BigNumber(1000))
-      amountWithFeeInWei = amountInWei.div(ONE.minus(fee.asDecimal)).toFixed(0)
+      amountInWei = amountToWei(new BigNumber(1000))
+      amountWithFeeInWei = amountInWei.times(ONE.plus(fee.asDecimal)).toFixed(0)
 
       const response = await exchangeFromDAI(
         MAINNET_ADRESSES.ETH,
         amountInWei.toFixed(0),
         slippage.value.toString(),
         exchange.address,
-        ALLOWED_PROTOCOLS
+        ALLOWED_PROTOCOLS,
       )
 
       const {
@@ -493,20 +482,6 @@ describe('Exchange', async function () {
         ONE.minus(slippage.asDecimal),
       )
       receiveAtLeastInWei = amountToWei(receiveAtLeast).toFixed(0)
-    })
-
-    it('should not happen if it is triggered from unauthorized caller', async () => {
-      let tx = exchange
-        .connect(provider.getSigner(1))
-        .swapDaiForToken(
-          MAINNET_ADRESSES.ETH,
-          amountToWei(1).toFixed(0),
-          amountFromWei(1).toFixed(0),
-          AGGREGATOR_V3_ADDRESS,
-          0,
-        )
-
-      await expect(tx).to.revertedWith('Exchange / Unauthorized Caller')
     })
 
     describe('when transferring an exact amount to the exchange', async function () {
@@ -579,7 +554,7 @@ describe('Exchange', async function () {
           await balanceOf(MAINNET_ADRESSES.MCD_DAI, feeBeneficiary),
         )
 
-        const expectedCollectedFee = convertToBigNumber(amountWithFeeInWei).times(fee.asDecimal)
+        const expectedCollectedFee = convertToBigNumber(amountInWei).times(fee.asDecimal)
         expect(beneficiaryDaiBalance.toFixed(0)).to.be.eq(expectedCollectedFee.toFixed(0))
       })
     })
@@ -630,11 +605,11 @@ describe('Exchange', async function () {
       it('should exchange all needed amount and return the surplus', async function () {
         const wethBalance = convertToBigNumber(await balanceOf(MAINNET_ADRESSES.ETH, address))
         const daiBalance = convertToBigNumber(await balanceOf(MAINNET_ADRESSES.MCD_DAI, address))
+        const amount = amountFromWei(new BigNumber(moreThanTheTransferAmount))
 
-        const surplusFee = amountToWei(surplusAmount.times(fee.asDecimal))
-
-        expect(daiBalance.toFixed(0)).to.equals(
-          initialDaiWalletBalance.minus(amountWithFeeInWei).minus(surplusFee).toFixed(0),
+        const swapFee = amountToWei(amount.minus(amount.div(ONE.plus(fee.asDecimal)))).toFixed(0)
+        expect(amountFromWei(daiBalance).toFixed(6)).to.equals(
+          amountFromWei(initialDaiWalletBalance.minus(amountInWei).minus(swapFee)).toFixed(6),
         )
         expect(wethBalance.gte(convertToBigNumber(receiveAtLeastInWei))).to.be.true
       })
@@ -656,16 +631,14 @@ describe('Exchange', async function () {
       })
 
       it('should have collected fee', async function () {
-        const beneficiaryDaiBalance = convertToBigNumber(
-          await balanceOf(MAINNET_ADRESSES.MCD_DAI, feeBeneficiary),
+        const beneficiaryDaiBalance = amountFromWei(
+          convertToBigNumber(await balanceOf(MAINNET_ADRESSES.MCD_DAI, feeBeneficiary)),
         )
 
-        const surplusFee = amountToWei(surplusAmount.times(fee.asDecimal))
+        const amount = amountFromWei(moreThanTheTransferAmount)
+        const expectedCollectedFee = amount.minus(amount.div(ONE.plus(fee.asDecimal)))
 
-        const expectedCollectedFee = convertToBigNumber(amountWithFeeInWei).times(fee.asDecimal)
-        expect(beneficiaryDaiBalance.toFixed(0)).to.be.eq(
-          expectedCollectedFee.plus(surplusFee).toFixed(0),
-        )
+        expect(beneficiaryDaiBalance.toFixed(10)).to.be.eq(expectedCollectedFee.toFixed(10))
       })
     })
 
@@ -956,7 +929,7 @@ describe('Exchange', async function () {
         amountInWei,
         exchange.address,
         slippage.value.toString(),
-        ALLOWED_PROTOCOLS
+        ALLOWED_PROTOCOLS,
       )
 
       const {
@@ -1070,7 +1043,7 @@ describe('Exchange', async function () {
         amountInWei.toFixed(0),
         slippage.value.toString(),
         exchange.address,
-        ALLOWED_PROTOCOLS
+        ALLOWED_PROTOCOLS,
       )
 
       const {
@@ -1168,7 +1141,7 @@ describe('Exchange', async function () {
     this.beforeAll(async function () {
       localSnapshotId = await provider.send('evm_snapshot', [])
       const amountInWei = amountToWei(new BigNumber(1000))
-      amountWithFeeInWei = amountInWei.div(ONE.minus(fee.asDecimal)).toFixed(0)
+      amountWithFeeInWei = amountInWei.times(ONE.plus(fee.asDecimal)).toFixed(0)
 
       await swapTokens(
         MAINNET_ADRESSES.ETH,

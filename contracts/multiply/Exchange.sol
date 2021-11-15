@@ -92,9 +92,16 @@ contract Exchange {
     return balance;
   }
 
-  function _collectFee(address asset, uint256 fromAmount) internal returns (uint256) {
+  function _collectFeeTokenToDai(uint256 fromAmount) internal returns (uint256) {
     uint256 feeToTransfer = (fromAmount.mul(fee)).div(feeBase);
-    IERC20(asset).safeTransfer(feeBeneficiaryAddress, feeToTransfer);
+    IERC20(DAI_ADDRESS).safeTransfer(feeBeneficiaryAddress, feeToTransfer);
+    emit FeePaid(feeBeneficiaryAddress, feeToTransfer);
+    return fromAmount.sub(feeToTransfer);
+  }
+
+  function _collectFeeDaiToToken(uint256 fromAmount) internal returns (uint256) {
+    uint256 feeToTransfer = fromAmount.sub((fromAmount.mul(feeBase)).div(feeBase.add(fee)));
+    IERC20(DAI_ADDRESS).safeTransfer(feeBeneficiaryAddress, feeToTransfer);
     emit FeePaid(feeBeneficiaryAddress, feeToTransfer);
     return fromAmount.sub(feeToTransfer);
   }
@@ -116,7 +123,7 @@ contract Exchange {
   ) public {
     _transferIn(msg.sender, DAI_ADDRESS, amount);
 
-    uint256 _amount = _collectFee(DAI_ADDRESS, amount);
+    uint256 _amount = _collectFeeDaiToToken(amount);
     uint256 balance = _swap(DAI_ADDRESS, asset, _amount, receiveAtLeast, callee, withData);
 
     uint256 daiBalance = IERC20(DAI_ADDRESS).balanceOf(address(this));
@@ -138,7 +145,7 @@ contract Exchange {
     _transferIn(msg.sender, asset, amount);
 
     uint256 balance = _swap(asset, DAI_ADDRESS, amount, receiveAtLeast, callee, withData);
-    uint256 _balance = _collectFee(DAI_ADDRESS, balance);
+    uint256 _balance = _collectFeeTokenToDai(balance);
 
     uint256 assetBalance = IERC20(asset).balanceOf(address(this));
 
