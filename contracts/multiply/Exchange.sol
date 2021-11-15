@@ -84,8 +84,10 @@ contract Exchange {
   ) internal returns (uint256) {
     IERC20(fromAsset).safeApprove(callee, amount);
     (bool success, ) = callee.call(withData);
+    console.log("DEBUG: swap status", success ? "succes" : "failure");
     require(success, "Exchange / Could not swap");
     uint256 balance = IERC20(toAsset).balanceOf(address(this));
+    console.log("DEBUG: SWAPPED BALANCE", balance);
     emit SlippageSaved(receiveAtLeast, balance);
     require(balance >= receiveAtLeast, "Exchange / Received less");
     emit AssetSwap(fromAsset, toAsset, amount, balance);
@@ -93,7 +95,7 @@ contract Exchange {
   }
 
   function _collectFee(address asset, uint256 fromAmount) internal returns (uint256) {
-    uint256 feeToTransfer = (fromAmount.mul(fee)).div(feeBase);
+    uint256 feeToTransfer = fromAmount.sub((fromAmount.mul(feeBase)).div(feeBase.add(fee)));
     IERC20(asset).safeTransfer(feeBeneficiaryAddress, feeToTransfer);
     emit FeePaid(feeBeneficiaryAddress, feeToTransfer);
     return fromAmount.sub(feeToTransfer);
@@ -115,8 +117,13 @@ contract Exchange {
     bytes calldata withData
   ) public {
     _transferIn(msg.sender, DAI_ADDRESS, amount);
+    console.log("DEBUG: AMOUNT", amount);
+    console.log("DEBUG: ASSET", asset);
+    console.log("DEBUG: receiveAtLEast", receiveAtLeast);
+    console.logBytes(withData);
 
     uint256 _amount = _collectFee(DAI_ADDRESS, amount);
+    console.log("DEBUG: AFTER FEE", _amount);
     uint256 balance = _swap(DAI_ADDRESS, asset, _amount, receiveAtLeast, callee, withData);
 
     uint256 daiBalance = IERC20(DAI_ADDRESS).balanceOf(address(this));

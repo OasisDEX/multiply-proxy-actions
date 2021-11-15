@@ -90,6 +90,8 @@ contract DummyExchange {
     uint256 amountOut = (mul(amount, 10**18) / prices[asset]) / (10**(18 - precision));
     _transferIn(msg.sender, DAI_ADDRESS, amount);
     emit AssetSwap(DAI_ADDRESS, asset, amount, amountOut);
+    console.log("DEBUG AMOUNT OUT", amountOut);
+    console.log("DEBUG msg.sender", msg.sender);
     _transferOut(asset, msg.sender, amountOut);
   }
 

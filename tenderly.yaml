@@ -12,7 +12,8 @@ exports:
       istanbul_block: 0
       petersburg_block: 0
       berlin_block: 0
+      london_block: 0
     forked_network: mainnet
-    project_slug: jinx/project
+    project_slug: georgi2/project
     protocol: ""
     rpc_address: 127.0.0.1:8545
