@@ -84,8 +84,11 @@ contract Exchange {
   ) internal returns (uint256) {
     IERC20(fromAsset).safeApprove(callee, amount);
     (bool success, ) = callee.call(withData);
+    console.log("DEBUG: tx status", success ? "success" : "failed");
     require(success, "Exchange / Could not swap");
     uint256 balance = IERC20(toAsset).balanceOf(address(this));
+    console.log("DEBUG: BALANCE", balance);
+    console.log("DEBUG: RECEIVE AT LEAST", receiveAtLeast);
     emit SlippageSaved(receiveAtLeast, balance);
     require(balance >= receiveAtLeast, "Exchange / Received less");
     emit AssetSwap(fromAsset, toAsset, amount, balance);
@@ -117,9 +120,11 @@ contract Exchange {
     _transferIn(msg.sender, DAI_ADDRESS, amount);
 
     uint256 _amount = _collectFee(DAI_ADDRESS, amount);
+    console.log("DEBUG: AMOUNT USED TO SWAP", _amount);
     uint256 balance = _swap(DAI_ADDRESS, asset, _amount, receiveAtLeast, callee, withData);
 
     uint256 daiBalance = IERC20(DAI_ADDRESS).balanceOf(address(this));
+    console.log("DEBUG: DAI LEFT OVER", daiBalance);
 
     if (daiBalance > 0) {
       _transferOut(DAI_ADDRESS, msg.sender, daiBalance);

@@ -17,6 +17,7 @@ import "../interfaces/misc/IGUNIToken.sol";
 import "../interfaces/exchange/IExchange.sol";
 import "./../flashMint/interface/IERC3156FlashBorrower.sol";
 import "./../flashMint/interface/IERC3156FlashLender.sol";
+import "hardhat/console.sol";
 
 struct CdpData {
   address gemJoin;
@@ -106,6 +107,8 @@ contract GuniMultiplyProxyActions is IERC3156FlashBorrower {
     uint256 action
   ) internal {
     bytes memory paramsData = abi.encode(action, exchangeData, cdpData, guniAddressRegistry);
+    console.log("DEBUG: TAKING A FLASHLOAN");
+    console.log("DEBUG: FL: REQUIRED DEBT:", cdpData.requiredDebt);
 
     IManager(guniAddressRegistry.manager).cdpAllow(
       cdpData.cdpId,
@@ -137,6 +140,7 @@ contract GuniMultiplyProxyActions is IERC3156FlashBorrower {
     IERC20 otherToken = IERC20(guniAddressRegistry.otherToken);
 
     uint256 bal0 = daiContract.balanceOf(address(this));
+    console.log("DEBUG: DAI BALANCE", bal0);
 
     {
       IExchange exchange = IExchange(guniAddressRegistry.exchange);
@@ -154,6 +158,7 @@ contract GuniMultiplyProxyActions is IERC3156FlashBorrower {
 
     uint256 guniBalance;
     uint256 bal1 = otherToken.balanceOf(address(this));
+    console.log("DEBUG: USDC BALANCE", bal1);
     bal0 = daiContract.balanceOf(address(this));
 
     {
@@ -164,6 +169,8 @@ contract GuniMultiplyProxyActions is IERC3156FlashBorrower {
       (, , guniBalance) = router.addLiquidity(address(guni), bal0, bal1, 0, 0, address(this));
     }
 
+    console.log("DEBUG: GUNI BALANCE", guniBalance);
+
     guni.approve(guniAddressRegistry.guniProxyActions, guniBalance);
     joinDrawDebt(
       cdpData,
@@ -172,6 +179,7 @@ contract GuniMultiplyProxyActions is IERC3156FlashBorrower {
       guniAddressRegistry.jug
     );
 
+    console.log("DEBUG: DO I GET HERE?");
     uint256 daiLeft = IERC20(DAI).balanceOf(address(this)).sub(borrowedDaiAmount);
     uint256 otherTokenLeft = otherToken.balanceOf(address(this));
 
@@ -349,23 +357,28 @@ contract GuniMultiplyProxyActions is IERC3156FlashBorrower {
     IGem gem = IJoin(cdpData.gemJoin).gem();
 
     uint256 balance = IERC20(address(gem)).balanceOf(address(this));
+    console.log("DEBUG: JDD: GEM BALANCE", balance);
     gem.approve(address(cdpData.gemJoin), balance);
 
     address urn = IManager(manager).urns(cdpData.cdpId);
     address vat = IManager(manager).vat();
 
     IJoin(cdpData.gemJoin).join(urn, balance);
-
+    console.log("DEBUG: JDD: After join");
+    console.logInt(toInt256(convertTo18(cdpData.gemJoin, balance)));
     IManager(manager).frob(
       cdpData.cdpId,
       toInt256(convertTo18(cdpData.gemJoin, balance)),
       _getDrawDart(vat, jug, urn, cdpData.ilk, borrowedDai)
     );
+    console.log("DEBUG: JDD: After from");
     IManager(manager).move(cdpData.cdpId, address(this), borrowedDai.mul(RAY));
-
+    console.log("DEBUG: JDD: After move");
     IVat(vat).hope(DAIJOIN);
+    console.log("DEBUG: JDD: After hope");
 
     IJoin(DAIJOIN).exit(address(this), borrowedDai);
+    console.log("DEBUG: JDD: After exit");
   }
 
   function _getDrawDart(
@@ -380,13 +393,21 @@ contract GuniMultiplyProxyActions is IERC3156FlashBorrower {
 
     // Gets DAI balance of the urn in the vat
     uint256 dai = IVat(vat).dai(urn);
+    console.log("DEBUG : GET DRAW DART: wad", wad);
+    console.log("DEBUG : GET DRAW DART: dai", dai);
+    console.log("DEBUG : GET DRAW DART: rate", rate);
+    console.log("DEBUG : GET DRAW DART: wad.mul(RAY)", wad.mul(RAY));
 
     // If there was already enough DAI in the vat balance, just exits it without adding more debt
     if (dai < wad.mul(RAY)) {
       // Calculates the needed dart so together with the existing dai in the vat is enough to exit wad amount of DAI tokens
       dart = toInt256(wad.mul(RAY).sub(dai) / rate);
+      console.log("DART1");
+      console.logInt(dart);
       // This is neeeded due lack of precision. It might need to sum an extra dart wei (for the given DAI wad amount)
       dart = uint256(dart).mul(rate) < wad.mul(RAY) ? dart + 1 : dart;
+      console.log("DART2");
+      console.logInt(dart);
     }
   }
 
