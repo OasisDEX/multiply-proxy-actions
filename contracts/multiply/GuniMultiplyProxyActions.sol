@@ -149,8 +149,8 @@ contract GuniMultiplyProxyActions is IERC3156FlashBorrower {
     }
 
     uint256 guniBalance;
-    uint256 bal1 = otherToken.balanceOf(address(this)); //120k
-    bal0 = daiContract.balanceOf(address(this)); //80 k
+    uint256 bal1 = otherToken.balanceOf(address(this));
+    bal0 = daiContract.balanceOf(address(this));
 
     {
       IGUNIRouter router = IGUNIRouter(guniAddressRegistry.router);
