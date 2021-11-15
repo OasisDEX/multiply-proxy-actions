@@ -379,6 +379,10 @@ const deploySystem = async function (provider, signer, isExchangeDummy = false, 
       'MultiplyProxyActions address:',
       deployedContracts.multiplyProxyActionsInstance.address,
     )
+    console.log(
+      'GuniMultiplyProxyActions address:',
+      guni.address,
+    )
     console.log('MCDView address:', deployedContracts.mcdViewInstance.address)
   }
 
