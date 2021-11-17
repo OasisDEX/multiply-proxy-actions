@@ -96,7 +96,11 @@ contract Exchange {
   }
 
   function _collectFee(address asset, uint256 fromAmount) internal returns (uint256) {
+    // uint256 feeToTransfer = fromAmount.sub((fromAmount.mul(feeBase)).div(feeBase.add(fee))); 
     uint256 feeToTransfer = (fromAmount.mul(fee)).div(feeBase);
+
+    console.log('FEE TO TRANSFER', feeToTransfer  );
+    
     IERC20(asset).safeTransfer(feeBeneficiaryAddress, feeToTransfer);
     emit FeePaid(feeBeneficiaryAddress, feeToTransfer);
     return fromAmount.sub(feeToTransfer);
@@ -117,10 +121,15 @@ contract Exchange {
     address callee,
     bytes calldata withData
   ) public {
+    console.log('SWAPPING DAI TO TOKEN @@@@' );
     _transferIn(msg.sender, DAI_ADDRESS, amount);
 
+    console.log('FROM TOKEN AMOUNT::', amount );
+    
     uint256 _amount = _collectFee(DAI_ADDRESS, amount);
     console.log("DEBUG: AMOUNT USED TO SWAP", _amount);
+    console.log('RECEIVE AT LEAST USDC', receiveAtLeast );
+    
     uint256 balance = _swap(DAI_ADDRESS, asset, _amount, receiveAtLeast, callee, withData);
 
     uint256 daiBalance = IERC20(DAI_ADDRESS).balanceOf(address(this));

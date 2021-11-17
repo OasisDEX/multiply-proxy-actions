@@ -81,6 +81,9 @@ contract GuniMultiplyProxyActions is IERC3156FlashBorrower {
       guniAddressRegistry.guniProxyActions,
       cdpData.token0Amount
     );
+
+    console.log('TRANSFERED DAI', daiContract.balanceOf(address(this)) );
+    
     takeAFlashLoan(exchangeData, cdpData, guniAddressRegistry, 1);
   }
 
@@ -142,10 +145,18 @@ contract GuniMultiplyProxyActions is IERC3156FlashBorrower {
     uint256 bal0 = daiContract.balanceOf(address(this));
     console.log("DEBUG: DAI BALANCE", bal0);
 
+  
     {
+
+      console.log('EXCHANGE:', guniAddressRegistry.exchange );
+      
       IExchange exchange = IExchange(guniAddressRegistry.exchange);
 
       daiContract.approve(address(exchange), exchangeData.fromTokenAmount);
+
+      console.log('SWAP FROM TOKEN AMOUNT', exchangeData.fromTokenAmount );
+      console.log('SWAP MIN TO TOKEN AMOUNT', exchangeData.minToTokenAmount );
+      
 
       exchange.swapDaiForToken(
         exchangeData.toTokenAddress,
@@ -161,17 +172,30 @@ contract GuniMultiplyProxyActions is IERC3156FlashBorrower {
     console.log("DEBUG: USDC BALANCE", bal1);
     bal0 = daiContract.balanceOf(address(this));
 
+    console.log('DEBUG: DAI BALANCE after SWAP', bal0 );
+    
+
     {
       IGUNIRouter router = IGUNIRouter(guniAddressRegistry.router);
       daiContract.approve(address(router), bal0);
       otherToken.approve(address(router), bal1);
+      uint256 b0;
+      uint256 b1;
 
-      (, , guniBalance) = router.addLiquidity(address(guni), bal0, bal1, 0, 0, address(this));
+      (b0, b1, guniBalance) = router.addLiquidity(address(guni), bal0, bal1, 0, 0, address(this));
+      console.log('DAI USED in GUNI', b0 );
+      console.log('USDC USED in GUNI', b1 );
+      
     }
 
     console.log("DEBUG: GUNI BALANCE", guniBalance);
 
     guni.approve(guniAddressRegistry.guniProxyActions, guniBalance);
+
+    console.log('CURRENT BALANCE OF DAI', IERC20(DAI).balanceOf(address(this)));
+    
+    console.log('SENT TO DRAW DEBT', borrowedDaiAmount.sub(IERC20(DAI).balanceOf(address(this))));
+    
     joinDrawDebt(
       cdpData,
       borrowedDaiAmount.sub(IERC20(DAI).balanceOf(address(this))),
@@ -179,9 +203,15 @@ contract GuniMultiplyProxyActions is IERC3156FlashBorrower {
       guniAddressRegistry.jug
     );
 
+    console.log('DAI DRAWN FROM VAULT', IERC20(DAI).balanceOf(address(this)) );
+    console.log('borrowed amount', borrowedDaiAmount );
+    
+
     console.log("DEBUG: DO I GET HERE?");
     uint256 daiLeft = IERC20(DAI).balanceOf(address(this)).sub(borrowedDaiAmount);
     uint256 otherTokenLeft = otherToken.balanceOf(address(this));
+    console.log('DAI LEFT', daiLeft);
+    console.log('USDC LEFT', otherTokenLeft);
 
     if (daiLeft > 0) {
       IERC20(DAI).transfer(cdpData.fundsReceiver, daiLeft);
