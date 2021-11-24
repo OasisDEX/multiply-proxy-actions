@@ -10,7 +10,7 @@ async function deploy() {
   const signer = provider.getSigner(0);
   const authCaller = process.env.AUTH_CALLER;
   const feeRecipient = process.env.FEE_RECIPIENT;
-  const FEE = 20;
+  const FEE = 0;
 
   console.log('Deployer address:',await signer.getAddress());
   console.log('---Deploying the system---')
