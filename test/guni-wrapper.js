@@ -258,6 +258,8 @@ describe('GUNI Multiply Proxy Action Wrapper with Mocked Exchange', async functi
     // CDP_ID = lastCDP.id
     // CDP_ILK = lastCDP.ilk
 
+    let actionEvents = findMPAEvent(result)
+
     const currentCollRatio = new BigNumber(info.coll)
       .times(oraclePrice)
       .div(new BigNumber(info.debt))
@@ -269,6 +271,7 @@ describe('GUNI Multiply Proxy Action Wrapper with Mocked Exchange', async functi
     const requiredTotalCollateral = currentColl.plus(toBorrowCollateralAmount)
     const resultTotalCollateral = new BigNumber(info.coll)
 
+    expect(actionEvents[0].methodName).to.be.equal('openMultiplyGuniVault')
     expect(currentCollRatio.toFixed(2), 'coll ratio').to.be.equal('1.05')
 
   })

@@ -175,6 +175,15 @@ contract GuniMultiplyProxyActions is IERC3156FlashBorrower {
     uint256 daiLeft = IERC20(DAI).balanceOf(address(this)).sub(borrowedDaiAmount);
     uint256 otherTokenLeft = otherToken.balanceOf(address(this));
 
+    emit MultipleActionCalled(
+      cdpData.methodName,
+      cdpData.cdpId,
+      exchangeData.minToTokenAmount,
+      exchangeData.toTokenAmount,
+      0,
+      daiLeft
+    );
+
     if (daiLeft > 0) {
       IERC20(DAI).transfer(cdpData.fundsReceiver, daiLeft);
     }
@@ -222,6 +231,15 @@ contract GuniMultiplyProxyActions is IERC3156FlashBorrower {
 
     uint256 daiLeft = IERC20(DAI).balanceOf(address(this)).sub(borrowedDaiAmount);
     uint256 otherTokenLeft = otherToken.balanceOf(address(this));
+
+    emit MultipleActionCalled(
+      cdpData.methodName,
+      cdpData.cdpId,
+      exchangeData.minToTokenAmount,
+      exchangeData.toTokenAmount,
+      0,
+      daiLeft
+    );
 
     if (daiLeft > 0) {
       IERC20(DAI).transfer(cdpData.fundsReceiver, daiLeft);
