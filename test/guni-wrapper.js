@@ -221,7 +221,7 @@ describe('GUNI Multiply Proxy Action Wrapper with Mocked Exchange', async functi
     exchangeData.minToTokenAmount = usdcAmount.toString();
     exchangeData.toTokenAddress = MAINNET_ADRESSES.USDC;
 
-    const guniAddressRegistry = {
+    guniAddressRegistry = {
       guni: '0xAbDDAfB225e10B90D798bB8A886238Fb835e2053',
       resolver: '0x0317650Af6f184344D7368AC8bB0bEbA5EDB214a',
       router: '0x14E6D67F824C3a7b4329d3228807f8654294e4bd',
@@ -276,7 +276,6 @@ describe('GUNI Multiply Proxy Action Wrapper with Mocked Exchange', async functi
 
   })
 
-
   it('should close exiting Guni vault and return Dai to user', async function () {
     const { params, exchangeData, cdpData } = mpParams
     cdpData.cdpId = 25897;
@@ -287,6 +286,8 @@ describe('GUNI Multiply Proxy Action Wrapper with Mocked Exchange', async functi
       guniAddressRegistry
     ]
 
+    cdpData.token0Amount = 0;
+
     var [status, result] = await dsproxyExecuteAction(
       guni,
       dsProxy,
@@ -296,6 +297,8 @@ describe('GUNI Multiply Proxy Action Wrapper with Mocked Exchange', async functi
       0
     )
 
+    let actionEvents = findMPAEvent(result)
+    
     const lastCDP = await getLastCDP(provider, signer, userProxyAddress)
     let info = await getVaultInfo(mcdView, lastCDP.id, lastCDP.ilk)
 
@@ -307,5 +310,10 @@ describe('GUNI Multiply Proxy Action Wrapper with Mocked Exchange', async functi
       multiplyProxyActions.address,
     )
     const resultTotalCollateral = new BigNumber(info.coll)
+
+    expect(actionEvents[0].methodName).to.be.equal('closeGuniVaultExitDai')
+    expect(resultTotalCollateral.toFixed(0), 'coll ratio').to.be.equal('0')
+    expect(daiBalance.toFixed(0), 'coll ratio').to.be.equal('0')
+    
   });
 });
