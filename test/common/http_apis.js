@@ -6,7 +6,7 @@ const { one } = require('../utils')
 const fetch = require('node-fetch')
 
 const getMarketPrice = async function (from, to, fromPrecision = 18, toPrecision = 18) {
-  const endpoint = `https://api.1inch.exchange/v3.0/1/quote?fromTokenAddress=${from}&toTokenAddress=${to}&amount=${ethers.utils.parseUnits(
+  const endpoint = `https://api.1inch.exchange/v4.0/1/quote?fromTokenAddress=${from}&toTokenAddress=${to}&amount=${ethers.utils.parseUnits(
     '0.1',
     fromPrecision,
   )}&protocols=UNISWAP_V3`
@@ -26,7 +26,7 @@ const getMarketPrice = async function (from, to, fromPrecision = 18, toPrecision
 const exchangeFromDAI = async function (toTokenAddress, amount, slippage, recepient, protocols) {
   protocols = !protocols || !protocols.length ? '' : `&protocols=${protocols.join(',')}`
 
-  var url = `https://oasis.api.enterprise.1inch.exchange/v3.0/1/swap?
+  var url = `https://oasis.api.enterprise.1inch.exchange/v4.0/1/swap?
     fromTokenAddress=${MAINNET_ADRESSES.MCD_DAI}
     &toTokenAddress=${toTokenAddress}
     &amount=${amount}
@@ -67,7 +67,7 @@ const exchangeToDAI = async function (
 ) {
   protocols = !protocols || !protocols.length ? '' : `&protocols=${protocols.join(',')}`
 
-  var url = `https://oasis.api.enterprise.1inch.exchange/v3.0/1/swap?
+  var url = `https://oasis.api.enterprise.1inch.exchange/v4.0/1/swap?
     fromTokenAddress=${fromTokenAddress}
     &toTokenAddress=${MAINNET_ADRESSES.MCD_DAI}
     &amount=${amount}
