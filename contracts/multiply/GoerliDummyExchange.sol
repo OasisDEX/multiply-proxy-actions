@@ -7,9 +7,11 @@ import "../utils/SafeERC20.sol";
 import "hardhat/console.sol";
 
 contract GoerliDummyExchange {
+  using SafeMath for uint256;
   using SafeERC20 for IERC20;
 
   address DAI_ADDRESS = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+  mapping(address => bool) public WHITELISTED_CALLERS;
 
   uint8 slippage;
 
@@ -24,11 +26,18 @@ contract GoerliDummyExchange {
     uint256 amountIn,
     uint256 amountOut
   );
+  
+  modifier onlyAuthorized() {
+    require(WHITELISTED_CALLERS[msg.sender], "Exchange / Unauthorized Caller.");
+    _;
+  }
 
-  constructor(address _beneficiary, uint8 _fee, uint8 _slippage){
+  constructor(address _beneficiary, uint8 _fee, uint8 _slippage, address _dai, address authorisedCaller){
     feeBeneficiaryAddress = _beneficiary;
     fee = _fee;
     slippage = _slippage;
+    DAI_ADDRESS = _dai;
+    WHITELISTED_CALLERS[authorisedCaller] = true;
   }
   
   event FeePaid(address indexed beneficiary, uint256 amount);
@@ -43,6 +52,10 @@ contract GoerliDummyExchange {
     require(
       IERC20(asset).allowance(from, address(this)) >= amount,
       "Exchange / Not enought allowance"
+    );
+    require(
+      IERC20(asset).balanceOf(from)>=amount,
+      "Exchange / Could not swap"
     );
     IERC20(asset).transferFrom(from, address(this), amount);
   }
@@ -71,11 +84,11 @@ contract GoerliDummyExchange {
     uint256 receiveAtLeast,
     address callee,
     bytes calldata withData
-  ) public {
-    uint8 precision = precisions[asset];
+  ) public onlyAuthorized() {
+    require(WHITELISTED_CALLERS[msg.sender],"caller-illegal");
+    _transferIn(msg.sender, DAI_ADDRESS, amount);
     amount = _collectFee(DAI_ADDRESS, amount);
     uint256 amountOut = receiveAtLeast.mul(100).div(100-slippage);
-    _transferIn(msg.sender, DAI_ADDRESS, amount);
     emit AssetSwap(DAI_ADDRESS, asset, amount, amountOut);
     _transferOut(asset, msg.sender, amountOut);
   }
@@ -87,11 +100,9 @@ contract GoerliDummyExchange {
     uint256 receiveAtLeast,
     address callee,
     bytes calldata withData
-  ) public {
-    uint8 precision = precisions[asset];
-    uint256 amountOut = mul(mul(amount, 10**(18 - precision)), prices[asset]) / 10**18;
+  ) public onlyAuthorized() {
+    uint256 amountOut = receiveAtLeast.mul(100).div(100-slippage);
     amountOut = _collectFee(DAI_ADDRESS, amountOut);
-
     _transferIn(msg.sender, asset, amount);
     emit AssetSwap(asset, DAI_ADDRESS, amount, amountOut);
     _transferOut(DAI_ADDRESS, msg.sender, amountOut);
