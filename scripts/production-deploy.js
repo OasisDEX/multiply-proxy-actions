@@ -21,6 +21,7 @@ async function deploy() {
   let mpa =await multiplyProxyActions.deployed();
   console.log('---MultiplyProxyActions Deployed---', mpa.address)
 
+  
   const Exchange = await ethers.getContractFactory('Exchange', signer)
   console.log('---Deploying Exchange---')
   const exchange = await Exchange.deploy(
