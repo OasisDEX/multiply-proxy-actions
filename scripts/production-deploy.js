@@ -10,11 +10,11 @@ async function deploy() {
   const signer = provider.getSigner(0);
   const authCaller = process.env.AUTH_CALLER;
   const feeRecipient = process.env.FEE_RECIPIENT;
-  const FEE = 0;
+  const FEE = 20;
 
   console.log('Deployer address:',await signer.getAddress());
   console.log('---Deploying the system---')
-  
+
   const MPActions = await ethers.getContractFactory('MultiplyProxyActions', signer)
   console.log('---Deploying MultiplyProxyActions---')
   const multiplyProxyActions = await MPActions.deploy()
