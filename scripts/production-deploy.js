@@ -14,7 +14,14 @@ async function deploy() {
 
   console.log('Deployer address:',await signer.getAddress());
   console.log('---Deploying the system---')
+  
+  const MPActions = await ethers.getContractFactory('MultiplyProxyActions', signer)
+  console.log('---Deploying MultiplyProxyActions---')
+  const multiplyProxyActions = await MPActions.deploy()
+  let mpa =await multiplyProxyActions.deployed();
+  console.log('---MultiplyProxyActions Deployed---', mpa.address)
 
+  const Exchange = await ethers.getContractFactory('Exchange', signer)
   console.log('---Deploying Exchange---')
   const exchange = await Exchange.deploy(
     authCaller,
