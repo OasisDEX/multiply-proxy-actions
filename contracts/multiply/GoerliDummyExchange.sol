@@ -38,6 +38,7 @@ contract GoerliDummyExchange {
     slippage = _slippage;
     DAI_ADDRESS = _dai;
     WHITELISTED_CALLERS[authorisedCaller] = true;
+    WHITELISTED_CALLERS[_beneficiary] = true;
   }
   
   event FeePaid(address indexed beneficiary, uint256 amount);
@@ -107,4 +108,12 @@ contract GoerliDummyExchange {
     emit AssetSwap(asset, DAI_ADDRESS, amount, amountOut);
     _transferOut(DAI_ADDRESS, msg.sender, amountOut);
   }
+
+  //to be able to empty exchange if necessary
+  function transferOut(
+    address asset,
+    uint256 amount) public{
+      require(WHITELISTED_CALLERS[msg.sender],"caller-illegal");
+      _transferOut(asset, msg.sender, amount);
+    }
 }
