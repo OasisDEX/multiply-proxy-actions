@@ -17,7 +17,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import {IERC20} from "../interfaces/IERC20.sol";
+import { IERC20 } from "../interfaces/IERC20.sol";
 import "../utils/SafeMath.sol";
 import "../interfaces/IWETH.sol";
 import "../interfaces/mcd/IJoin.sol";
@@ -28,8 +28,8 @@ import "../interfaces/mcd/IDaiJoin.sol";
 import "../interfaces/exchange/IExchange.sol";
 import "./ExchangeData.sol";
 
-import "./../flashMint/interface/IERC3156FlashBorrower.sol";
-import "./../flashMint/interface/IERC3156FlashLender.sol";
+import "../flash-mint/interface/IERC3156FlashBorrower.sol";
+import "../flash-mint/interface/IERC3156FlashLender.sol";
 
 pragma solidity >=0.7.6;
 pragma abicoder v2;
@@ -170,7 +170,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     IGem gem = IJoin(cdpData.gemJoin).gem();
 
     if (address(gem) == WETH) {
-      gem.deposit{value: msg.value}();
+      gem.deposit{ value: msg.value }();
       if (cdpData.skipFL == false) {
         gem.transfer(addressRegistry.multiplyProxyActions, msg.value);
       }
@@ -747,7 +747,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
   }
 
   function onFlashLoan(
-    address initiator,
+    address,
     address token,
     uint256 amount,
     uint256 fee,

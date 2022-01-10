@@ -17,15 +17,15 @@ library Address {
   }
 
   function sendValue(address payable recipient, uint256 amount) internal {
-    require(address(this).balance >= amount, 'Address: insufficient balance');
+    require(address(this).balance >= amount, "Address: insufficient balance");
 
     // solhint-disable-next-line avoid-low-level-calls, avoid-call-value
-    (bool success, ) = recipient.call{value: amount}('');
-    require(success, 'Address: unable to send value, recipient may have reverted');
+    (bool success, ) = recipient.call{ value: amount }("");
+    require(success, "Address: unable to send value, recipient may have reverted");
   }
 
   function functionCall(address target, bytes memory data) internal returns (bytes memory) {
-    return functionCall(target, data, 'Address: low-level call failed');
+    return functionCall(target, data, "Address: low-level call failed");
   }
 
   function functionCall(
@@ -41,7 +41,7 @@ library Address {
     bytes memory data,
     uint256 value
   ) internal returns (bytes memory) {
-    return functionCallWithValue(target, data, value, 'Address: low-level call with value failed');
+    return functionCallWithValue(target, data, value, "Address: low-level call with value failed");
   }
 
   function functionCallWithValue(
@@ -50,7 +50,7 @@ library Address {
     uint256 value,
     string memory errorMessage
   ) internal returns (bytes memory) {
-    require(address(this).balance >= value, 'Address: insufficient balance for call');
+    require(address(this).balance >= value, "Address: insufficient balance for call");
     return _functionCallWithValue(target, data, value, errorMessage);
   }
 
@@ -60,10 +60,9 @@ library Address {
     uint256 weiValue,
     string memory errorMessage
   ) private returns (bytes memory) {
-    require(isContract(target), 'Address: call to non-contract');
+    require(isContract(target), "Address: call to non-contract");
 
-    // solhint-disable-next-line avoid-low-level-calls
-    (bool success, bytes memory returndata) = target.call{value: weiValue}(data);
+    (bool success, bytes memory returndata) = target.call{ value: weiValue }(data);
     if (success) {
       return returndata;
     } else {

@@ -2,7 +2,7 @@
 
 pragma solidity ^0.7.0;
 
-import './IPipInterface.sol';
+import "./IPipInterface.sol";
 
 abstract contract ISpotter {
   struct Ilk {

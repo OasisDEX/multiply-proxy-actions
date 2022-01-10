@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.7.6;
 
-import '../DS/DSMath.sol';
+import "../DS/DSMath.sol";
 
-import '../interfaces/mcd/IManager.sol';
-import '../interfaces/mcd/ISpotter.sol';
-import '../interfaces/mcd/IVat.sol';
+import "../interfaces/mcd/IManager.sol";
+import "../interfaces/mcd/ISpotter.sol";
+import "../interfaces/mcd/IVat.sol";
 
 /// @title Getter contract for Vault info from Maker protocol
 contract McdView is DSMath {

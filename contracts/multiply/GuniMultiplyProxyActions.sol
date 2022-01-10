@@ -3,7 +3,6 @@
 pragma solidity >=0.7.6;
 pragma abicoder v2;
 import "../interfaces/IERC20.sol";
-import "./ExchangeData.sol";
 import "../utils/SafeMath.sol";
 import "../interfaces/mcd/IJoin.sol";
 import "../interfaces/mcd/IManager.sol";
@@ -15,8 +14,9 @@ import "../interfaces/misc/IGUNIRouter.sol";
 import "../interfaces/misc/IGUNIResolver.sol";
 import "../interfaces/misc/IGUNIToken.sol";
 import "../interfaces/exchange/IExchange.sol";
-import "./../flashMint/interface/IERC3156FlashBorrower.sol";
-import "./../flashMint/interface/IERC3156FlashLender.sol";
+import "../flash-mint/interface/IERC3156FlashBorrower.sol";
+import "../flash-mint/interface/IERC3156FlashLender.sol";
+import "./ExchangeData.sol";
 
 struct CdpData {
   address gemJoin;
@@ -250,7 +250,7 @@ contract GuniMultiplyProxyActions is IERC3156FlashBorrower {
   }
 
   function onFlashLoan(
-    address initiator,
+    address,
     address token,
     uint256 amount,
     uint256 fee,

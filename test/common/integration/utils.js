@@ -1,5 +1,5 @@
 const { getPayload } = require('./_1inch')
-const { getCurrentBlockNumber } = require('./../http_apis')
+const { getCurrentBlockNumber } = require('../http_apis')
 const { default: BigNumber } = require('bignumber.js')
 
 const createSnapshot = async function (provider) {

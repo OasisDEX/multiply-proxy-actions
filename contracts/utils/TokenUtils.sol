@@ -2,8 +2,8 @@
 
 pragma solidity >=0.7.6;
 
-import '../interfaces/IWETH.sol';
-import './SafeERC20.sol';
+import "../interfaces/IWETH.sol";
+import "./SafeERC20.sol";
 
 library TokenUtils {
   using SafeERC20 for IERC20;
@@ -64,7 +64,7 @@ library TokenUtils {
   }
 
   function depositWeth(uint256 _amount) internal {
-    IWETH(WETH_ADDR).deposit{value: _amount}();
+    IWETH(WETH_ADDR).deposit{ value: _amount }();
   }
 
   function withdrawWeth(uint256 _amount) internal {

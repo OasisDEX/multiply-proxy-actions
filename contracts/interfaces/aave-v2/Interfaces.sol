@@ -1,6 +1,6 @@
 pragma experimental ABIEncoderV2;
 
-import {DataTypes} from './Libraries.sol';
+import { DataTypes } from "./Libraries.sol";
 
 /**
  * @dev Interface of the ERC20 standard as defined in the EIP.

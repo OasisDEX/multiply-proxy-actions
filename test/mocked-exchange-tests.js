@@ -746,9 +746,11 @@ describe('Multiply Proxy Action with Mocked Exchange', async function () {
         CDP_ID,
       )
 
-      info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)      
-      const expectedVaultCollateral = new BigNumber(info.coll).minus(parseFloat(sellCollateralAmount.toString()))
-     
+      info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
+      const expectedVaultCollateral = new BigNumber(info.coll).minus(
+        parseFloat(sellCollateralAmount.toString()),
+      )
+
       await dsproxyExecuteAction(
         multiplyProxyActions,
         dsProxy,

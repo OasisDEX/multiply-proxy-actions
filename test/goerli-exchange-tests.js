@@ -39,28 +39,34 @@ function asPercentageValue(value, base) {
 }
 
 describe('Exchange', async function () {
-  let provider, signer, address, exchange, WETH, DAI, feeBeneficiary, slippage, fee, snapshotId;
+  let provider, signer, address, exchange, WETH, DAI, feeBeneficiary, slippage, fee, snapshotId
 
   this.beforeAll(async function () {
-    console.log("Before init");
+    console.log('Before init')
     let [_provider, _signer] = await init(undefined, provider, signer)
-    console.log("After init");
+    console.log('After init')
     provider = _provider
     signer = _signer
     address = await signer.getAddress()
-    
-    feeBeneficiary = await ( await _provider.getSigner(1)).getAddress();
+
+    feeBeneficiary = await (await _provider.getSigner(1)).getAddress()
     slippage = asPercentageValue(8, 100)
     fee = asPercentageValue(FEE, FEE_BASE)
 
-    console.log("Fee and slippage", FEE, 8);
+    console.log('Fee and slippage', FEE, 8)
 
     const GoerliDummyExchange = await ethers.getContractFactory('GoerliDummyExchange', signer)
-    exchange = await GoerliDummyExchange.deploy(feeBeneficiary, FEE, 8, MAINNET_ADRESSES.MCD_DAI, address)
+    exchange = await GoerliDummyExchange.deploy(
+      feeBeneficiary,
+      FEE,
+      8,
+      MAINNET_ADRESSES.MCD_DAI,
+      address,
+    )
     await exchange.deployed()
-    
-    await loadDummyExchangeFixtures(provider, signer, exchange, true);
-    console.log("After deploy", address);
+
+    await loadDummyExchangeFixtures(provider, signer, exchange, true)
+    console.log('After deploy', address)
 
     WETH = new ethers.Contract(MAINNET_ADRESSES.ETH, wethAbi, provider).connect(signer)
     DAI = new ethers.Contract(MAINNET_ADRESSES.MCD_DAI, erc20Abi, provider).connect(signer)
@@ -100,7 +106,7 @@ describe('Exchange', async function () {
         amountInWei,
         exchange.address,
         slippage.value.toString(),
-        ALLOWED_PROTOCOLS
+        ALLOWED_PROTOCOLS,
       )
       initialDaiWalletBalance = convertToBigNumber(await balanceOf(MAINNET_ADRESSES.ETH, address))
 
@@ -144,11 +150,9 @@ describe('Exchange', async function () {
           value: amountToWei(amount.toNumber()).toFixed(0),
         })
 
-        const intBal = await balanceOf( MAINNET_ADRESSES.ETH,address);
+        const intBal = await balanceOf(MAINNET_ADRESSES.ETH, address)
 
-        initialWethWalletBalance = convertToBigNumber(
-          intBal
-        )
+        initialWethWalletBalance = convertToBigNumber(intBal)
 
         await WETH.approve(exchange.address, amountInWei)
 
@@ -163,7 +167,6 @@ describe('Exchange', async function () {
             gasLimit: 2500000,
           },
         )
-
       })
 
       this.afterEach(async function () {
@@ -208,7 +211,7 @@ describe('Exchange', async function () {
         initialWethWalletBalance = convertToBigNumber(
           await balanceOf(MAINNET_ADRESSES.ETH, address),
         )
-        lessThanTheTransferAmount = convertToBigNumber(amountInWei).minus(5);
+        lessThanTheTransferAmount = convertToBigNumber(amountInWei).minus(5)
 
         await WETH.approve(exchange.address, lessThanTheTransferAmount.toFixed(0))
       })
@@ -229,14 +232,13 @@ describe('Exchange', async function () {
             gasLimit: 2500000,
           },
         )
-        await expect(tx).to.revertedWith("Exchange / Not enought allowance")
+        await expect(tx).to.revertedWith('Exchange / Not enought allowance')
 
         const wethBalance = convertToBigNumber(await balanceOf(MAINNET_ADRESSES.ETH, address))
 
         expect(wethBalance.toString()).to.equals(initialWethWalletBalance.toString())
       })
     })
-
   })
 
   describe('DAI for Asset', async function () {
@@ -251,7 +253,7 @@ describe('Exchange', async function () {
         amountInWei.toFixed(0),
         slippage.value.toString(),
         exchange.address,
-        ALLOWED_PROTOCOLS
+        ALLOWED_PROTOCOLS,
       )
 
       const {
@@ -383,11 +385,8 @@ describe('Exchange', async function () {
             gasLimit: 2500000,
           },
         )
-        await expect(tx).to.be.revertedWith("Exchange / Not enought allowance")
-        
+        await expect(tx).to.be.revertedWith('Exchange / Not enought allowance')
       })
     })
-
   })
-
 })

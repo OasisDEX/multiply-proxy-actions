@@ -11,7 +11,8 @@ abstract contract IGUNIRouter {
     uint256 _amount1Min,
     address _receiver
   )
-    public virtual
+    public
+    virtual
     returns (
       uint256 amount0,
       uint256 amount1,
@@ -25,7 +26,8 @@ abstract contract IGUNIRouter {
     uint256 _amount1Min,
     address _receiver
   )
-    public virtual
+    public
+    virtual
     returns (
       uint256 amount0,
       uint256 amount1,

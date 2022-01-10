@@ -2,7 +2,7 @@
 
 pragma solidity ^0.7.0;
 
-import './DSAuthority.sol';
+import "./DSAuthority.sol";
 
 contract DSAuthEvents {
   event LogSetAuthority(address indexed authority);
@@ -28,8 +28,8 @@ contract DSAuth is DSAuthEvents {
     emit LogSetAuthority(address(authority));
   }
 
-  modifier auth {
-    require(isAuthorized(msg.sender, msg.sig), 'Not authorized');
+  modifier auth() {
+    require(isAuthorized(msg.sender, msg.sig), "Not authorized");
     _;
   }
 
