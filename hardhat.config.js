@@ -139,21 +139,6 @@ module.exports = {
         agg[network] = config
         return agg
       }, {}),
-    // mainnet: {
-    //   url: process.env.ALCHEMY_NODE,
-    //   accounts: [process.env.PRIV_KEY_MAINNET],
-    //   gasPrice: 40000000000,
-    // },
-    // rinkeby: {
-    //   url: process.env.ALCHEMY_NODE_RINKEBY,
-    //   accounts: [process.env.PRIV_KEY_MAINNET],
-    //   gasPrice: 40000000000,
-    // },
-    // goerli: {
-    //   url: process.env.ALCHEMY_NODE_GOERLI,
-    //   accounts: [process.env.PRIV_KEY_MAINNET],
-    //   gasPrice: 40000000000,
-    // },
   },
   solidity: {
     version: '0.7.6',
