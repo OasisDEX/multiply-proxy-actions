@@ -1,42 +1,56 @@
-const dsProxyRegistryAbi = require('../../abi/external/ds-proxy-registry.json')
-const dsProxyAbi = require('../../abi/external/ds-proxy.json')
-const WethAbi = require('../../abi/IWETH.json')
-const Erc20Abi = require('../../abi/IERC20.json')
-const { default: BigNumber } = require('bignumber.js')
-const getCdpsAbi = require('../../abi/external/get-cdps.json')
-const _ = require('lodash')
-const {
+import BigNumber from 'bignumber.js'
+import _ from 'lodash'
+import { curry } from 'ramda'
+import { ethers } from 'hardhat'
+import { BigNumber as EthersBN, Contract, Signer } from 'ethers'
+import DSProxyRegistryABI from '../../abi/external/ds-proxy-registry.json'
+import DSProxyABI from '../../abi/external/ds-proxy.json'
+import WETHABI from '../../abi/IWETH.json'
+import ERC20ABI from '../../abi/IERC20.json'
+import GetCDPsABI from '../../abi/external/get-cdps.json'
+import UniswapRouterV3ABI from '../../abi/external/IUniswapRouter.json'
+import MAINNET_ADDRESSES from '../../addresses/mainnet.json'
+
+import { JsonRpcProvider } from '@ethersproject/providers'
+import { balanceOf, one, zero, WETH_ADDRESS } from '../utils'
+
+import {
   amountToWei,
   amountFromWei,
   addressRegistryFactory,
-  MAINNET_ADRESSES,
   ensureWeiFormat,
-  convertToBigNumber,
-} = require('./params-calculation-utils')
+} from './params-calculation-utils'
+import { getMarketPrice } from './http-apis'
 
-const UniswapRouterV3Abi = require('../../abi/external/IUniswapRouter.json')
+export const FEE = 20
+export const FEE_BASE = 10000
 
-let CONTRACTS = {}
+export interface MCDInitParams {
+  blockNumber?: string
+  provider?: JsonRpcProvider
+  signer?: Signer
+}
 
-const { balanceOf, TEN, one, zero } = require('../utils')
-const { getVaultInfo } = require('../utils-mcd.js')
-const { curry } = require('ramda')
-const { getMarketPrice } = require('./http_apis')
+export interface ERC20TokenData {
+  name: string
+  address: string
+  precision: number
+  pip?: string
+}
 
-const FEE = 20
-const FEE_BASE = 10000
+export async function init(params: MCDInitParams = {}): Promise<[JsonRpcProvider, Signer]> {
+  const provider = params.provider || new ethers.providers.JsonRpcProvider()
+  const signer = params.signer || provider.getSigner(0)
 
-const init = async function (blockNumber, provider, signer) {
-  blockNumber = blockNumber ? parseInt(blockNumber) : undefined
-  provider = provider || new hre.ethers.providers.JsonRpcProvider()
-  signer = signer || provider.getSigner(0)
-
-  let forking = {
+  const forking = {
     jsonRpcUrl: process.env.ALCHEMY_NODE,
   }
 
-  if (blockNumber) {
-    forking = { ...forking, blockNumber }
+  if (params.blockNumber) {
+    // TODO:
+    ;(forking as any).blockNumber = params.blockNumber
+      ? parseInt(params.blockNumber, 10)
+      : undefined
   }
 
   await provider.send('hardhat_reset', [
@@ -56,27 +70,23 @@ const init = async function (blockNumber, provider, signer) {
  * recipient: string - wallet's addrees that's going to receive the funds
  */
 
-const swapTokens = async function (
-  tokenIn,
-  tokenOut,
-  amountIn,
-  amountOutMinimum,
-  recipient,
-  provider,
-  signer,
+export async function swapTokens(
+  tokenIn: string,
+  tokenOut: string,
+  amountIn: string,
+  amountOutMinimum: string,
+  recipient: string,
+  provider: JsonRpcProvider,
+  signer: Signer,
 ) {
-  let value = 0
-
-  if (tokenIn === MAINNET_ADRESSES.ETH) {
-    value = amountIn
-  }
+  const value = tokenIn === MAINNET_ADDRESSES.ETH ? amountIn : 0
 
   const UNISWAP_ROUTER_V3 = '0xe592427a0aece92de3edee1f18e0157c05861564'
-  const uniswapV3 = new ethers.Contract(UNISWAP_ROUTER_V3, UniswapRouterV3Abi, provider).connect(
+  const uniswapV3 = new ethers.Contract(UNISWAP_ROUTER_V3, UniswapRouterV3ABI, provider).connect(
     signer,
   )
 
-  let swapParams = {
+  const swapParams = {
     tokenIn,
     tokenOut,
     fee: 3000,
@@ -90,12 +100,12 @@ const swapTokens = async function (
   await uniswapV3.exactInputSingle(swapParams, { value })
 }
 
-const dsproxyExecuteAction = async function (
-  proxyActions,
-  dsProxy,
-  fromAddress,
-  method,
-  params,
+export async function dsproxyExecuteAction(
+  proxyActions: Contract,
+  dsProxy: Contract,
+  fromAddress: string,
+  method: string,
+  params: any[],
   value = new BigNumber(0),
   debug = false,
 ) {
@@ -103,14 +113,14 @@ const dsproxyExecuteAction = async function (
     const calldata = proxyActions.interface.encodeFunctionData(method, params)
 
     debug && console.log(`\x1b[33m ${method} started \x1b[0m`, new Date())
-    var tx = await dsProxy['execute(address,bytes)'](proxyActions.address, calldata, {
+    const tx = await dsProxy['execute(address,bytes)'](proxyActions.address, calldata, {
       from: fromAddress,
       value: ensureWeiFormat(value),
       gasLimit: 8500000,
-      gasPrice: '1000000000',
+      gasPrice: 1000000000,
     })
 
-    var retVal = await tx.wait()
+    const retVal = await tx.wait()
     debug &&
       console.log(
         `\x1b[33m  ${method} completed  gasCost = ${retVal.gasUsed.toString()} \x1b[0m`,
@@ -124,11 +134,11 @@ const dsproxyExecuteAction = async function (
   }
 }
 
-const getOrCreateProxy = async function getOrCreateProxy(provider, signer) {
+export async function getOrCreateProxy(provider: JsonRpcProvider, signer: Signer) {
   const address = await signer.getAddress()
   const dsProxyRegistry = new ethers.Contract(
-    MAINNET_ADRESSES.PROXY_REGISTRY,
-    dsProxyRegistryAbi,
+    MAINNET_ADDRESSES.PROXY_REGISTRY,
+    DSProxyRegistryABI,
     provider,
   ).connect(signer)
   let proxyAddress = await dsProxyRegistry.proxies(address)
@@ -139,74 +149,79 @@ const getOrCreateProxy = async function getOrCreateProxy(provider, signer) {
   return proxyAddress
 }
 
-async function exchangeToToken(provider, signer, token) {
+async function exchangeToToken(provider: JsonRpcProvider, signer: Signer, token: ERC20TokenData) {
   const UNISWAP_ROUTER_V3 = '0xe592427a0aece92de3edee1f18e0157c05861564'
-  const uniswapV3 = new ethers.Contract(UNISWAP_ROUTER_V3, UniswapRouterV3Abi, provider).connect(
+  const uniswapV3 = new ethers.Contract(UNISWAP_ROUTER_V3, UniswapRouterV3ABI, provider).connect(
     signer,
   )
 
   const address = await signer.getAddress()
 
-  let swapParams = {
-    tokenIn: MAINNET_ADRESSES.ETH,
+  const swapParams = {
+    tokenIn: MAINNET_ADDRESSES.ETH,
     tokenOut: token.address,
     fee: 3000,
     recipient: address,
     deadline: 1751366148,
-    amountIn: amountToWei(new BigNumber(200)).toFixed(0),
+    amountIn: amountToWei(200).toFixed(0),
     amountOutMinimum: amountToWei(zero, token.precision).toFixed(0),
     sqrtPriceLimitX96: 0,
   }
 
   const uniswapTx = await uniswapV3.exactInputSingle(swapParams, {
-    value: amountToWei(new BigNumber(200)).toFixed(0),
+    value: amountToWei(200).toFixed(0),
   })
 
   await uniswapTx.wait()
 }
 
-async function transferToExchange(provider, signer, exchangeAddress, token, amount) {
-  const Token = new ethers.Contract(token.address, Erc20Abi, provider).connect(signer)
+async function transferToExchange(
+  provider: JsonRpcProvider,
+  signer: Signer,
+  exchangeAddress: string,
+  token: ERC20TokenData,
+  amount: BigNumber.Value,
+) {
+  const contract = new ethers.Contract(token.address, ERC20ABI, provider).connect(signer)
 
-  const tokenTransferToExchangeTx = await Token.transfer(exchangeAddress, amount)
+  const tokenTransferToExchangeTx = await contract.transfer(exchangeAddress, amount)
 
   await tokenTransferToExchangeTx.wait()
 }
 
 const addFundsDummyExchange = async function (
-  provider,
-  signer,
-  WETH_ADDRESS,
-  erc20Tokens,
-  exchange,
-  debug,
+  provider: JsonRpcProvider,
+  signer: Signer,
+  WETH_ADDRESS: string, // TODO: remove
+  erc20Tokens: ERC20TokenData[], // TODO:
+  exchange: Contract,
+  debug: boolean,
 ) {
-  const WETH = new ethers.Contract(WETH_ADDRESS, WethAbi, provider).connect(signer)
+  const WETH = new ethers.Contract(WETH_ADDRESS, WETHABI, provider).connect(signer)
   const address = await signer.getAddress()
 
   const exchangeToTokenCurried = curry(exchangeToToken)(provider, signer)
   const transferToExchangeCurried = curry(transferToExchange)(provider, signer, exchange.address)
 
   const wethDeposit = await WETH.deposit({
-    value: amountToWei(new BigNumber(1000)).toFixed(0),
+    value: amountToWei(1000).toFixed(0),
   })
   await wethDeposit.wait()
 
   const wethTransferToExchangeTx = await WETH.transfer(
     exchange.address,
-    amountToWei(new BigNumber(500)).toFixed(0),
+    amountToWei(500).toFixed(0),
   )
   await wethTransferToExchangeTx.wait()
 
   // Exchange ETH for the `token`
-  await Promise.all(erc20Tokens.map((token) => exchangeToTokenCurried(token)))
+  await Promise.all(erc20Tokens.map(token => exchangeToTokenCurried(token)))
 
   // Transfer half of the accounts balance of each token to the dummy exchange.
   await Promise.all(
-    erc20Tokens.map(async function (token) {
+    erc20Tokens.map(async token => {
       const balance = await balanceOf(token.address, address)
-      const amountToTransfer = new BigNumber(balance.toString()).dividedBy(2).toFixed(0)
-      return transferToExchangeCurried(token, amountToTransfer)
+      return transferToExchangeCurried(token, balance.div(2).toFixed(0))
     }),
   )
 
@@ -214,10 +229,10 @@ const addFundsDummyExchange = async function (
     // Diplays balances of the exchange and account for each token
     await Promise.all(
       erc20Tokens.map(async function (token) {
-        const exchangeTokenBalance = convertToBigNumber(
-          await balanceOf(token.address, exchange.address),
-        )
-        const addressTokenBalance = convertToBigNumber(await balanceOf(token.address, address))
+        const [exchangeTokenBalance, addressTokenBalance] = await Promise.all([
+          balanceOf(token.address, exchange.address),
+          balanceOf(token.address, address),
+        ])
         console.log(
           `Exchange ${token.name} balance: ${amountFromWei(
             exchangeTokenBalance,
@@ -235,36 +250,41 @@ const addFundsDummyExchange = async function (
   }
 }
 
-const loadDummyExchangeFixtures = async function (provider, signer, dummyExchangeInstance, debug) {
+export async function loadDummyExchangeFixtures(
+  provider: JsonRpcProvider,
+  signer: Signer,
+  dummyExchangeInstance: Contract,
+  debug: boolean,
+) {
   const tokens = [
     {
       name: 'ETH',
-      address: MAINNET_ADRESSES.ETH,
-      pip: MAINNET_ADRESSES.PIP_ETH,
+      address: MAINNET_ADDRESSES.ETH,
+      pip: MAINNET_ADDRESSES.PIP_ETH,
       precision: 18,
     },
     {
       name: 'DAI',
-      address: MAINNET_ADRESSES.MCD_DAI,
+      address: MAINNET_ADDRESSES.MCD_DAI,
       pip: undefined,
       precision: 18,
     },
     {
       name: 'LINK',
-      address: MAINNET_ADRESSES.LINK,
-      pip: MAINNET_ADRESSES.PIP_LINK,
+      address: MAINNET_ADDRESSES.LINK,
+      pip: MAINNET_ADDRESSES.PIP_LINK,
       precision: 18,
     },
     {
       name: 'WBTC',
-      address: MAINNET_ADRESSES.WBTC,
-      pip: MAINNET_ADRESSES.PIP_WBTC,
+      address: MAINNET_ADDRESSES.WBTC,
+      pip: MAINNET_ADDRESSES.PIP_WBTC,
       precision: 8,
     },
     {
       name: 'USDC',
-      address: MAINNET_ADRESSES.USDC,
-      pip: MAINNET_ADRESSES.PIP_USDC,
+      address: MAINNET_ADDRESSES.USDC,
+      pip: MAINNET_ADDRESSES.PIP_USDC,
       precision: 6,
     },
   ]
@@ -273,49 +293,66 @@ const loadDummyExchangeFixtures = async function (provider, signer, dummyExchang
   await addFundsDummyExchange(
     provider,
     signer,
-    MAINNET_ADRESSES.WETH_ADDRESS,
-    tokens.filter((token) => token.address !== MAINNET_ADRESSES.ETH),
+    WETH_ADDRESS,
+    tokens.filter(token => token.address !== MAINNET_ADDRESSES.ETH),
     dummyExchangeInstance,
     debug,
   )
 
   // Setting precision for each @token that is going to be used.
   await Promise.all(
-    tokens.map((token) => {
+    tokens.map(token => {
       if (debug) {
         console.log(`${token.name} precision: ${token.precision}`)
       }
-      if (dummyExchangeInstance.setPrecision)
+
+      if (dummyExchangeInstance.setPrecision) {
         return dummyExchangeInstance.setPrecision(token.address, token.precision)
-      else return true
+      }
+
+      return true
     }),
   )
 
   // Setting price for each @token that has PIP
   await Promise.all(
     tokens
-      .filter((token) => !!token.pip)
-      .map(async (token) => {
-        const price = await getMarketPrice(token.address, MAINNET_ADRESSES.MCD_DAI, token.precision)
+      .filter(token => !!token.pip)
+      .map(async token => {
+        const price = await getMarketPrice(
+          token.address,
+          MAINNET_ADDRESSES.MCD_DAI,
+          token.precision,
+        )
         const priceInWei = amountToWei(price).toFixed(0)
+
         if (debug) {
           console.log(`${token.name} Price: ${price.toString()} and Price(wei): ${priceInWei}`)
         }
-        if (dummyExchangeInstance.setPrice)
+
+        if (dummyExchangeInstance.setPrice) {
           return dummyExchangeInstance.setPrice(token.address, priceInWei)
-        else return true
+        }
+
+        return true
       }),
   )
 
   if (debug) {
-    tokens.map((token) => {
+    tokens.map(token => {
       console.log(`${token.name}: ${token.address}`)
     })
   }
 }
 
-const deploySystem = async function (provider, signer, isExchangeDummy = false, debug = false) {
-  let deployedContracts = {
+export async function deploySystem(
+  provider: JsonRpcProvider,
+  signer: Signer,
+  usingDummyExchange = false,
+  debug = false,
+) {
+  // TODO:
+  const deployedContracts: any = {
     // defined during system deployment
     mcdViewInstance: undefined,
     exchangeInstance: undefined,
@@ -329,9 +366,9 @@ const deploySystem = async function (provider, signer, isExchangeDummy = false, 
   }
 
   const userProxyAddress = await getOrCreateProxy(provider, signer)
-  const dsProxy = new ethers.Contract(userProxyAddress, dsProxyAbi, provider).connect(signer)
+  const dsProxy = new ethers.Contract(userProxyAddress, DSProxyABI, provider).connect(signer)
 
-  deployedContracts.userProxyAddress = userProxyAddress
+  deployedContracts.userProxyAddress = userProxyAddress // TODO:
   deployedContracts.dsProxyInstance = dsProxy
 
   // GUNI DEPLOYMENT
@@ -347,7 +384,7 @@ const deploySystem = async function (provider, signer, isExchangeDummy = false, 
 
   const incompleteRegistry = addressRegistryFactory(
     deployedContracts.multiplyProxyActionsInstance,
-    undefined,
+    '', // TODO:
   )
 
   const McdView = await ethers.getContractFactory('McdView', signer)
@@ -366,7 +403,7 @@ const deploySystem = async function (provider, signer, isExchangeDummy = false, 
   const dummyExchange = await DummyExchange.deploy()
   const dummyExchangeInstance = await dummyExchange.deployed()
 
-  if (isExchangeDummy == false) {
+  if (usingDummyExchange == false) {
     deployedContracts.exchangeInstance = exchangeInstance
   } else {
     deployedContracts.exchangeInstance = dummyExchangeInstance
@@ -377,7 +414,7 @@ const deploySystem = async function (provider, signer, isExchangeDummy = false, 
   if (debug) {
     console.log('Signer address:', await signer.getAddress())
     console.log('Exchange address:', deployedContracts.exchangeInstance.address)
-    console.log('User Proxy Address:', deployedContracts.userProxyAddress)
+    console.log('User Proxy Address:', deployedContracts.userProxyAddress) // TODO:
     console.log('DSProxy address:', deployedContracts.dsProxyInstance.address)
     console.log(
       'MultiplyProxyActions address:',
@@ -390,10 +427,13 @@ const deploySystem = async function (provider, signer, isExchangeDummy = false, 
   return deployedContracts
 }
 
-const ONE = one
+export const ONE = one // TODO: omg
 
-async function getOraclePrice(provider, pipAddress = MAINNET_ADRESSES.PIP_ETH) {
-  const storageHexToBigNumber = (uint256) => {
+export async function getOraclePrice(
+  provider: JsonRpcProvider,
+  pipAddress = MAINNET_ADDRESSES.PIP_ETH,
+) {
+  const storageHexToBigNumber = (uint256: string) => {
     const match = uint256.match(/^0x(\w+)$/)
     if (!match) {
       throw new Error(`invalid uint256: ${uint256}`)
@@ -411,14 +451,14 @@ async function getOraclePrice(provider, pipAddress = MAINNET_ADRESSES.PIP_ETH) {
   return p[1].shiftedBy(-18)
 }
 
-const getLastCDP = async function (provider, signer, proxyAddress) {
-  const getCdps = new ethers.Contract(MAINNET_ADRESSES.GET_CDPS, getCdpsAbi, provider).connect(
+export async function getLastCDP(provider: JsonRpcProvider, signer: Signer, proxyAddress: string) {
+  const getCdps = new ethers.Contract(MAINNET_ADDRESSES.GET_CDPS, GetCDPsABI, provider).connect(
     signer,
   )
-  const { ids, urns, ilks } = await getCdps.getCdpsAsc(MAINNET_ADRESSES.CDP_MANAGER, proxyAddress)
+  const { ids, urns, ilks } = await getCdps.getCdpsAsc(MAINNET_ADDRESSES.CDP_MANAGER, proxyAddress)
   const cdp = _.last(
-    _.map(_.zip(ids, urns, ilks), (cdp) => ({
-      id: cdp[0].toNumber(),
+    _.map(_.zip(ids, urns, ilks), cdp => ({
+      id: (cdp[0] as EthersBN).toNumber(), // TODO:
       urn: cdp[1],
       ilk: cdp[2],
     })),
@@ -429,18 +469,21 @@ const getLastCDP = async function (provider, signer, proxyAddress) {
   return cdp
 }
 
-const findMPAEvent = function (txResult) {
-  let abi = [
+// TODO:
+export function findMPAEvent(txResult: any) {
+  const abi = [
     'event MultipleActionCalled(string methodName, uint indexed cdpId, uint swapMinAmount, uint swapOptimistAmount, uint collateralLeft, uint daiLeft)',
   ]
-  let iface = new ethers.utils.Interface(abi)
-  let events = txResult.events
-    .filter((x) => {
+  const iface = new ethers.utils.Interface(abi)
+  const events = txResult.events
+    // TODO:
+    .filter((x: any) => {
       return x.topics[0] == iface.getEventTopic('MultipleActionCalled')
     })
-    .map((x) => {
-      let result = iface.decodeEventLog('MultipleActionCalled', x.data, x.topics)
-      let retVal = {
+    // TODO:
+    .map((x: any) => {
+      const result = iface.decodeEventLog('MultipleActionCalled', x.data, x.topics)
+      const retVal = {
         methodName: result.methodName,
         cdpId: result.cdpId.toString(),
         swapMinAmount: result.swapMinAmount.toString(),
@@ -451,25 +494,4 @@ const findMPAEvent = function (txResult) {
       return retVal
     })
   return events
-}
-
-module.exports = {
-  getOrCreateProxy,
-  deploySystem,
-  dsproxyExecuteAction,
-  getOraclePrice,
-  getLastCDP,
-  getVaultInfo,
-  balanceOf,
-  addressRegistryFactory,
-  loadDummyExchangeFixtures,
-  swapTokens,
-  findMPAEvent,
-  init,
-  ONE,
-  TEN,
-  FEE,
-  FEE_BASE,
-  MAINNET_ADRESSES,
-  CONTRACTS,
 }

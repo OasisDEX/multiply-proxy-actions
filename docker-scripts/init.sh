@@ -12,7 +12,7 @@ trap "exit" INT TERM ERR
 trap "jobs -p | xargs -r kill" EXIT
 
 # Deploy the system contracts
-npx hardhat run scripts/deploy-system.js --network local
+npx hardhat run scripts/deploy-system.ts --network local
 
 # Move the hardhat node to foreground
 fg %1

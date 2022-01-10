@@ -1,4 +1,7 @@
-const {
+import { expect } from 'chai'
+import { ethers } from 'hardhat'
+import BigNumber from 'bignumber.js'
+import {
   init,
   deploySystem,
   getOraclePrice,
@@ -7,19 +10,15 @@ const {
   getVaultInfo,
   MAINNET_ADRESSES,
   swapTokens,
-} = require('./common/mcd-deployment-utils')
-const { default: BigNumber } = require('bignumber.js')
-const {
+} from './common/mcd-deployment-utils'
+import {
   amountToWei,
   calculateParamsIncreaseMP,
   calculateParamsDecreaseMP,
   prepareMultiplyParameters2,
-} = require('./common/params-calculation-utils')
-const { expect } = require('chai')
+} from './common/params-calculation-utils'
 
-const erc20Abi = require('../abi/IERC20.json')
-
-const ethers = hre.ethers
+import erc20Abi from '../abi/IERC20.json'
 
 const LENDER_FEE = new BigNumber(0.0)
 

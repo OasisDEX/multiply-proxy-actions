@@ -1,11 +1,17 @@
-const dotenv = require('dotenv').config()
-const { getFile, getCurrentDir } = require('./utils.js')
-const fs = require('fs')
-const fsPromises = fs.promises
+import { config } from 'dotenv'
+import { mkdirSync, writeFileSync } from 'fs'
+import { getFile, getCurrentDir } from './utils'
 
-const DEPLOYMENTS_FOLDER_NAME = 'deployments'
+config()
 
-const write = async (contractName, network, address, ...args) => {
+export const DEPLOYMENTS_FOLDER_NAME = 'deployments'
+
+export async function write(
+  contractName: string,
+  network: string,
+  address: string,
+  ...args: any[]
+) {
   const filename = (await getFile(`./artifacts/`, `${contractName}.json`))[0]
   const file = require(filename)
 
@@ -19,7 +25,7 @@ const write = async (contractName, network, address, ...args) => {
     newFile.networks[network] = {}
   }
 
-  if (network == 'mainnet') {
+  if (network === 'mainnet') {
     newFile.networks[network].address = address
     newFile.networks[network].args = args
   }
@@ -27,22 +33,13 @@ const write = async (contractName, network, address, ...args) => {
   try {
     const currentDir = await getCurrentDir()
 
-    fsPromises
-      .mkdir(`${currentDir}/${DEPLOYMENTS_FOLDER_NAME}`, { recursive: true })
-      .catch(console.error)
+    mkdirSync(`${currentDir}/${DEPLOYMENTS_FOLDER_NAME}`, { recursive: true })
 
     const writeFilename = `${currentDir}/${DEPLOYMENTS_FOLDER_NAME}/${contractName}.json`
-    await fsPromises.writeFile(writeFilename, JSON.stringify(newFile, null, '\t'))
+    writeFileSync(writeFilename, JSON.stringify(newFile, null, '\t'))
 
     return
   } catch (e) {
     console.log(e)
-
-    return
   }
-}
-
-module.exports = {
-  write,
-  DEPLOYMENTS_FOLDER_NAME,
 }

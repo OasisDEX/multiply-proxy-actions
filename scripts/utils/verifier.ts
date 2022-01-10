@@ -1,13 +1,13 @@
-const { exec } = require('child_process')
-const { getFile } = require('./utils')
-const { DEPLOYMENTS_FOLDER_NAME } = require('./writer')
+import { exec } from 'child_process'
+import { getFile } from './utils'
+import { DEPLOYMENTS_FOLDER_NAME } from './writer'
 
 const networkName = process.argv[2]
 const contractName = process.argv[3]
 
 if (!contractName || !networkName) {
-  console.log('You need to provide network name and contract name respectively')
-  process.exit(1)
+  process.exitCode = 1
+  throw new Error('You need to provide network name and contract name respectively')
 }
 
 ;(async () => {

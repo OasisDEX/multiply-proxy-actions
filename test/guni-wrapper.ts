@@ -1,4 +1,7 @@
-const {
+import BigNumber from 'bignumber.js'
+import { expect } from 'chai'
+import { ethers } from 'hardhat'
+import {
   deploySystem,
   getOraclePrice,
   dsproxyExecuteAction,
@@ -8,9 +11,8 @@ const {
   MAINNET_ADRESSES,
   findMPAEvent,
   swapTokens,
-} = require('./common/mcd-deployment-utils')
-const { default: BigNumber } = require('bignumber.js')
-const {
+} from './common/mcd-deployment-utils'
+import {
   amountToWei,
   amountFromWei,
   ensureWeiFormat,
@@ -19,15 +21,12 @@ const {
   prepareMultiplyParameters,
   packMPAParams,
   prepareMultiplyParameters2,
-} = require('./common/params-calculation-utils')
-const { expect } = require('chai')
-const { one } = require('./utils')
+} from './common/params-calculation-utils'
+import { one } from './utils'
 
-const wethAbi = require('../abi/IWETH.json')
-const erc20Abi = require('../abi/IERC20.json')
-const spotterAbi = require('../abi/ISpotter.json')
-
-const ethers = hre.ethers
+import wethAbi from '../abi/IWETH.json'
+import erc20Abi from '../abi/IERC20.json'
+import spotterAbi from '../abi/ISpotter.json'
 
 async function checkMPAPostState(tokenAddress, mpaAddress) {
   const daiBalance = await balanceOf(MAINNET_ADRESSES.MCD_DAI, mpaAddress)
@@ -243,7 +242,7 @@ describe('GUNI Multiply Proxy Action Wrapper with Mocked Exchange', async functi
 
     let params2 = [exchangeData, cdpData, guniAddressRegistry]
 
-    var [status, result] = await dsproxyExecuteAction(
+    let [status, result] = await dsproxyExecuteAction(
       guni,
       dsProxy,
       address,
@@ -287,7 +286,7 @@ describe('GUNI Multiply Proxy Action Wrapper with Mocked Exchange', async functi
 
     cdpData.token0Amount = 0
 
-    var [status, result] = await dsproxyExecuteAction(
+    let [status, result] = await dsproxyExecuteAction(
       guni,
       dsProxy,
       address,

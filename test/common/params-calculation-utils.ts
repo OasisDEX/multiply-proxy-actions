@@ -1,12 +1,13 @@
-const { default: BigNumber } = require('bignumber.js')
-let MAINNET_ADRESSES = require('../../addresses/mainnet.json')
-const { WETH_ADDRESS, one, zero, TEN, balanceOf } = require('../utils')
+import BigNumber from 'bignumber.js'
+import { BigNumber as EthersBN } from 'ethers'
+import MAINNET_ADRESSES from '../../addresses/mainnet.json'
+import { one, zero, TEN, WETH_ADDRESS } from '../utils'
 
-MAINNET_ADRESSES.WETH_ADDRESS = WETH_ADDRESS
+// MAINNET_ADRESSES.WETH_ADDRESS = WETH_ADDRESS // TODO:
 
-const addressRegistryFactory = function (
-  multiplyProxyActionsInstanceAddress,
-  exchangeInstanceAddress,
+export function addressRegistryFactory(
+  multiplyProxyActionsInstanceAddress: string,
+  exchangeInstanceAddress: string,
 ) {
   return {
     jug: '0x19c0976f590D67707E62397C87829d896Dc0f1F1',
@@ -18,29 +19,24 @@ const addressRegistryFactory = function (
   }
 }
 
-function amountToWei(amount, precision = 18) {
-  if (BigNumber.isBigNumber(amount) == false) {
-    amount = new BigNumber(amount || 0)
-  }
-  return amount.times(new BigNumber(10).pow(precision))
+export function amountToWei(amount: BigNumber.Value, precision = 18) {
+  return new BigNumber(amount || 0).times(new BigNumber(10).pow(precision))
 }
 
-function amountFromWei(amount, precision = 18) {
-  if (BigNumber.isBigNumber(amount) == false) {
-    amount = new BigNumber(amount || 0)
-  }
-  return amount.div(new BigNumber(10).pow(precision))
+// TODO: change
+export function amountFromWei(amount: BigNumber.Value, precision = 18) {
+  return new BigNumber(amount || 0).div(new BigNumber(10).pow(precision))
 }
 
-const calculateParamsIncreaseMP = function (
-  oraclePrice,
-  marketPrice,
-  OF,
-  FF,
-  currentColl,
-  currentDebt,
-  requiredCollRatio,
-  slippage,
+export function calculateParamsIncreaseMP(
+  oraclePrice: BigNumber,
+  marketPrice: BigNumber,
+  OF: BigNumber,
+  FF: BigNumber,
+  currentColl: BigNumber,
+  currentDebt: BigNumber,
+  requiredCollRatio: BigNumber,
+  slippage: BigNumber,
   depositDai = new BigNumber(0),
   debug = false,
 ) {
@@ -72,15 +68,15 @@ const calculateParamsIncreaseMP = function (
   return [debt, collateral]
 }
 
-const calculateParamsDecreaseMP = function (
-  oraclePrice,
-  marketPrice,
-  OF,
-  FF,
-  currentColl,
-  currentDebt,
-  requiredCollRatio,
-  slippage,
+export function calculateParamsDecreaseMP(
+  oraclePrice: BigNumber,
+  marketPrice: BigNumber,
+  OF: BigNumber,
+  FF: BigNumber,
+  currentColl: BigNumber,
+  currentDebt: BigNumber,
+  requiredCollRatio: BigNumber,
+  slippage: BigNumber,
   depositDai = new BigNumber(0),
   debug = false,
 ) {
@@ -112,7 +108,8 @@ const calculateParamsDecreaseMP = function (
   return [debt, collateral]
 }
 
-const packMPAParams = function (cdpData, exchangeData, registry) {
+// TODO:
+export function packMPAParams(cdpData: any, exchangeData: any, registry: any) {
   let registryClone = { ...registry }
   delete registryClone.feeRecepient
 
@@ -120,7 +117,8 @@ const packMPAParams = function (cdpData, exchangeData, registry) {
   return params
 }
 
-const convertToBigNumber = function (a) {
+// TODO: remove
+export function convertToBigNumber(a: any) {
   try {
     if (typeof a == 'number' || typeof a == 'string') {
       a = new BigNumber(a)
@@ -137,7 +135,10 @@ const convertToBigNumber = function (a) {
   return a
 }
 
-const ensureWeiFormat = function (input, interpretBigNum = true) {
+export function ensureWeiFormat(
+  input: any, // TODO:
+  interpretBigNum = true,
+) {
   let formated
   input = convertToBigNumber(input)
   try {
@@ -162,38 +163,39 @@ const ensureWeiFormat = function (input, interpretBigNum = true) {
   return formated
 }
 
-const mul = function (a, b) {
-  a = convertToBigNumber(a)
-  b = convertToBigNumber(b)
-  return a.multipliedBy(b)
-}
+// TODO: wtf
+// export function mul(a, b) {
+//   a = convertToBigNumber(a)
+//   b = convertToBigNumber(b)
+//   return a.multipliedBy(b)
+// }
 
-const div = function (a, b) {
-  a = convertToBigNumber(a)
-  b = convertToBigNumber(b)
-  return a.dividedBy(b)
-}
+// export function div(a, b) {
+//   a = convertToBigNumber(a)
+//   b = convertToBigNumber(b)
+//   return a.dividedBy(b)
+// }
 
-const add = function (a, b) {
-  a = convertToBigNumber(a)
-  b = convertToBigNumber(b)
-  return a.plus(b)
-}
+// export function add(a, b) {
+//   a = convertToBigNumber(a)
+//   b = convertToBigNumber(b)
+//   return a.plus(b)
+// }
 
-const sub = function (a, b) {
-  a = convertToBigNumber(a)
-  b = convertToBigNumber(b)
-  return new BigNumber(a).minus(b)
-}
+// export function sub(a, b) {
+//   a = convertToBigNumber(a)
+//   b = convertToBigNumber(b)
+//   return new BigNumber(a).minus(b)
+// }
 
-const prepareBasicParams = function (
-  gemAddress,
-  debtDelta,
-  collateralDelta,
-  providedCollateral,
-  oneInchPayload,
-  existingCDP,
-  fundsReciver,
+export function prepareBasicParams(
+  gemAddress: string,
+  debtDelta: any, // TODO:
+  collateralDelta: any, // TODO:
+  providedCollateral: any, // TODO:
+  oneInchPayload: any, // TODO:
+  existingCDP: any, // TODO:
+  fundsReciver: string,
   toDAI = false,
   skipFL = false,
 ) {
@@ -234,19 +236,19 @@ const prepareBasicParams = function (
   }
 }
 
-const prepareMultiplyParameters = function (
-  oneInchPayload,
-  desiredCdpState,
-  multiplyProxyActionsInstanceAddress,
-  exchangeInstanceAddress,
-  fundsReceiver,
+export function prepareMultiplyParameters(
+  oneInchPayload: any, // TODO:
+  desiredCdpState: any, // TODO:
+  multiplyProxyActionsInstanceAddress: string,
+  exchangeInstanceAddress: string,
+  fundsReceiver: string,
   toDAI = false,
   cdpId = 0,
   skipFL = false,
 ) {
   let exchangeData = {
-    fromTokenAddress: toDAI ? MAINNET_ADRESSES.WETH_ADDRESS : MAINNET_ADRESSES.MCD_DAI,
-    toTokenAddress: toDAI ? MAINNET_ADRESSES.MCD_DAI : MAINNET_ADRESSES.WETH_ADDRESS,
+    fromTokenAddress: toDAI ? WETH_ADDRESS : MAINNET_ADRESSES.MCD_DAI,
+    toTokenAddress: toDAI ? MAINNET_ADRESSES.MCD_DAI : WETH_ADDRESS,
     fromTokenAmount: toDAI
       ? amountToWei(desiredCdpState.toBorrowCollateralAmount).toFixed(0)
       : amountToWei(desiredCdpState.requiredDebt).toFixed(0),
@@ -285,15 +287,15 @@ const prepareMultiplyParameters = function (
   return { params, exchangeData, cdpData }
 }
 
-const prepareMultiplyParameters2 = function (
-  fromTokenAddress,
-  toTokenAddress,
-  oneInchPayload,
-  cdpId,
-  desiredCdpState,
-  multiplyProxyActionsInstanceAddress,
-  exchangeInstanceAddress,
-  userAddress,
+export function prepareMultiplyParameters2(
+  fromTokenAddress: string,
+  toTokenAddress: string,
+  oneInchPayload: any, // TODO:
+  cdpId: string, // TODO:
+  desiredCdpState: any, // TODO:
+  multiplyProxyActionsInstanceAddress: string,
+  exchangeInstanceAddress: string,
+  userAddress: string,
   skipFL = false,
   join = MAINNET_ADRESSES.MCD_JOIN_ETH_A,
   precision = 18,
@@ -344,23 +346,4 @@ const prepareMultiplyParameters2 = function (
   ]
 
   return params
-}
-
-module.exports = {
-  add,
-  mul,
-  sub,
-  div,
-  calculateParamsIncreaseMP,
-  calculateParamsDecreaseMP,
-  amountToWei,
-  prepareMultiplyParameters,
-  prepareMultiplyParameters2,
-  addressRegistryFactory,
-  prepareBasicParams,
-  packMPAParams,
-  ensureWeiFormat,
-  convertToBigNumber,
-  amountFromWei,
-  MAINNET_ADRESSES,
 }

@@ -1,55 +1,58 @@
-const {
-  balanceOf,
-  MAINNET_ADRESSES,
+import BigNumber from 'bignumber.js'
+import { expect } from 'chai'
+import { ethers } from 'hardhat'
+import { JsonRpcProvider } from '@ethersproject/providers'
+import { Contract, Signer } from 'ethers'
+import WETHABI from '../abi/IWETH.json'
+import ERC20ABI from '../abi/IERC20.json'
+import {
   FEE,
   FEE_BASE,
   init,
   loadDummyExchangeFixtures,
-  ONE,
   swapTokens,
-} = require('./common/mcd-deployment-utils')
-const { expect } = require('chai')
-const {
-  amountFromWei,
-  amountToWei,
-  convertToBigNumber,
-} = require('./common/params-calculation-utils')
-const { exchangeToDAI, exchangeFromDAI } = require('./common/http_apis')
-const wethAbi = require('../abi/IWETH.json')
-const erc20Abi = require('../abi/IERC20.json')
-const BigNumber = require('bignumber.js')
-const { zero } = require('./utils')
-const _ = require('lodash')
+} from './common/mcd-deployment-utils'
+import { amountFromWei, amountToWei } from './common/params-calculation-utils'
+import { exchangeToDAI, exchangeFromDAI } from './common/http-apis'
+import MAINNET_ADDRESSES from '../addresses/mainnet.json'
+import { balanceOf } from './utils'
 
 const AGGREGATOR_V3_ADDRESS = '0x11111112542d85b3ef69ae05771c2dccff4faa26'
 
-const ethers = hre.ethers
 const ALLOWED_PROTOCOLS = ['UNISWAP_V2']
 
-function asPercentageValue(value, base) {
-  value = convertToBigNumber(value)
+// TODO:
+function asPercentageValue(value: BigNumber.Value, base: BigNumber.Value) {
+  value = new BigNumber(value)
 
   return {
     get value() {
       return value
     },
 
-    asDecimal: value.div(new BigNumber(base)),
+    asDecimal: value.div(base),
   }
 }
 
-describe('Exchange', async function () {
-  let provider, signer, address, exchange, WETH, DAI, feeBeneficiary, slippage, fee, snapshotId
+describe('Exchange', async () => {
+  let provider: JsonRpcProvider
+  let signer: Signer
+  let address: string
+  let exchange: Contract
+  let WETH: Contract
+  let DAI: Contract
+  let feeBeneficiary: string
+  let slippage: ReturnType<typeof asPercentageValue>
+  let fee: ReturnType<typeof asPercentageValue>
+  let snapshotId: string
 
-  this.beforeAll(async function () {
+  before(async () => {
     console.log('Before init')
-    let [_provider, _signer] = await init(undefined, provider, signer)
+    ;[provider, signer] = await init()
     console.log('After init')
-    provider = _provider
-    signer = _signer
     address = await signer.getAddress()
 
-    feeBeneficiary = await (await _provider.getSigner(1)).getAddress()
+    feeBeneficiary = await provider.getSigner(1).getAddress()
     slippage = asPercentageValue(8, 100)
     fee = asPercentageValue(FEE, FEE_BASE)
 
@@ -60,7 +63,7 @@ describe('Exchange', async function () {
       feeBeneficiary,
       FEE,
       8,
-      MAINNET_ADRESSES.MCD_DAI,
+      MAINNET_ADDRESSES.MCD_DAI,
       address,
     )
     await exchange.deployed()
@@ -68,98 +71,95 @@ describe('Exchange', async function () {
     await loadDummyExchangeFixtures(provider, signer, exchange, true)
     console.log('After deploy', address)
 
-    WETH = new ethers.Contract(MAINNET_ADRESSES.ETH, wethAbi, provider).connect(signer)
-    DAI = new ethers.Contract(MAINNET_ADRESSES.MCD_DAI, erc20Abi, provider).connect(signer)
+    WETH = new ethers.Contract(MAINNET_ADDRESSES.ETH, WETHABI, provider).connect(signer)
+    DAI = new ethers.Contract(MAINNET_ADDRESSES.MCD_DAI, ERC20ABI, provider).connect(signer)
   })
 
-  this.beforeEach(async function () {
+  beforeEach(async () => {
     snapshotId = await provider.send('evm_snapshot', [])
   })
 
-  this.afterEach(async function () {
+  afterEach(async () => {
     await provider.send('evm_revert', [snapshotId])
   })
 
-  it('should have fee set', async function () {
+  it('should have fee set', async () => {
     const exchangeFee = await exchange.fee()
     expect(exchangeFee.toString()).to.be.eq(fee.value.toString())
   })
 
-  it('should have fee beneficiary address set', async function () {
+  it('should have fee beneficiary address set', async () => {
     const exchangeFeeBeneficiary = await exchange.feeBeneficiaryAddress()
     expect(exchangeFeeBeneficiary).to.be.eq(feeBeneficiary)
   })
 
-  it('should have a whitelisted caller set', async function () {
+  it('should have a whitelisted caller set', async () => {
     expect(await exchange.WHITELISTED_CALLERS(address)).to.be.true
   })
 
-  describe('Asset for DAI', async function () {
+  describe('Asset for DAI', async () => {
     const amount = new BigNumber(10)
-    const amountInWei = amountToWei(amount).toFixed(0)
-    let receiveAtLeastInWei
-    let to, data
+    const amountInWei = amountToWei(amount)
+    let receiveAtLeastInWei: BigNumber
+    let to: string
+    let data: string
+    // let initialDaiWalletBalance: BigNumber
 
-    this.beforeAll(async function () {
+    before(async () => {
       const response = await exchangeToDAI(
-        MAINNET_ADRESSES.ETH,
-        amountInWei,
+        MAINNET_ADDRESSES.ETH,
+        amountInWei.toFixed(0),
         exchange.address,
         slippage.value.toString(),
         ALLOWED_PROTOCOLS,
       )
-      initialDaiWalletBalance = convertToBigNumber(await balanceOf(MAINNET_ADRESSES.ETH, address))
+      // initialDaiWalletBalance = await balanceOf(MAINNET_ADDRESSES.ETH, address)
 
-      const {
-        toTokenAmount,
-        tx: { to: _to, data: _data },
-      } = response
-      to = _to
-      data = _data
+      to = response.tx.to
+      data = response.tx.data
 
-      const receiveAtLeast = new BigNumber(amountFromWei(toTokenAmount)).times(
-        ONE.minus(slippage.asDecimal),
+      const receiveAtLeast = amountFromWei(response.toTokenAmount).times(
+        new BigNumber(1).minus(slippage.asDecimal),
       )
-      receiveAtLeastInWei = amountToWei(receiveAtLeast).toFixed(0)
+      receiveAtLeastInWei = amountToWei(receiveAtLeast)
     })
 
-    this.afterEach(async function () {
+    afterEach(async () => {
       await provider.send('evm_revert', [snapshotId])
     })
 
     it('should not happen if it is triggered from unauthorized caller', async () => {
-      let tx = exchange
+      const tx = exchange
         .connect(provider.getSigner(1))
         .swapTokenForDai(
-          MAINNET_ADRESSES.ETH,
+          MAINNET_ADDRESSES.ETH,
           amountToWei(1).toFixed(0),
           amountFromWei(1).toFixed(0),
           AGGREGATOR_V3_ADDRESS,
           0,
         )
-      await expect(tx).to.revertedWith('Exchange / Unauthorized Caller')
+      await expect(tx).to.be.revertedWith('Exchange / Unauthorized Caller')
     })
 
-    describe('when transferring an exact amount to the exchange', async function () {
-      let localSnapshotId, initialWethWalletBalance
+    describe('when transferring an exact amount to the exchange', async () => {
+      let initialWethWalletBalance: BigNumber
+      let localSnapshotId: string
 
-      this.beforeEach(async function () {
+      beforeEach(async () => {
         localSnapshotId = await provider.send('evm_snapshot', [])
 
-        let tx = await WETH.deposit({
-          value: amountToWei(amount.toNumber()).toFixed(0),
+        await WETH.deposit({
+          value: amountToWei(amount).toFixed(0),
         })
 
-        const intBal = await balanceOf(MAINNET_ADRESSES.ETH, address)
+        initialWethWalletBalance = await balanceOf(MAINNET_ADDRESSES.ETH, address)
 
-        initialWethWalletBalance = convertToBigNumber(intBal)
-
-        await WETH.approve(exchange.address, amountInWei)
+        await WETH.approve(exchange.address, amountInWei.toFixed(0))
 
         await exchange.swapTokenForDai(
-          MAINNET_ADRESSES.ETH,
-          amountInWei,
-          receiveAtLeastInWei,
+          MAINNET_ADDRESSES.ETH,
+          amountInWei.toFixed(0),
+          receiveAtLeastInWei.toFixed(0),
           to,
           data,
           {
@@ -169,23 +169,24 @@ describe('Exchange', async function () {
         )
       })
 
-      this.afterEach(async function () {
+      afterEach(async () => {
         await provider.send('evm_revert', [localSnapshotId])
       })
 
-      it(`should receive at least amount specified in receiveAtLeast`, async function () {
-        const wethBalance = convertToBigNumber(await balanceOf(MAINNET_ADRESSES.ETH, address))
-        const daiBalance = convertToBigNumber(await balanceOf(MAINNET_ADRESSES.MCD_DAI, address))
+      // TODO: I finished here
+      it(`should receive at least amount specified in receiveAtLeast`, async () => {
+        const wethBalance = await balanceOf(MAINNET_ADDRESSES.ETH, address)
+        const daiBalance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, address)
 
         expect(wethBalance.toString()).to.equals(
           initialWethWalletBalance.minus(amountToWei(amount)).toString(),
         )
-        expect(daiBalance.gte(convertToBigNumber(receiveAtLeastInWei))).to.be.true
+        expect(daiBalance.gte(receiveAtLeastInWei)).to.be.true
       })
 
-      it('should have collected fee', async function () {
+      it('should have collected fee', async () => {
         const beneficiaryDaiBalance = convertToBigNumber(
-          await balanceOf(MAINNET_ADRESSES.MCD_DAI, feeBeneficiary),
+          await balanceOf(MAINNET_ADDRESSES.MCD_DAI, feeBeneficiary),
         )
 
         const expectedCollectedFee = amountFromWei(receiveAtLeastInWei)
@@ -198,10 +199,10 @@ describe('Exchange', async function () {
       })
     })
 
-    describe('when transferring less amount to the exchange', async function () {
+    describe('when transferring less amount to the exchange', async () => {
       let initialWethWalletBalance, lessThanTheTransferAmount, localSnapshotId
 
-      this.beforeEach(async function () {
+      beforeEach(async () => {
         localSnapshotId = await provider.send('evm_snapshot', [])
 
         await WETH.deposit({
@@ -209,20 +210,20 @@ describe('Exchange', async function () {
         })
 
         initialWethWalletBalance = convertToBigNumber(
-          await balanceOf(MAINNET_ADRESSES.ETH, address),
+          await balanceOf(MAINNET_ADDRESSES.ETH, address),
         )
         lessThanTheTransferAmount = convertToBigNumber(amountInWei).minus(5)
 
         await WETH.approve(exchange.address, lessThanTheTransferAmount.toFixed(0))
       })
 
-      this.afterEach(async function () {
+      afterEach(async () => {
         await provider.send('evm_revert', [localSnapshotId])
       })
 
-      it('should throw an error and not exchange anything', async function () {
-        let tx = exchange.swapTokenForDai(
-          MAINNET_ADRESSES.ETH,
+      it('should throw an error and not exchange anything', async () => {
+        const tx = exchange.swapTokenForDai(
+          MAINNET_ADDRESSES.ETH,
           amountInWei,
           receiveAtLeastInWei,
           to,
@@ -232,24 +233,24 @@ describe('Exchange', async function () {
             gasLimit: 2500000,
           },
         )
-        await expect(tx).to.revertedWith('Exchange / Not enought allowance')
+        await expect(tx).to.be.revertedWith('Exchange / Not enought allowance')
 
-        const wethBalance = convertToBigNumber(await balanceOf(MAINNET_ADRESSES.ETH, address))
+        const wethBalance = convertToBigNumber(await balanceOf(MAINNET_ADDRESSES.ETH, address))
 
         expect(wethBalance.toString()).to.equals(initialWethWalletBalance.toString())
       })
     })
   })
 
-  describe('DAI for Asset', async function () {
+  describe('DAI for Asset', async () => {
     let initialDaiWalletBalance, amountWithFeeInWei
 
-    this.beforeAll(async function () {
+    before(async () => {
       const amountInWei = amountToWei(new BigNumber(1000))
       amountWithFeeInWei = amountInWei.div(ONE.minus(fee.asDecimal)).toFixed(0)
 
       const response = await exchangeFromDAI(
-        MAINNET_ADRESSES.ETH,
+        MAINNET_ADDRESSES.ETH,
         amountInWei.toFixed(0),
         slippage.value.toString(),
         exchange.address,
@@ -270,28 +271,28 @@ describe('Exchange', async function () {
     })
 
     it('should not happen if it is triggered from unauthorized caller', async () => {
-      let tx = exchange
+      const tx = exchange
         .connect(provider.getSigner(1))
         .swapDaiForToken(
-          MAINNET_ADRESSES.ETH,
+          MAINNET_ADDRESSES.ETH,
           amountToWei(1).toFixed(0),
           amountFromWei(1).toFixed(0),
           AGGREGATOR_V3_ADDRESS,
           0,
         )
 
-      await expect(tx).to.revertedWith('Exchange / Unauthorized Caller')
+      await expect(tx).to.be.revertedWith('Exchange / Unauthorized Caller')
     })
 
-    describe('when transferring an exact amount to the exchange', async function () {
+    describe('when transferring an exact amount to the exchange', async () => {
       let localSnapshotId
 
-      this.beforeEach(async function () {
+      beforeEach(async () => {
         localSnapshotId = await provider.send('evm_snapshot', [])
 
         await swapTokens(
-          MAINNET_ADRESSES.ETH,
-          MAINNET_ADRESSES.MCD_DAI,
+          MAINNET_ADDRESSES.ETH,
+          MAINNET_ADDRESSES.MCD_DAI,
           amountToWei(new BigNumber(10), 18).toFixed(0),
           amountWithFeeInWei,
           address,
@@ -300,13 +301,13 @@ describe('Exchange', async function () {
         )
 
         initialDaiWalletBalance = convertToBigNumber(
-          await balanceOf(MAINNET_ADRESSES.MCD_DAI, address),
+          await balanceOf(MAINNET_ADDRESSES.MCD_DAI, address),
         )
 
         await DAI.approve(exchange.address, amountWithFeeInWei)
 
         await exchange.swapDaiForToken(
-          MAINNET_ADRESSES.ETH,
+          MAINNET_ADDRESSES.ETH,
           amountWithFeeInWei,
           receiveAtLeastInWei,
           to,
@@ -318,13 +319,13 @@ describe('Exchange', async function () {
         )
       })
 
-      this.afterEach(async function () {
+      afterEach(async () => {
         await provider.send('evm_revert', [localSnapshotId])
       })
 
-      it(`should receive at least amount specified in receiveAtLeast`, async function () {
-        const wethBalance = convertToBigNumber(await balanceOf(MAINNET_ADRESSES.ETH, address))
-        const daiBalance = convertToBigNumber(await balanceOf(MAINNET_ADRESSES.MCD_DAI, address))
+      it(`should receive at least amount specified in receiveAtLeast`, async () => {
+        const wethBalance = convertToBigNumber(await balanceOf(MAINNET_ADDRESSES.ETH, address))
+        const daiBalance = convertToBigNumber(await balanceOf(MAINNET_ADDRESSES.MCD_DAI, address))
 
         expect(daiBalance.toString()).to.be.equal(
           initialDaiWalletBalance.minus(amountWithFeeInWei).toString(),
@@ -332,9 +333,9 @@ describe('Exchange', async function () {
         expect(wethBalance.gte(convertToBigNumber(receiveAtLeastInWei))).to.be.true
       })
 
-      it('should have collected fee', async function () {
+      it('should have collected fee', async () => {
         const beneficiaryDaiBalance = convertToBigNumber(
-          await balanceOf(MAINNET_ADRESSES.MCD_DAI, feeBeneficiary),
+          await balanceOf(MAINNET_ADDRESSES.MCD_DAI, feeBeneficiary),
         )
 
         const expectedCollectedFee = convertToBigNumber(amountWithFeeInWei).times(fee.asDecimal)
@@ -342,15 +343,15 @@ describe('Exchange', async function () {
       })
     })
 
-    describe('when transferring less amount to the exchange', async function () {
+    describe('when transferring less amount to the exchange', async () => {
       let lessThanTheTransferAmount, localSnapshotId, deficitAmount
 
-      this.beforeEach(async function () {
+      beforeEach(async () => {
         localSnapshotId = await provider.send('evm_snapshot', [])
 
         await swapTokens(
-          MAINNET_ADRESSES.ETH,
-          MAINNET_ADRESSES.MCD_DAI,
+          MAINNET_ADDRESSES.ETH,
+          MAINNET_ADDRESSES.MCD_DAI,
           amountToWei(new BigNumber(10), 18).toFixed(0),
           amountWithFeeInWei,
           address,
@@ -359,7 +360,7 @@ describe('Exchange', async function () {
         )
 
         initialDaiWalletBalance = convertToBigNumber(
-          await balanceOf(MAINNET_ADRESSES.MCD_DAI, address),
+          await balanceOf(MAINNET_ADDRESSES.MCD_DAI, address),
         )
         deficitAmount = new BigNumber(10)
         lessThanTheTransferAmount = convertToBigNumber(amountWithFeeInWei)
@@ -369,13 +370,13 @@ describe('Exchange', async function () {
         await DAI.approve(exchange.address, lessThanTheTransferAmount)
       })
 
-      this.afterEach(async function () {
+      afterEach(async () => {
         await provider.send('evm_revert', [localSnapshotId])
       })
 
-      it('should throw an error and not exchange anything', async function () {
-        let tx = exchange.swapDaiForToken(
-          MAINNET_ADRESSES.ETH,
+      it('should throw an error and not exchange anything', async () => {
+        const tx = exchange.swapDaiForToken(
+          MAINNET_ADDRESSES.ETH,
           amountWithFeeInWei,
           receiveAtLeastInWei,
           to,

@@ -1,4 +1,8 @@
-const {
+import BigNumber from 'bignumber.js'
+import { ethers } from 'hardhat'
+import { expect } from 'chai'
+import { JsonRpcProvider } from '@ethersproject/providers'
+import {
   deploySystem,
   ONE,
   TEN,
@@ -9,35 +13,34 @@ const {
   balanceOf,
   MAINNET_ADRESSES,
   FEE_BASE,
-} = require('../test/common/mcd-deployment-utils')
-const { getMarketPrice, exchangeFromDAI } = require('../test/common/http_apis')
-const {
+} from '../test/common/mcd-deployment-utils'
+import {
   calculateParamsIncreaseMP,
   amountToWei,
   prepareMultiplyParameters,
   addressRegistryFactory,
   convertToBigNumber,
-} = require('../test/common/params-calculation-utils')
-const { default: BigNumber } = require('bignumber.js')
-const { expect } = require('chai')
-const { ethers } = require('hardhat')
+} from '../test/common/params-calculation-utils'
+import { getMarketPrice, exchangeFromDAI } from './common/http-apis'
 
 function lookupEventByHash(events, eventHash) {
   return events.filter((x) => x.firstTopic === eventHash)
 }
 
 describe('Proxy Action', async function () {
-  let primaryAddress
-  let primaryAddressAdr
-  let provider
-  let mcdViewInstance
-  let exchangeInstance, multiplyProxyActionsInstance, dsProxyInstance, userProxyAddr
-  let initialSetupSnapshotId
-  let ADDRESS_REGISTRY
   const baseCollateralAmountInETH = new BigNumber(10)
   const LENDER_FEE = 0.0
   const BASE_SLIPPAGE = new BigNumber(0.08)
   const OUR_FEE = 0.0003 // todo: fetch it from exchange once implemented
+
+  let provider: JsonRpcProvider
+  let primaryAddress
+  let primaryAddressAdr
+  let mcdViewInstance
+  let exchangeInstance, multiplyProxyActionsInstance, dsProxyInstance, userProxyAddr
+  let initialSetupSnapshotId
+  let ADDRESS_REGISTRY
+
   let oraclePrice
   let marketPrice
 
@@ -109,7 +112,7 @@ describe('Proxy Action', async function () {
         data.slippage,
       )
 
-      payload = await exchangeFromDAI(
+      const payload = await exchangeFromDAI(
         MAINNET_ADRESSES.WETH_ADDRESS,
         amountToWei(convertToBigNumber(requiredDebt).times(ONE.minus(OUR_FEE))).toFixed(0),
         data.slippage.multipliedBy(100).toNumber(),
@@ -178,14 +181,14 @@ describe('Proxy Action', async function () {
       let abi = ['event FLData(uint256 borrowed, uint256 due)']
       let iface = new ethers.utils.Interface(abi)
 
-      var flDataEvent = iface.parseLog(
+      let flDataEvent = iface.parseLog(
         lookupEventByHash(
           allEvents,
           '0x9c6641b21946115d10f3f55df9bec5752ec06d40dc9250b1cc6560549764600e',
         )[0],
       )
-      var expected = amountToWei(vaultInfo.debt)
-      var actual = new BigNumber(flDataEvent.args.due.toString())
+      let expected = amountToWei(vaultInfo.debt)
+      let actual = new BigNumber(flDataEvent.args.due.toString())
       actual = amountToWei(actual.dividedBy(TEN.pow(18)))
       expect(actual.gt(expected.multipliedBy(0.98))).to.be.equal(true)
       expect(expected.gt(actual.multipliedBy(0.98))).to.be.equal(true)
@@ -268,14 +271,14 @@ describe('Proxy Action', async function () {
       let abi = ['event FLData(uint256 borrowed, uint256 due)']
       let iface = new ethers.utils.Interface(abi)
 
-      var flDataEvent = iface.parseLog(
+      let flDataEvent = iface.parseLog(
         lookupEventByHash(
           allEvents,
           '0x9c6641b21946115d10f3f55df9bec5752ec06d40dc9250b1cc6560549764600e',
         )[0],
       )
-      var expected = amountToWei(vaultInfo.debt)
-      var actual = new BigNumber(flDataEvent.args.due.toString())
+      let expected = amountToWei(vaultInfo.debt)
+      let actual = new BigNumber(flDataEvent.args.due.toString())
       actual = amountToWei(actual.dividedBy(TEN.pow(18)))
       expect(actual.gt(expected.multipliedBy(0.98))).to.be.equal(true)
       expect(expected.gt(actual.multipliedBy(0.98))).to.be.equal(true)

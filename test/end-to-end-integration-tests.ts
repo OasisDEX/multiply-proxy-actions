@@ -1,20 +1,18 @@
-const {
+import BigNumber from 'bignumber.js'
+import { expect } from 'chai'
+import { ethers } from 'hardhat'
+import {
   deploySystem,
   FEE,
   FEE_BASE,
-  TEN,
   getOraclePrice,
   dsproxyExecuteAction,
   getLastCDP,
-  getVaultInfo,
-  MAINNET_ADRESSES,
-  addressRegistryFactory,
-  balanceOf,
   ONE,
-} = require('./common/mcd-deployment-utils')
-const { getMarketPrice, getCurrentBlockNumber } = require('./common/http_apis')
+} from './common/mcd-deployment-utils'
+import { getMarketPrice, getCurrentBlockNumber } from './common/http-apis'
 
-const {
+import {
   printAllERC20Transfers,
   findExchangeTransferEvent,
   getAddressesLabels,
@@ -22,64 +20,61 @@ const {
   createSnapshot,
   restoreSnapshot,
   resetNetworkToBlock,
-} = require('./common/integration/utils')
+} from './common/integration/utils'
 
-const {
+import {
   calculateParamsIncreaseMP,
   calculateParamsDecreaseMP,
   amountToWei,
   prepareBasicParams,
   packMPAParams,
   convertToBigNumber,
-  add,
-  sub,
-  mul,
-  div,
   ensureWeiFormat,
-} = require('./common/params-calculation-utils')
+  addressRegistryFactory,
+} from './common/params-calculation-utils'
 
-const { default: BigNumber } = require('bignumber.js')
-const { expect } = require('chai')
-const { ethers } = require('hardhat')
-const { zero } = require('./utils')
+import MAINNET_ADDRESSES from '../addresses/mainnet.json'
+
+import { balanceOf, TEN, WETH_ADDRESS, zero } from './utils'
+import { getVaultInfo } from './utils-mcd'
 
 const AAVE_FEE = 0.0009
 const BASE_SLIPPAGE = 0.08
 const OUR_FEE = FEE / FEE_BASE
 
 const ALLOWED_PROTOCOLS = ['UNISWAP_V3']
-let blockNumber = process.env.BLOCK_NUMBER
+let blockNumber = parseInt(process.env.BLOCK_NUMBER, 10)
 
-var testVaults = [
+const testVaults = [
   {
     existingCDP: undefined,
-    gemAddress: MAINNET_ADRESSES.WETH_ADDRESS,
+    gemAddress: WETH_ADDRESS,
     _1inchPayload: {
       to: '0x111111111117dc0aa78b770fa6a738034120c302',
       data: '0x111111111117dc0aa78b770fa6a738034120c302',
-    }, //irrelevant, for mock exchange just for encoding validation passing
+    }, // irrelevant, for mock exchange just for encoding validation passing
     desiredCDPState: {
-      desiredCollRatio: 2.0, //expected collateralisation Ratio after Vault creation
+      desiredCollRatio: 2.0, // expected collateralisation Ratio after Vault creation
       providedCollateral: 14, // Amount of ETH used initialy
       providedDAI: 0,
     },
   },
   {
     existingCDP: undefined,
-    gemAddress: MAINNET_ADRESSES.WETH_ADDRESS,
+    gemAddress: WETH_ADDRESS,
     _1inchPayload: {
       to: '0x111111111117dc0aa78b770fa6a738034120c302',
       data: '0x111111111117dc0aa78b770fa6a738034120c302',
-    }, //irrelevant, for mock exchange just for encoding validation passing
+    }, // irrelevant, for mock exchange just for encoding validation passing
     desiredCDPState: {
-      desiredCollRatio: 5.0, //expected collateralisation Ratio after Vault creation
+      desiredCollRatio: 5.0, // expected collateralisation Ratio after Vault creation
       providedCollateral: 50, // Amount of ETH used initialy
       providedDAI: 0,
     },
   },
 ]
 
-testParams = [
+const testParams = [
   {
     slippage: BASE_SLIPPAGE,
     desiredDAI: 1100,
@@ -95,16 +90,16 @@ testParams = [
   },
   {
     slippage: BASE_SLIPPAGE,
-    desiredDAI: 1100, //amount of dai withdrawn in decreaseMultipleWithdrawDai
-    desiredETH: 0.7, //amount of dai  withdrawn in decreaseMultipleWithdrawCollateral
+    desiredDAI: 1100, // amount of dai withdrawn in decreaseMultipleWithdrawDai
+    desiredETH: 0.7, // amount of dai  withdrawn in decreaseMultipleWithdrawCollateral
     useMockExchange: false,
     debug: false,
     skipFL: false,
     printERC20Transfers: false,
-    desiredCollRatio: 2.5, //collateralisation ratio after Multiply decrease
-    desiredCollRatioDAI: 3.5, //collateralisation ratio after Multiply decrease with DAI withdraw
-    desiredCollRatioETH: 3.5, //collateralisation ratio after Multiply decrease with ETH withdraw
-    oraclePriceDivergence: 0, //difference between oracle price and market price, <0,1> marketPrice = (1-x)*oraclePrice
+    desiredCollRatio: 2.5, // collateralisation ratio after Multiply decrease
+    desiredCollRatioDAI: 3.5, // collateralisation ratio after Multiply decrease with DAI withdraw
+    desiredCollRatioETH: 3.5, // collateralisation ratio after Multiply decrease with ETH withdraw
+    oraclePriceDivergence: 0, // difference between oracle price and market price, <0,1> marketPrice = (1-x)*oraclePrice
   },
   {
     slippage: BASE_SLIPPAGE,
@@ -134,21 +129,21 @@ testParams = [
   },
   {
     slippage: BASE_SLIPPAGE,
-    desiredDAI: 100, //amount of dai withdrawn in decreaseMultipleWithdrawDai
-    desiredETH: 1, //amount of dai  withdrawn in decreaseMultipleWithdrawCollateral
+    desiredDAI: 100, // amount of dai withdrawn in decreaseMultipleWithdrawDai
+    desiredETH: 1, // amount of dai  withdrawn in decreaseMultipleWithdrawCollateral
     useMockExchange: false,
     debug: true,
     skipFL: true,
     printERC20Transfers: false,
-    desiredCollRatio: 5.1, //collateralisation ratio after Multiply decrease
-    desiredCollRatioDAI: 5.2, //collateralisation ratio after Multiply decrease with DAI withdraw
-    desiredCollRatioETH: 5.2, //collateralisation ratio after Multiply decrease with ETH withdraw
-    oraclePriceDivergence: 0, //difference between oracle price and market price, <0,1> marketPrice = (1-x)*oraclePrice
+    desiredCollRatio: 5.1, // collateralisation ratio after Multiply decrease
+    desiredCollRatioDAI: 5.2, // collateralisation ratio after Multiply decrease with DAI withdraw
+    desiredCollRatioETH: 5.2, // collateralisation ratio after Multiply decrease with ETH withdraw
+    oraclePriceDivergence: 0, // difference between oracle price and market price, <0,1> marketPrice = (1-x)*oraclePrice
   },
 ]
 
 async function runner(tasks) {
-  for (var i = 0; i < tasks.length; i++) {
+  for (let i = 0; i < tasks.length; i++) {
     await tasks[i]
   }
 }
@@ -158,30 +153,29 @@ runner([
   testCaseDefinition(testVaults[0], testParams[1]),
   testCaseDefinition(testVaults[0], testParams[2]),
   //  testCaseDefinition(testVaults[0], testParams[3]),
-  //testCaseDefinition(testVaults[0],testParams[0])
+  // testCaseDefinition(testVaults[0],testParams[0])
   // runTestCase(testVaults[0],OracleMarketDifference)
-  testCaseDefinition(testVaults[1], testParams[4]), //skipFL == true on small operations
+  testCaseDefinition(testVaults[1], testParams[4]), // skipFL == true on small operations
 ])
 
 async function testCaseDefinition(testCase, testParam) {
-  var provider
-  provider = new ethers.providers.JsonRpcProvider()
+  const provider = new ethers.providers.JsonRpcProvider()
 
-  testCase = JSON.parse(JSON.stringify(testCase)) //break reference
+  testCase = JSON.parse(JSON.stringify(testCase)) // break reference
   testParam = JSON.parse(JSON.stringify(testParam))
 
   return new Promise((res, rej) => {
-    //to run several in runner, one after another
+    // to run several in runner, one after another
 
     describe(`Proxy Action, oracleDivergence = ${
       testParam.useMockExchange ? testParam.oraclePriceDivergence * 100 : 0
     } % slippage ${testParam.slippage} skipFL=${testParam.skipFL}`, async function () {
       this.afterAll(async function () {
-        res(true) //resolves Promise
+        res(true) // resolves Promise
       })
 
-      var primarySigner
-      var primarySignerAddress
+      let primarySigner
+      let primarySignerAddress
 
       let deployedContracts = {
         // defined during system deployment
@@ -194,57 +188,57 @@ async function testCaseDefinition(testCase, testParam) {
         },
         daiTokenInstance: undefined,
       }
-      var ADDRESS_REGISTRY
-      var userProxyAddr
-      var initialSetupSnapshotId
-      var oraclePrice
-      var marketPrice
+      let ADDRESS_REGISTRY
+      let userProxyAddr
+      let initialSetupSnapshotId
+      let oraclePrice
+      let marketPrice
 
       function addBalanceCheckingAssertions(_it, useMockExchange) {
         _it('ProxyAction should have no DAI', async function () {
-          let mpaAddress = await deployedContracts.multiplyProxyActionsInstance.address
-          var balance = await balanceOf(MAINNET_ADRESSES.MCD_DAI, mpaAddress)
+          const mpaAddress = await deployedContracts.multiplyProxyActionsInstance.address
+          const balance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, mpaAddress)
           expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
         })
         _it('ProxyAction should have no ETH', async function () {
-          let mpaAddress = await deployedContracts.multiplyProxyActionsInstance.address
-          var balance = await provider.getBalance(mpaAddress)
+          const mpaAddress = await deployedContracts.multiplyProxyActionsInstance.address
+          const balance = await provider.getBalance(mpaAddress)
           expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
         })
         _it('ProxyAction should have no WETH', async function () {
-          let mpaAddress = await deployedContracts.multiplyProxyActionsInstance.address
-          var balance = await balanceOf(MAINNET_ADRESSES.ETH, mpaAddress)
+          const mpaAddress = await deployedContracts.multiplyProxyActionsInstance.address
+          const balance = await balanceOf(MAINNET_ADDRESSES.ETH, mpaAddress)
           expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
         })
         _it('dsProxy should have no DAI', async function () {
-          let dsProxyAddress = await deployedContracts.dsProxyInstance.address
-          var balance = await balanceOf(MAINNET_ADRESSES.MCD_DAI, dsProxyAddress)
+          const dsProxyAddress = await deployedContracts.dsProxyInstance.address
+          const balance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, dsProxyAddress)
           expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
         })
         _it('dsProxy should have no ETH', async function () {
-          let dsProxyAddress = await deployedContracts.dsProxyInstance.address
-          var balance = await provider.getBalance(dsProxyAddress)
+          const dsProxyAddress = await deployedContracts.dsProxyInstance.address
+          const balance = await provider.getBalance(dsProxyAddress)
           expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
         })
         _it('dsProxy should have no WETH', async function () {
-          let dsProxyAddress = await deployedContracts.dsProxyInstance.address
-          var balance = await balanceOf(MAINNET_ADRESSES.ETH, dsProxyAddress)
+          const dsProxyAddress = await deployedContracts.dsProxyInstance.address
+          const balance = await balanceOf(MAINNET_ADDRESSES.ETH, dsProxyAddress)
           expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
         })
         if (useMockExchange == false) {
           _it('exchange should have no DAI', async function () {
-            let addressToCheck = await deployedContracts.exchangeInstance.address
-            var balance = await balanceOf(MAINNET_ADRESSES.MCD_DAI, addressToCheck)
+            const addressToCheck = await deployedContracts.exchangeInstance.address
+            const balance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, addressToCheck)
             expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
           })
           _it('exchange should have no ETH', async function () {
-            let addressToCheck = deployedContracts.exchangeInstance.address
-            var balance = await provider.getBalance(addressToCheck)
+            const addressToCheck = deployedContracts.exchangeInstance.address
+            const balance = await provider.getBalance(addressToCheck)
             expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
           })
           _it('exchange should have no WETH', async function () {
-            let addressToCheck = deployedContracts.exchangeInstance.address
-            var balance = await balanceOf(MAINNET_ADRESSES.ETH, addressToCheck)
+            const addressToCheck = deployedContracts.exchangeInstance.address
+            const balance = await balanceOf(MAINNET_ADDRESSES.ETH, addressToCheck)
             expect(convertToBigNumber(balance).toFixed(0)).to.be.equal('0')
           })
         }
@@ -268,13 +262,14 @@ async function testCaseDefinition(testCase, testParam) {
       ) {
         let debtDelta
         let exchangeMinAmount
-        let currentColl = sub(
-          add(existingCDP ? existingCDP.coll : 0, desiredCDPState.providedCollateral),
-          withdrawColl,
+        const currentColl = new BigNumber(existingCDP?.coll || 0)
+          .plus(desiredCDPState.providedCollateral)
+          .minus(withdrawColl)
+        const currentDebt = new BigNumber(existingCDP?.debt ? existingCDP.debt : 0).plus(
+          withdrawDai,
         )
-        let currentDebt = add(existingCDP && existingCDP.debt ? existingCDP.debt : 0, withdrawDai)
 
-        let targetColRatio = convertToBigNumber(desiredCDPState.desiredCollRatio)
+        const targetColRatio = convertToBigNumber(desiredCDPState.desiredCollRatio)
         if (operation == 'mul') {
           ;[debtDelta, exchangeMinAmount] = calculateParamsIncreaseMP(
             oraclePrice,
@@ -316,8 +311,8 @@ async function testCaseDefinition(testCase, testParam) {
       }
 
       const updateLastCDPInfo = async function (data, signer, provider, userProxyAddr) {
-        var lastCDP = await getLastCDP(provider, signer, userProxyAddr)
-        var vaultInfo = await getVaultInfo(
+        const lastCDP = await getLastCDP(provider, signer, userProxyAddr)
+        const vaultInfo = await getVaultInfo(
           deployedContracts.mcdViewInstance,
           lastCDP.id,
           lastCDP.ilk,
@@ -331,6 +326,7 @@ async function testCaseDefinition(testCase, testParam) {
       }
 
       this.beforeAll(async function () {
+        // TODO: validate parseInt
         if (blockNumber == 0 || testParam.useMockExchange == false) {
           blockNumber = await getCurrentBlockNumber()
         }
@@ -353,7 +349,7 @@ async function testCaseDefinition(testCase, testParam) {
           await deployedContracts.exchangeInstance.feeBeneficiaryAddress()
 
         if (testParam.skipFL == true) {
-          ADDRESS_REGISTRY.lender = ADDRESS_REGISTRY.feeRecepient //some correct address that do not have FL functionality
+          ADDRESS_REGISTRY.lender = ADDRESS_REGISTRY.feeRecepient // some correct address that do not have FL functionality
         }
 
         oraclePrice = await getOraclePrice(provider)
@@ -363,28 +359,23 @@ async function testCaseDefinition(testCase, testParam) {
             marketPrice.multipliedBy(TEN.pow(18)).toFixed(0),
           )
         } else {
-          marketPrice = await getMarketPrice(
-            MAINNET_ADRESSES.WETH_ADDRESS,
-            MAINNET_ADRESSES.MCD_DAI,
-            18,
-            18,
-          )
+          marketPrice = await getMarketPrice(WETH_ADDRESS, MAINNET_ADDRESSES.MCD_DAI, 18, 18)
         }
 
         initialSetupSnapshotId = await createSnapshot(provider)
-        revertBlockNumber = await provider.getBlockNumber()
+        // revertBlockNumber = await provider.getBlockNumber() // TODO:
       })
 
       describe(`opening Multiply Vault with collateralisation ratio of ${testCase.desiredCDPState.desiredCollRatio}`, async function () {
-        var txResult
-        var startBalance
+        let txResult
+        let startBalance
 
         this.afterAll(async function () {
           await restoreSnapshot(provider, initialSetupSnapshotId)
         })
 
         this.beforeAll(async function () {
-          startBalance = await balanceOf(MAINNET_ADRESSES.MCD_DAI, ADDRESS_REGISTRY.feeRecepient)
+          startBalance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, ADDRESS_REGISTRY.feeRecepient)
           const [debtDelta, collateralDelta] = calculateRequiredDebt(
             'mul',
             testCase.existingCDP,
@@ -428,16 +419,16 @@ async function testCaseDefinition(testCase, testParam) {
             amountToWei(testCase.desiredCDPState.providedCollateral),
           )
           if (testParam.printERC20Transfers) {
-            var labels = getAddressesLabels(
+            const labels = getAddressesLabels(
               deployedContracts,
               ADDRESS_REGISTRY,
-              MAINNET_ADRESSES,
+              MAINNET_ADDRESSES,
               primarySignerAddress,
             )
             printAllERC20Transfers(txResult, labels)
           }
           if (!status) {
-            restoreSnapshot.lock = true //If tx fails throws immediatelly and prevent snalshot revert in AfterAll hook
+            restoreSnapshot.lock = true // If tx fails throws immediatelly and prevent snalshot revert in AfterAll hook
             throw 'Tx failed'
           }
 
@@ -445,26 +436,26 @@ async function testCaseDefinition(testCase, testParam) {
         })
 
         it(`it should open vault with collateralisation Ratio of ${testCase.desiredCDPState.desiredCollRatio}`, async function () {
-          precision = 10
-          var actualRatio = div(
+          const precision = 10
+          const actualRatio = div(
             mul(testCase.existingCDP.coll, oraclePrice),
             testCase.existingCDP.debt,
           )
-          var maxAcceptable = mul(testCase.desiredCDPState.desiredCollRatio, 1 + precision / 100)
+          const maxAcceptable = mul(testCase.desiredCDPState.desiredCollRatio, 1 + precision / 100)
           console.warn(`\x1b[33m ${precision}% margin for collateralisation ratio applied \x1b[0m`)
           /*    console.warn(
             `\x1b[33m Vault params:Collateral ${testCase.existingCDP.coll}, Debt ${testCase.existingCDP.debt} \x1b[0m`,
-          )*/
+          ) */
           expect(actualRatio.toNumber()).to.be.greaterThanOrEqual(
             testCase.desiredCDPState.desiredCollRatio,
-          ) //final collaterallisation value equal to at least desired
-          expect(actualRatio.toNumber()).to.be.lessThanOrEqual(maxAcceptable.toNumber()) //final collaterallisation is off not more than 5% from desired value
+          ) // final collaterallisation value equal to at least desired
+          expect(actualRatio.toNumber()).to.be.lessThanOrEqual(maxAcceptable.toNumber()) // final collaterallisation is off not more than 5% from desired value
         })
 
         it(`it should flash loan correct amount of DAI`, async function () {
-          precision = 0.1
+          const precision = 0.1
           console.warn(`\x1b[33m${precision}% margin for collateralisation ratio applied\x1b[0m`)
-          var allEvents = txResult.events.map((x) => {
+          const allEvents = txResult.events.map(x => {
             return {
               firstTopic: x.topics[0],
               topics: x.topics,
@@ -473,27 +464,27 @@ async function testCaseDefinition(testCase, testParam) {
               name: x.name,
             }
           })
-          let abi = ['event FLData(uint256 borrowed, uint256 due)']
-          let iface = new ethers.utils.Interface(abi)
+          const abi = ['event FLData(uint256 borrowed, uint256 due)']
+          const iface = new ethers.utils.Interface(abi)
 
-          var flDataEvent = iface.parseLog(
+          const flDataEvent = iface.parseLog(
             allEvents.filter(
-              (x) =>
+              x =>
                 x.firstTopic ===
                 '0x9c6641b21946115d10f3f55df9bec5752ec06d40dc9250b1cc6560549764600e',
             )[0],
           )
-          var expected = amountToWei(testCase.existingCDP.debt)
-          var actual = new BigNumber(flDataEvent.args.due.toString())
+          const expected = amountToWei(testCase.existingCDP.debt)
+          let actual = new BigNumber(flDataEvent.args.due.toString())
           actual = amountToWei(actual.dividedBy(TEN.pow(18)))
           expect(actual.gt(expected.multipliedBy(0.98))).to.be.equal(true)
           expect(expected.gt(actual.multipliedBy(0.98))).to.be.equal(true)
         })
 
         it('it should send fee to beneficiary', async function () {
-          precision = 1
+          const precision = 1
           console.warn(`\x1b[33m${precision}% margin for collateralisation ratio applied\x1b[0m`)
-          var allEvents = txResult.events.map((x) => {
+          const allEvents = txResult.events.map(x => {
             return {
               firstTopic: x.topics[0],
               topics: x.topics,
@@ -501,27 +492,30 @@ async function testCaseDefinition(testCase, testParam) {
               name: x.name,
             }
           })
-          var feePaidEvents = allEvents.filter(
-            (x) =>
+          const feePaidEvents = allEvents.filter(
+            x =>
               x.firstTopic === '0x075a2720282fdf622141dae0b048ef90a21a7e57c134c76912d19d006b3b3f6f',
           )
           console.log('Events count', allEvents.length)
           expect(feePaidEvents.length).to.be.deep.equal(1)
-          var feeAmount = new BigNumber(feePaidEvents[0].data, 16)
-          var expected = amountToWei(testCase.existingCDP.debt * OUR_FEE)
-          endBalance = await balanceOf(MAINNET_ADRESSES.MCD_DAI, ADDRESS_REGISTRY.feeRecepient)
-          var balanceDifference = endBalance.sub(startBalance).toString()
+          const feeAmount = new BigNumber(feePaidEvents[0].data, 16)
+          const expected = amountToWei(testCase.existingCDP.debt * OUR_FEE)
+          const endBalance = await balanceOf(
+            MAINNET_ADDRESSES.MCD_DAI,
+            ADDRESS_REGISTRY.feeRecepient,
+          )
+          const balanceDifference = endBalance.sub(startBalance).toString()
           expect(feeAmount.toNumber()).to.be.greaterThanOrEqual(
             expected.toNumber() * (1 - precision / 100),
-          ) //due to possible rounding errors
+          ) // due to possible rounding errors
           expect(feeAmount.toFixed(0)).to.be.equal(balanceDifference)
         })
 
         describe(`Decrease Multiple to coll ratio of ${testCase.desiredCDPState.desiredCollRatio} to ${testParam.desiredCollRatio} without withdrawal`, async function () {
-          var inTxResult = undefined
-          var beforeTxBalance = undefined
-          var internalSnapshotId
-          var testCaseCopy
+          let inTxResult
+          let beforeTxBalance
+          let internalSnapshotId
+          let testCaseCopy
           this.beforeAll(async function () {
             internalSnapshotId = await createSnapshot(provider)
 
@@ -572,10 +566,10 @@ async function testCaseDefinition(testCase, testParam) {
               params,
             )
             if (testParam.printERC20Transfers) {
-              var labels = getAddressesLabels(
+              const labels = getAddressesLabels(
                 deployedContracts,
                 ADDRESS_REGISTRY,
-                MAINNET_ADRESSES,
+                MAINNET_ADDRESSES,
                 primarySignerAddress,
               )
               printAllERC20Transfers(inTxResult, labels)
@@ -588,28 +582,28 @@ async function testCaseDefinition(testCase, testParam) {
             await updateLastCDPInfo(testCaseCopy, primarySigner, provider, userProxyAddr)
           })
           it(`should increase CollateralisationRatio to ${testParam.desiredCollRatio} `, async function () {
-            var negativeMargin = 0.1
-            var positiveMargin = 5
+            const negativeMargin = 0.1
+            const positiveMargin = 5
             const collRatio = div(
               mul(testCaseCopy.existingCDP.coll, oraclePrice),
               testCaseCopy.existingCDP.debt,
             ).toNumber()
             expect(collRatio).to.be.greaterThan(
               testParam.desiredCollRatio * (1 - negativeMargin / 100),
-            ) //to accout for rounding errors
+            ) // to accout for rounding errors
             expect(collRatio).to.be.lessThanOrEqual(
               testParam.desiredCollRatio * (1 + positiveMargin / 100),
-            ) //due to slippage smaller than maximum we might end up with higher coll ratio
+            ) // due to slippage smaller than maximum we might end up with higher coll ratio
             console.warn(
               `\x1b[33m${positiveMargin}% positive and ${negativeMargin}% negative margin for collateralisation ratio applied actual Value ${collRatio}\x1b[0m`,
             )
           })
           it('should not change primaryAddress ETH balance, only by tx Costs', async function () {
-            var after = await provider.getBalance(await primarySigner.getAddress())
-            var gasUsed = parseFloat(inTxResult.cumulativeGasUsed.toString())
+            const after = await provider.getBalance(await primarySigner.getAddress())
+            const gasUsed = parseFloat(inTxResult.cumulativeGasUsed.toString())
 
-            var gasPrice = 1000000000
-            var reminder = beforeTxBalance.sub(after).sub(gasUsed * gasPrice)
+            const gasPrice = 1000000000
+            const reminder = beforeTxBalance.sub(after).sub(gasUsed * gasPrice)
             expect(reminder).to.be.equal(0)
           })
 
@@ -622,8 +616,10 @@ async function testCaseDefinition(testCase, testParam) {
         describe(`Decrease Multiple to coll ratio of ${testParam.desiredCollRatioDAI} with DAI withdrawal (${testParam.desiredDAI} DAI)`, async function () {
           let daiBefore
           let testCaseCopy
+          let internalSnapshotId
+
           this.beforeAll(async function () {
-            daiBefore = await balanceOf(MAINNET_ADRESSES.MCD_DAI, await primarySigner.getAddress())
+            daiBefore = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, await primarySigner.getAddress())
             if (testParam.debug) {
               console.log(
                 'DAI Balance of',
@@ -685,10 +681,10 @@ async function testCaseDefinition(testCase, testParam) {
               params,
             )
             if (testParam.printERC20Transfers) {
-              var labels = getAddressesLabels(
+              const labels = getAddressesLabels(
                 deployedContracts,
                 ADDRESS_REGISTRY,
-                MAINNET_ADRESSES,
+                MAINNET_ADDRESSES,
                 primarySignerAddress,
               )
               printAllERC20Transfers(inTxResult, labels)
@@ -707,8 +703,8 @@ async function testCaseDefinition(testCase, testParam) {
             await updateLastCDPInfo(testCaseCopy, primarySigner, provider, userProxyAddr)
           })
           it(`should increase CollateralisationRatio to ${testParam.desiredCollRatioDAI}`, async function () {
-            var negativeMargin = 0.1
-            var positiveMargin = 5
+            const negativeMargin = 0.1
+            const positiveMargin = 5
 
             if (testParam.debug) {
               console.log(
@@ -723,17 +719,17 @@ async function testCaseDefinition(testCase, testParam) {
             ).toNumber()
             expect(collRatio).to.be.greaterThan(
               testParam.desiredCollRatioDAI * (1 - negativeMargin / 100),
-            ) //to accout for rounding errors
+            ) // to accout for rounding errors
             expect(collRatio).to.be.lessThanOrEqual(
               testParam.desiredCollRatioDAI * (1 + positiveMargin / 100),
-            ) //due to slippage smaller than maximum we might end up with higher coll ratio
+            ) // due to slippage smaller than maximum we might end up with higher coll ratio
             console.warn(
               `\x1b[33m${positiveMargin}% positive and ${negativeMargin}% negative margin for collateralisation ratio applied actual Value ${collRatio}\x1b[0m`,
             )
           })
           it(`should change primaryAddress DAI balance by exacly ${testParam.desiredDAI} DAI`, async function () {
-            var balanceAfter = await balanceOf(
-              MAINNET_ADRESSES.MCD_DAI,
+            const balanceAfter = await balanceOf(
+              MAINNET_ADDRESSES.MCD_DAI,
               await primarySigner.getAddress(),
             )
             if (testParam.debug) {
@@ -745,7 +741,7 @@ async function testCaseDefinition(testCase, testParam) {
               )
             }
 
-            var balanceIncrease = sub(balanceAfter.toString(), daiBefore.toString()).toFixed(0)
+            const balanceIncrease = sub(balanceAfter.toString(), daiBefore.toString()).toFixed(0)
 
             expect(balanceIncrease).to.be.equal(amountToWei(testParam.desiredDAI).toFixed(0))
           })
@@ -756,15 +752,16 @@ async function testCaseDefinition(testCase, testParam) {
         })
 
         describe(`Decrease Multiple to coll ratio of ${testParam.desiredCollRatioETH} with Collateral withdrawal ${testParam.desiredETH} ETH`, async function () {
-          var inTxResult = undefined
-          var beforeTxBalance = undefined
-          var daiBefore
+          let inTxResult
+          let beforeTxBalance
+          let daiBefore
           let actualSwappedAmount
           let minAcceptableAmount
           let testCaseCopy
+          let internalSnapshotId
 
           this.beforeAll(async function () {
-            daiBefore = await balanceOf(MAINNET_ADRESSES.MCD_DAI, await primarySigner.getAddress())
+            daiBefore = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, await primarySigner.getAddress())
 
             internalSnapshotId = await createSnapshot(provider)
 
@@ -841,10 +838,10 @@ async function testCaseDefinition(testCase, testParam) {
             }
 
             if (testParam.printERC20Transfers) {
-              var labels = getAddressesLabels(
+              const labels = getAddressesLabels(
                 deployedContracts,
                 ADDRESS_REGISTRY,
-                MAINNET_ADRESSES,
+                MAINNET_ADDRESSES,
                 primarySignerAddress,
               )
               printAllERC20Transfers(inTxResult, labels)
@@ -852,39 +849,39 @@ async function testCaseDefinition(testCase, testParam) {
             await updateLastCDPInfo(testCaseCopy, primarySigner, provider, userProxyAddr)
           })
           it(`should increase CollateralisationRatio to ${testParam.desiredCollRatioETH} `, async function () {
-            var negativeMargin = 0.1
-            var positiveMargin = 5
+            const negativeMargin = 0.1
+            const positiveMargin = 5
             const collRatio = div(
               mul(testCaseCopy.existingCDP.coll, oraclePrice),
               testCaseCopy.existingCDP.debt,
             ).toNumber()
             expect(collRatio).to.be.greaterThan(
               testParam.desiredCollRatioDAI * (1 - negativeMargin / 100),
-            ) //to accout for rounding errors
+            ) // to accout for rounding errors
             expect(collRatio).to.be.lessThanOrEqual(
               testParam.desiredCollRatioDAI * (1 + positiveMargin / 100),
-            ) //due to slippage smaller than maximum we might end up with higher coll ratio
+            ) // due to slippage smaller than maximum we might end up with higher coll ratio
             console.warn(
               `\x1b[33m${positiveMargin}% positive and ${negativeMargin}% negative margin for collateralisation ratio applied actual Value ${collRatio}\x1b[0m`,
             )
           })
           it(`should change primaryAddress ETH balance by exacly ${testParam.desiredETH} ETH, minus tx fees`, async function () {
-            var after = await provider.getBalance(await primarySigner.getAddress())
-            var gasUsed = parseFloat(inTxResult.cumulativeGasUsed.toString())
+            const after = await provider.getBalance(await primarySigner.getAddress())
+            const gasUsed = parseFloat(inTxResult.cumulativeGasUsed.toString())
 
-            var gasPrice = 1000000000
-            var reminder = beforeTxBalance.sub(after).sub(gasUsed * gasPrice)
+            const gasPrice = 1000000000
+            const reminder = beforeTxBalance.sub(after).sub(gasUsed * gasPrice)
             expect(reminder.mul(-1)).to.be.equal(amountToWei(testParam.desiredETH).toFixed(0))
           })
           it(`should change primaryAddress DAI balance only due to not maximum slippage`, async function () {
-            let precision = 2
-            var daiAfter = await balanceOf(
-              MAINNET_ADRESSES.MCD_DAI,
+            const precision = 2
+            const daiAfter = await balanceOf(
+              MAINNET_ADDRESSES.MCD_DAI,
               await primarySigner.getAddress(),
             )
 
-            var balanceIncrease = sub(daiAfter.toString(), daiBefore.toString()).toNumber()
-            var swapDifference = sub(actualSwappedAmount, minAcceptableAmount).toNumber()
+            const balanceIncrease = sub(daiAfter.toString(), daiBefore.toString()).toNumber()
+            const swapDifference = sub(actualSwappedAmount, minAcceptableAmount).toNumber()
 
             console.warn(
               `\x1b[33m ${precision}% margin for surplus DAI amounts, actual ratio ${
@@ -911,13 +908,14 @@ async function testCaseDefinition(testCase, testParam) {
           let minTokenAmount
           let actualSwappedAmount
           let testCaseCopy
+          let internalSnapshotId
           this.beforeAll(async function () {
             await updateLastCDPInfo(testCase, primarySigner, provider, userProxyAddr)
             closingVaultInfo = testCase.existingCDP
             console.log('CDP state before', closingVaultInfo)
             beforeTxBalance = await provider.getBalance(await primarySigner.getAddress())
 
-            daiBefore = await balanceOf(MAINNET_ADRESSES.MCD_DAI, await primarySigner.getAddress())
+            daiBefore = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, await primarySigner.getAddress())
 
             internalSnapshotId = await createSnapshot(provider)
 
@@ -944,16 +942,20 @@ async function testCaseDefinition(testCase, testParam) {
             cdpData.withdrawDai = 0
 
             exchangeData.toTokenAmount = ensureWeiFormat(
-              mul(
-                mul(testCaseCopy.existingCDP.debt, add(add(1, AAVE_FEE), OUR_FEE)),
-                add(1, testParam.slippage),
-              ),
+              new BigNumber(1)
+                .plus(AAVE_FEE)
+                .plus(OUR_FEE)
+                .times(testCaseCopy.existingCDP.debt)
+                .times(new BigNumber(1).plus(testParam.slippage)),
             )
             exchangeData.minToTokenAmount = ensureWeiFormat(
-              mul(testCaseCopy.existingCDP.debt, add(add(1, AAVE_FEE), OUR_FEE)),
+              new BigNumber(1).plus(AAVE_FEE).plus(OUR_FEE).times(testCaseCopy.existingCDP.debt),
             )
             exchangeData.fromTokenAmount = ensureWeiFormat(
-              div(exchangeData.toTokenAmount, mul(marketPrice, sub(1, testParam.slippage))),
+              new BigNumber(1)
+                .minus(testParam.slippage)
+                .times(marketPrice)
+                .div(exchangeData.toTokenAmount),
             )
 
             minTokenAmount = exchangeData.minToTokenAmount
@@ -969,7 +971,7 @@ async function testCaseDefinition(testCase, testParam) {
             )
             const params = packMPAParams(cdpData, exchangeData, ADDRESS_REGISTRY)
             beneficiaryBefore = await balanceOf(
-              MAINNET_ADRESSES.MCD_DAI,
+              MAINNET_ADDRESSES.MCD_DAI,
               '0x79d7176aE8F93A04bC73b9BC710d4b44f9e362Ce',
             )
 
@@ -1002,10 +1004,10 @@ async function testCaseDefinition(testCase, testParam) {
             }
 
             if (testParam.printERC20Transfers) {
-              var labels = getAddressesLabels(
+              const labels = getAddressesLabels(
                 deployedContracts,
                 ADDRESS_REGISTRY,
-                MAINNET_ADRESSES,
+                MAINNET_ADDRESSES,
                 primarySignerAddress,
               )
               printAllERC20Transfers(inTxResult, labels)
@@ -1013,47 +1015,48 @@ async function testCaseDefinition(testCase, testParam) {
 
             await updateLastCDPInfo(testCaseCopy, primarySigner, provider, userProxyAddr)
 
-            daiAfter = await balanceOf(MAINNET_ADRESSES.MCD_DAI, await primarySigner.getAddress())
+            daiAfter = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, await primarySigner.getAddress())
 
             afterTxBalance = await provider.getBalance(await primarySigner.getAddress())
             closedVaultInfo = testCaseCopy.existingCDP
           })
           it('should send to user all collateral in a vault minus debt', async function () {
-            var gasUsed = parseFloat(inTxResult.cumulativeGasUsed.toString())
+            const gasUsed = parseFloat(inTxResult.cumulativeGasUsed.toString())
 
-            var gasPrice = 1000000000
-            var reminder = afterTxBalance.sub(beforeTxBalance).add(gasUsed * gasPrice)
+            const gasPrice = 1000000000
+            const reminder = afterTxBalance.sub(beforeTxBalance).add(gasUsed * gasPrice)
 
-            var expectedReturnedAmount = sub(
-              closingVaultInfo.coll,
-              div(
-                mul(closingVaultInfo.debt, add(add(add(1, testParam.slippage), AAVE_FEE), OUR_FEE)),
-                marketPrice,
-              ),
-            )
+            let expectedReturnedAmount = new BigNumber(1)
+              .plus(testParam.slippage)
+              .plus(AAVE_FEE)
+              .plus(OUR_FEE)
+              .times(closingVaultInfo.debt)
+              .div(marketPrice)
+              .minus(closingVaultInfo.coll)
+
             expectedReturnedAmount = amountToWei(expectedReturnedAmount)
-            var ratio = div(reminder, expectedReturnedAmount)
+            const ratio = div(reminder, expectedReturnedAmount)
             expect(ratio.toNumber()).to.be.lessThanOrEqual(1.02)
             expect(ratio.toNumber()).to.be.greaterThanOrEqual(0.98)
           })
           it('should send to user no more DAI than positive slippage', async function () {
-            var expected = sub(add(daiBefore, actualSwappedAmount), minTokenAmount).toFixed(0)
+            const expected = sub(add(daiBefore, actualSwappedAmount), minTokenAmount).toFixed(0)
             console.log(expected, daiAfter, daiBefore)
-            var ratio = div(sub(daiAfter, daiBefore), sub(expected, daiBefore))
+            const ratio = div(sub(daiAfter, daiBefore), sub(expected, daiBefore))
             expect(ratio.toNumber()).to.be.lessThan(1.01)
             expect(ratio.toNumber()).to.be.greaterThan(0.99)
           })
           addBalanceCheckingAssertions(it, testParam.useMockExchange, deployedContracts)
           it('should collect fee', async function () {
-            var beneficiaryAfter = await balanceOf(
-              MAINNET_ADRESSES.MCD_DAI,
+            const beneficiaryAfter = await balanceOf(
+              MAINNET_ADDRESSES.MCD_DAI,
               ADDRESS_REGISTRY.feeRecepient,
             )
             //       console.log(OUR_FEE, closingVaultInfo.debt)
-            var expectedFee =
-              //TODO: review that calculation
+            const expectedFee =
+              // TODO: review that calculation
               div(mul(OUR_FEE, actualSwappedAmount), sub(ONE, OUR_FEE))
-            var allEvents = inTxResult.events.map((x) => {
+            const allEvents = inTxResult.events.map(x => {
               return {
                 firstTopic: x.topics[0],
                 topics: x.topics,
@@ -1061,23 +1064,25 @@ async function testCaseDefinition(testCase, testParam) {
                 name: x.name,
               }
             })
-            var feePaidEvents = allEvents.filter(
-              (x) =>
+            const feePaidEvents = allEvents.filter(
+              x =>
                 x.firstTopic ===
                 '0x69e27f80547602d16208b028c44d20f25956e1fb7d0f51d62aa02f392426f371',
             )
             expect(feePaidEvents.length).to.be.deep.equal(1)
-            var feeAmount = new BigNumber(feePaidEvents[0].data, 16)
+            const feeAmount = new BigNumber(feePaidEvents[0].data, 16)
             //    console.log('beneficiary diff', beneficiaryAfter.sub(beneficiaryBefore).toString()) //
-            var diff = beneficiaryAfter.sub(beneficiaryBefore).toString()
+            const diff = beneficiaryAfter.sub(beneficiaryBefore).toString()
             expect(diff).to.be.equal(feeAmount.toString())
             expect(expectedFee.toNumber()).to.be.lessThan(1.01 * feeAmount.toNumber())
             expect(expectedFee.toNumber()).to.be.greaterThan(0.99 * feeAmount.toNumber())
           })
+
           this.afterAll(async function () {
             await restoreSnapshot(provider, internalSnapshotId)
           })
         })
+
         describe('Close Vault, withdraw DAI', async function () {
           if (testParam.skipFL) {
             return
@@ -1090,13 +1095,15 @@ async function testCaseDefinition(testCase, testParam) {
           let daiBefore
           let daiAfter
           let testCaseCopy
+          let internalSnapshotId
+
           this.beforeAll(async function () {
             await updateLastCDPInfo(testCase, primarySigner, provider, userProxyAddr)
             closingVaultInfo = testCase.existingCDP
             beforeTxBalance = await provider.getBalance(await primarySigner.getAddress())
 
-            daiBefore = await balanceOf(MAINNET_ADRESSES.MCD_DAI, await primarySigner.getAddress())
-            //console.log('Before DAI Balance', daiBefore.toString())
+            daiBefore = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, await primarySigner.getAddress())
+            // console.log('Before DAI Balance', daiBefore.toString())
 
             internalSnapshotId = await createSnapshot(provider)
             testCaseCopy = JSON.parse(JSON.stringify(testCase))
@@ -1121,12 +1128,12 @@ async function testCaseDefinition(testCase, testParam) {
 
             exchangeData.fromTokenAmount = ensureWeiFormat(testCaseCopy.existingCDP.coll)
 
-            let worstPossibleDaiValueOfExistingCollateral = mul(
+            const worstPossibleDaiValueOfExistingCollateral = mul(
               testCaseCopy.existingCDP.coll,
               mul(marketPrice, sub(1, testParam.slippage)),
             )
 
-            daiOutAfterOF = mul(worstPossibleDaiValueOfExistingCollateral, sub(1, OUR_FEE))
+            const daiOutAfterOF = mul(worstPossibleDaiValueOfExistingCollateral, sub(1, OUR_FEE))
 
             exchangeData.minToTokenAmount = ensureWeiFormat(daiOutAfterOF)
 
@@ -1146,7 +1153,7 @@ async function testCaseDefinition(testCase, testParam) {
             const params = packMPAParams(cdpData, exchangeData, ADDRESS_REGISTRY)
 
             beneficiaryBefore = await balanceOf(
-              MAINNET_ADRESSES.MCD_DAI,
+              MAINNET_ADDRESSES.MCD_DAI,
               ADDRESS_REGISTRY.feeRecepient,
             )
 
@@ -1160,14 +1167,15 @@ async function testCaseDefinition(testCase, testParam) {
               params,
             )
             if (testParam.printERC20Transfers) {
-              var labels = getAddressesLabels(
+              const labels = getAddressesLabels(
                 deployedContracts,
                 ADDRESS_REGISTRY,
-                MAINNET_ADRESSES,
+                MAINNET_ADDRESSES,
                 primarySignerAddress,
               )
               printAllERC20Transfers(inTxResult, labels)
             }
+
             if (!status) {
               restoreSnapshot.lock = true
               console.log(inTxResult)
@@ -1176,29 +1184,29 @@ async function testCaseDefinition(testCase, testParam) {
 
             await updateLastCDPInfo(testCaseCopy, primarySigner, provider, userProxyAddr)
 
-            daiAfter = await balanceOf(MAINNET_ADRESSES.MCD_DAI, await primarySigner.getAddress())
+            daiAfter = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, await primarySigner.getAddress())
 
             afterTxBalance = await provider.getBalance(await primarySigner.getAddress())
             closedVaultInfo = testCaseCopy.existingCDP
           })
           it('should send to user no ETH', async function () {
-            var after = await provider.getBalance(await primarySigner.getAddress())
-            var gasUsed = parseFloat(inTxResult.cumulativeGasUsed.toString())
+            const after = await provider.getBalance(await primarySigner.getAddress())
+            const gasUsed = parseFloat(inTxResult.cumulativeGasUsed.toString())
 
-            var gasPrice = 1000000000
-            var reminder = beforeTxBalance.sub(after).sub(gasUsed * gasPrice)
+            const gasPrice = 1000000000
+            const reminder = beforeTxBalance.sub(after).sub(gasUsed * gasPrice)
             expect(reminder).to.be.equal(0)
           })
           it('should send to user all DAI', async function () {
-            let daiAfter = await balanceOf(
-              MAINNET_ADRESSES.MCD_DAI,
+            const daiAfter = await balanceOf(
+              MAINNET_ADDRESSES.MCD_DAI,
               await primarySigner.getAddress(),
             )
-            var actual = sub(daiAfter, daiBefore)
+            const actual = sub(daiAfter, daiBefore)
 
-            expected = amountToWei(
+            const expected = amountToWei(
               sub(mul(closingVaultInfo.coll, marketPrice), closingVaultInfo.debt),
-            ) //do not take fees into account, but assert gives 10% tollerance which is way more than all fees and slippage
+            ) // do not take fees into account, but assert gives 10% tollerance which is way more than all fees and slippage
             if (testParam.debug) {
               console.log(
                 'Users DAI change:',
