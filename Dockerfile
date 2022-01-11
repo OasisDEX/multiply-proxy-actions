@@ -7,9 +7,9 @@ WORKDIR /usr/src/mpa
 
 RUN yarn --no-progress --non-interactive --frozen-lockfile
 
-RUN yarn run hardhat export-abi --no-compile
-
 COPY . .
+
+RUN yarn run hardhat export-abi --no-compile
 
 RUN chmod +x ./docker-scripts/init.sh
 
