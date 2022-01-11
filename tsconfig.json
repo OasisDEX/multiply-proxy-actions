@@ -1,15 +1,16 @@
 {
-    "compilerOptions": {
-      "target": "es2018",
-      "module": "commonjs",
-      "strict": true,
-      "esModuleInterop": true,
-      "outDir": "dist",
-      "declaration": true,
-      "resolveJsonModule": true,
-      "noImplicitAny": true
-    },
-    "include": ["./scripts", "./test", "./typechain", "./addresses"],
-    "files": ["./hardhat.config.ts"]
-  }
+  "compilerOptions": {
+    "target": "es2018",
+    "module": "commonjs",
+    "moduleResolution": "Node",
+    "strict": true,
+    "esModuleInterop": true,
+    "outDir": "dist",
+    "declaration": true,
+    "resolveJsonModule": true,
+    "noImplicitAny": true
+  },
+  "include": ["./scripts", "./test", "./typechain", "./addresses"],
+  "files": ["./hardhat.config.ts"]
+}
   

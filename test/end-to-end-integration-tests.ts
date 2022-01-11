@@ -43,7 +43,7 @@ const BASE_SLIPPAGE = 0.08
 const OUR_FEE = FEE / FEE_BASE
 
 const ALLOWED_PROTOCOLS = ['UNISWAP_V3']
-let blockNumber = parseInt(process.env.BLOCK_NUMBER, 10)
+let blockNumber = parseInt(process.env.BLOCK_NUMBER!, 10)
 
 const testVaults = [
   {
@@ -164,14 +164,14 @@ async function testCaseDefinition(testCase, testParam) {
   testCase = JSON.parse(JSON.stringify(testCase)) // break reference
   testParam = JSON.parse(JSON.stringify(testParam))
 
-  return new Promise((res, rej) => {
+  return new Promise((resolve, reject) => {
     // to run several in runner, one after another
 
     describe(`Proxy Action, oracleDivergence = ${
       testParam.useMockExchange ? testParam.oraclePriceDivergence * 100 : 0
     } % slippage ${testParam.slippage} skipFL=${testParam.skipFL}`, async function () {
       this.afterAll(async function () {
-        res(true) // resolves Promise
+        resolve(true) // resolves Promise
       })
 
       let primarySigner

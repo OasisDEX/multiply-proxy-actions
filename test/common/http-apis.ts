@@ -3,9 +3,12 @@ import fetch from 'node-fetch'
 import BigNumber from 'bignumber.js'
 import MAINNET_ADDRESSES from '../../addresses/mainnet.json'
 
-export interface OneInchResponse {
+export interface OneInchBaseResponse {
   toTokenAmount: string
   fromTokenAmount: string
+}
+
+export interface OneInchSwapResponse extends OneInchBaseResponse {
   tx: {
     from: string
     to: string
@@ -27,7 +30,7 @@ export async function getMarketPrice(
   )}&protocols=UNISWAP_V3`
 
   const response = await fetch(endpoint)
-  const result = await response.json()
+  const result = (await response.json()) as OneInchBaseResponse
 
   const fromTokenAmount = new BigNumber(
     ethers.utils.formatUnits(result.fromTokenAmount, fromPrecision),
@@ -43,7 +46,7 @@ export async function exchangeFromDAI(
   slippage: string,
   recepient: string,
   protocols: string[] = [],
-): Promise<OneInchResponse> {
+): Promise<OneInchSwapResponse> {
   const url = `https://oasis.api.enterprise.1inch.exchange/v4.0/1/swap?
     fromTokenAddress=${MAINNET_ADDRESSES.MCD_DAI}
     &toTokenAddress=${toTokenAddress}
@@ -55,7 +58,7 @@ export async function exchangeFromDAI(
     &allowPartialFill=false`.replace(/\n(\s*)/g, '')
 
   const response = await fetch(url)
-  const data = await response.json()
+  const data = (await response.json()) as OneInchSwapResponse
 
   if (!data) {
     console.log('incorrect response from 1inch ', data, 'original request', url)
@@ -72,7 +75,7 @@ export async function getCurrentBlockNumber() {
   try {
     const result = await fetch(url)
 
-    const json = await result.json()
+    const json = (await result.json()) as { result: string }
     return parseInt(json.result)
   } catch (err) {
     console.log('getCurrentBlockNumber Url', url)
@@ -86,7 +89,7 @@ export async function exchangeToDAI(
   recepient: string,
   slippage: string,
   protocols: string[] = [],
-): Promise<OneInchResponse> {
+): Promise<OneInchSwapResponse> {
   const url = `https://oasis.api.enterprise.1inch.exchange/v4.0/1/swap?
     fromTokenAddress=${fromTokenAddress}
     &toTokenAddress=${MAINNET_ADDRESSES.MCD_DAI}
@@ -98,7 +101,7 @@ export async function exchangeToDAI(
     &allowPartialFill=false`.replace(/\n(\s*)/g, '')
 
   const response = await fetch(url)
-  const data = await response.json()
+  const data = (await response.json()) as OneInchSwapResponse
 
   if (!data) {
     console.log('incorrect response from 1inch ', data, 'original request', url)

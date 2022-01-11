@@ -5,7 +5,7 @@ import { write } from './writer'
 
 config()
 
-async function getGasPrice(exGasPrice) {
+async function getGasPrice(exGasPrice: EthersBN) {
   let defaultGasPrice = EthersBN.from(10000000000)
   let newGasPrice = defaultGasPrice
 
@@ -29,7 +29,7 @@ export async function deploy(
   contractName: string,
   signer: Signer,
   action: string,
-  gasPrice,
+  gasPrice: EthersBN,
   nonce: number,
   ...args: any[]
 ) {
@@ -39,11 +39,7 @@ export async function deploy(
     const Contract = await ethers.getContractFactory(contractName, signer)
     // const provider = await ethers.provider
 
-    let options = { gasPrice, nonce }
-
-    if (nonce === -1) {
-      options = { gasPrice }
-    }
+    const options = nonce === -1 ? { gasPrice } : { gasPrice, nonce }
 
     let contract
     if (!args.length) {
@@ -75,8 +71,8 @@ export async function deployWithResend(
   contractName: string,
   signer: Signer,
   action: string,
-  exGasPrice,
-  nonce,
+  exGasPrice: EthersBN,
+  nonce: number,
   ...args: any[]
 ) {
   const timeoutMinutes = process.env.TIMEOUT_MINUTES ? parseFloat(process.env.TIMEOUT_MINUTES) : 1
@@ -104,27 +100,9 @@ export async function deployContract(contractName: string, ...args: any[]) {
   const address = await signers[0].getAddress()
   const nonce = await ethers.provider.getTransactionCount(address)
 
-  return deployWithResend(
-    contractName,
-    signers[0],
-    'Deploying',
-    ethers.BigNumber.from('0'),
-    nonce,
-    ...args,
-  )
+  return deployWithResend(contractName, signers[0], 'Deploying', EthersBN.from(0), nonce, ...args)
 }
 
 export async function deployAsOwner(contractName: string, signer: Signer, ...args: any[]) {
-  return deployWithResend(
-    contractName,
-    signer,
-    'Deploying',
-    ethers.BigNumber.from('0'),
-    -1,
-    ...args,
-  )
-}
-
-module.exports = {
-  deployWithResend,
+  return deployWithResend(contractName, signer, 'Deploying', EthersBN.from(0), -1, ...args)
 }

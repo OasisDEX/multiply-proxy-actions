@@ -14,21 +14,10 @@ import WETHABI from '../abi/IWETH.json'
 import ERC20ABI from '../abi/IERC20.json'
 import MAINNET_ADDRESSES from '../addresses/mainnet.json'
 import { balanceOf } from './utils'
+import { asPercentageValue, expectToBe, expectToBeEqual } from './_utils'
 
 const AGGREGATOR_V3_ADDRESS = '0x11111112542d85b3ef69ae05771c2dccff4faa26'
 const ALLOWED_PROTOCOLS = ['UNISWAP_V2']
-
-function asPercentageValue(value: BigNumber.Value, base: BigNumber.Value) {
-  value = new BigNumber(value)
-
-  return {
-    get value() {
-      return value
-    },
-
-    asDecimal: value.div(base),
-  }
-}
 
 describe('Exchange', async () => {
   let provider: JsonRpcProvider
@@ -52,7 +41,7 @@ describe('Exchange', async () => {
     fee = asPercentageValue(FEE, FEE_BASE)
 
     const exchangeFactory = await ethers.getContractFactory('Exchange', signer)
-    exchange = await exchangeFactory.deploy(address, feeBeneficiary, fee.value.toString())
+    exchange = await exchangeFactory.deploy(address, feeBeneficiary, fee.value.toFixed())
 
     await exchange.deployed()
 
@@ -70,12 +59,12 @@ describe('Exchange', async () => {
 
   it('should have fee set', async () => {
     const exchangeFee = await exchange.fee()
-    expect(exchangeFee.toString()).to.be.eq(fee.value.toString())
+    expectToBeEqual(exchangeFee, fee.value)
   })
 
   it('should have fee beneficiary address set', async () => {
     const exchangeFeeBeneficiary = await exchange.feeBeneficiaryAddress()
-    expect(exchangeFeeBeneficiary).to.be.eq(feeBeneficiary)
+    expectToBeEqual(exchangeFeeBeneficiary, feeBeneficiary)
   })
 
   it('should have a whitelisted caller set', async () => {
@@ -84,12 +73,12 @@ describe('Exchange', async () => {
 
   it('should have new fee set', async () => {
     const currentFee = await exchange.fee()
-    expect(currentFee.toString()).to.be.eq(fee.value.toString())
+    expectToBeEqual(currentFee, fee.value)
 
     const newFee = '3'
     await exchange.setFee(newFee)
     const exchangeFee = await exchange.fee()
-    expect(exchangeFee.toString()).to.be.eq(newFee)
+    expectToBeEqual(exchangeFee, newFee)
   })
 
   it('should not allow unauthorized caller to update the fee', async () => {
@@ -121,7 +110,7 @@ describe('Exchange', async () => {
         MAINNET_ADDRESSES.ETH,
         amountInWei.toFixed(0),
         exchange.address,
-        slippage.value.toString(),
+        slippage.value.toFixed(),
         ALLOWED_PROTOCOLS,
       )
       to = response.tx.to
@@ -175,21 +164,21 @@ describe('Exchange', async () => {
           balanceOf(MAINNET_ADDRESSES.MCD_DAI, address),
         ])
 
-        expect(wethBalance.eq(initialWethWalletBalance.minus(amountToWei(amount)))).to.be.true
-        expect(daiBalance.gte(receiveAtLeastInWei)).to.be.true
+        expectToBeEqual(wethBalance, initialWethWalletBalance.minus(amountToWei(amount)))
+        expectToBe(daiBalance, 'gte', receiveAtLeastInWei)
       })
 
       it('should not have Asset amount left in the exchange', async () => {
         const exchangeWethBalance = await balanceOf(MAINNET_ADDRESSES.ETH, exchange.address)
         const wethBalance = await balanceOf(MAINNET_ADDRESSES.ETH, address)
 
-        expect(wethBalance.eq(initialWethWalletBalance.minus(amountToWei(amount)))).to.be.true
-        expect(exchangeWethBalance.eq(0)).to.be.true
+        expectToBeEqual(wethBalance, initialWethWalletBalance.minus(amountToWei(amount)))
+        expectToBeEqual(exchangeWethBalance, 0)
       })
 
       it('should not have DAI amount left in the exchange', async () => {
         const exchangeDaiBalance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, exchange.address)
-        expect(exchangeDaiBalance.eq(0)).to.be.true
+        expectToBeEqual(exchangeDaiBalance, 0)
       })
 
       it('should have collected fee', async () => {
@@ -197,15 +186,14 @@ describe('Exchange', async () => {
         const beneficiaryDaiBalance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, feeBeneficiary)
 
         // TODO:
-        console.log('>>>>>>>> ', fee.asDecimal.toString(), (await exchange.fee()).toString())
+        console.log('>>>>>>>> ', fee.asDecimal.toFixed(), (await exchange.fee()).toString())
 
         const expectedCollectedFee = amountFromWei(walletDaiBalance)
           .div(new BigNumber(1).minus(fee.asDecimal))
+          .decimalPlaces(0)
           .times(fee.asDecimal)
 
-        expect(amountFromWei(beneficiaryDaiBalance).toFixed(6)).to.be.eq(
-          expectedCollectedFee.toFixed(6),
-        )
+        expectToBeEqual(amountFromWei(beneficiaryDaiBalance), expectedCollectedFee, 6)
       })
     })
 
@@ -246,21 +234,21 @@ describe('Exchange', async () => {
         const wethBalance = await balanceOf(MAINNET_ADDRESSES.ETH, address)
         const daiBalance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, address)
 
-        expect(wethBalance.eq(initialWethWalletBalance.minus(amountInWei))).to.be.true
-        expect(daiBalance.gte(receiveAtLeastInWei)).to.be.true
+        expectToBeEqual(wethBalance, initialWethWalletBalance.minus(amountInWei))
+        expectToBe(daiBalance, 'gte', receiveAtLeastInWei)
       })
 
       it('should not have Asset amount left in the exchange', async () => {
         const exchangeWethBalance = await balanceOf(MAINNET_ADDRESSES.ETH, exchange.address)
         const wethBalance = await balanceOf(MAINNET_ADDRESSES.ETH, address)
 
-        expect(exchangeWethBalance.eq(0)).to.be.true
-        expect(wethBalance.eq(initialWethWalletBalance.minus(amountInWei))).to.be.true
+        expectToBeEqual(exchangeWethBalance, 0)
+        expectToBeEqual(wethBalance, initialWethWalletBalance.minus(amountInWei))
       })
 
       it('should not have DAI amount left in the exchange', async () => {
         const exchangeDaiBalance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, exchange.address)
-        expect(exchangeDaiBalance.eq(0)).to.be.true
+        expectToBeEqual(exchangeDaiBalance, 0)
       })
 
       it('should have collected fee', async () => {
@@ -270,9 +258,7 @@ describe('Exchange', async () => {
         const expectedCollectedFee = amountFromWei(walletDaiBalance)
           .div(ONE.minus(fee.asDecimal))
           .times(fee.asDecimal)
-        expect(amountFromWei(beneficiaryDaiBalance).toFixed(6)).to.be.eq(
-          expectedCollectedFee.toFixed(6),
-        )
+        expectToBeEqual(amountFromWei(beneficiaryDaiBalance), expectedCollectedFee, 6)
       })
     })
 
@@ -321,21 +307,21 @@ describe('Exchange', async () => {
         console.log('>>>>>', wethBalance.toFixed(0), initialWethWalletBalance.toFixed(0))
         console.log('>>>>>', daiBalance.toFixed(0))
 
-        expect(wethBalance.eq(initialWethWalletBalance)).to.be.true
-        expect(daiBalance.eq(0)).to.be.true
+        expectToBeEqual(wethBalance, initialWethWalletBalance)
+        expectToBeEqual(daiBalance, 0)
       })
 
       it('should not have Asset amount left in the exchange', async () => {
         const exchangeWethBalance = await balanceOf(MAINNET_ADDRESSES.ETH, exchange.address)
         const wethBalance = await balanceOf(MAINNET_ADDRESSES.ETH, address)
 
-        expect(exchangeWethBalance.eq(0)).to.be.true
-        expect(wethBalance.eq(initialWethWalletBalance)).to.be.true
+        expectToBeEqual(exchangeWethBalance, 0)
+        expectToBeEqual(wethBalance, initialWethWalletBalance)
       })
 
       it('should not have DAI amount left in the exchange', async () => {
         const exchangeDaiBalance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, exchange.address)
-        expect(exchangeDaiBalance.eq(0)).to.be.true
+        expectToBeEqual(exchangeDaiBalance, 0)
       })
     })
 
@@ -366,7 +352,7 @@ describe('Exchange', async () => {
         })
         await WETH.connect(otherWallet).transfer(exchange.address, transferredAmount.toFixed(0))
         const exchangeWethBalance = await balanceOf(MAINNET_ADDRESSES.ETH, exchange.address)
-        expect(exchangeWethBalance.eq(transferredAmount)).to.be.true
+        expectToBeEqual(exchangeWethBalance, transferredAmount)
 
         await exchange.swapTokenForDai(
           MAINNET_ADDRESSES.ETH,
@@ -381,9 +367,10 @@ describe('Exchange', async () => {
         )
 
         const walletWethBalance = await balanceOf(MAINNET_ADDRESSES.ETH, address)
-        expect(
-          walletWethBalance.eq(initialWethWalletBalance.minus(amountInWei).plus(transferredAmount)),
-        ).to.be.true
+        expectToBeEqual(
+          walletWethBalance,
+          initialWethWalletBalance.minus(amountInWei).plus(transferredAmount),
+        )
       })
 
       it('should transfer everything to the caller if there is a surplus of DAI ', async () => {
@@ -402,11 +389,11 @@ describe('Exchange', async () => {
         )
 
         const otherWalletDaiBalance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, otherWalletAddress)
-        expect(amountFromWei(otherWalletDaiBalance).gte(1)).to.be.true
+        expectToBe(amountFromWei(otherWalletDaiBalance), 'gte', 1)
 
         await DAI.connect(otherWallet).transfer(exchange.address, amount.toFixed(0))
         let exchangeDaiBalance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, exchange.address)
-        expect(exchangeDaiBalance.eq(amount)).to.be.true
+        expectToBeEqual(exchangeDaiBalance, amount, 0)
 
         await exchange.swapTokenForDai(
           MAINNET_ADDRESSES.ETH,
@@ -423,12 +410,11 @@ describe('Exchange', async () => {
         // This assertion basically asserts the funds that were pre-deposit are not left within the exchange
         // This DOES NOT test if the fund were actually sent to the caller. There is no way to do that with current design
         exchangeDaiBalance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, exchange.address)
-        expect(exchangeDaiBalance.eq(0)).to.be.true
+        expectToBeEqual(exchangeDaiBalance, 0)
       })
     })
   })
 
-  /// ///////////////////// TODO: HERE
   describe('DAI for Asset', async () => {
     let initialDaiWalletBalance: BigNumber
     let amountWithFeeInWei: BigNumber
@@ -443,7 +429,7 @@ describe('Exchange', async () => {
       const response = await exchangeFromDAI(
         MAINNET_ADDRESSES.ETH,
         amountInWei.toFixed(0),
-        slippage.value.toString(),
+        slippage.value.toFixed(),
         exchange.address,
         ALLOWED_PROTOCOLS,
       )
@@ -498,24 +484,24 @@ describe('Exchange', async () => {
         const wethBalance = await balanceOf(MAINNET_ADDRESSES.ETH, address)
         const daiBalance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, address)
 
-        expect(daiBalance.eq(initialDaiWalletBalance.minus(amountWithFeeInWei))).to.be.true
-        expect(wethBalance.gte(receiveAtLeastInWei)).to.be.true
+        expectToBeEqual(daiBalance, initialDaiWalletBalance.minus(amountWithFeeInWei), 0)
+        expectToBe(wethBalance, 'gte', receiveAtLeastInWei)
       })
 
       it('should not have Asset amount left in the exchange', async () => {
         const exchangeWethBalance = await balanceOf(MAINNET_ADDRESSES.ETH, exchange.address)
-        expect(exchangeWethBalance.eq(0)).to.be.true
+        expectToBeEqual(exchangeWethBalance, 0)
       })
 
       it('should not have DAI amount left in the exchange', async () => {
         const exchangeDaiBalance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, exchange.address)
-        expect(exchangeDaiBalance.eq(0)).to.be.true
+        expectToBeEqual(exchangeDaiBalance, 0)
       })
 
       it('should have collected fee', async () => {
         const beneficiaryDaiBalance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, feeBeneficiary)
         const expectedCollectedFee = amountWithFeeInWei.times(fee.asDecimal)
-        expect(beneficiaryDaiBalance.eq(expectedCollectedFee)).to.be.true
+        expectToBeEqual(beneficiaryDaiBalance, expectedCollectedFee, 0)
       })
     })
 
@@ -567,19 +553,22 @@ describe('Exchange', async () => {
 
         const surplusFee = amountToWei(surplusAmount.times(fee.asDecimal))
 
-        expect(daiBalance.eq(initialDaiWalletBalance.minus(amountWithFeeInWei).minus(surplusFee)))
-          .to.be.true
-        expect(wethBalance.gte(receiveAtLeastInWei)).to.be.true
+        expectToBeEqual(
+          daiBalance,
+          initialDaiWalletBalance.minus(amountWithFeeInWei).minus(surplusFee),
+          0,
+        )
+        expectToBe(wethBalance, 'gte', receiveAtLeastInWei)
       })
 
       it('should not have Asset amount left in the exchange', async () => {
         const exchangeWethBalance = await balanceOf(MAINNET_ADDRESSES.ETH, exchange.address)
-        expect(exchangeWethBalance.eq(0)).to.be.true
+        expectToBeEqual(exchangeWethBalance, 0)
       })
 
       it('should not have DAI amount left in the exchange', async () => {
         const exchangeDaiBalance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, exchange.address)
-        expect(exchangeDaiBalance.eq(0)).to.be.true
+        expectToBeEqual(exchangeDaiBalance, 0)
       })
 
       it('should have collected fee', async () => {
@@ -587,7 +576,7 @@ describe('Exchange', async () => {
 
         const surplusFee = amountToWei(surplusAmount.times(fee.asDecimal))
         const expectedCollectedFee = amountWithFeeInWei.times(fee.asDecimal)
-        expect(beneficiaryDaiBalance.eq(expectedCollectedFee.plus(surplusFee))).to.be.true
+        expectToBeEqual(beneficiaryDaiBalance, expectedCollectedFee.plus(surplusFee), 0)
       })
     })
 
@@ -639,18 +628,18 @@ describe('Exchange', async () => {
         const wethBalance = await balanceOf(MAINNET_ADDRESSES.ETH, address)
         const daiBalance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, address)
 
-        expect(daiBalance.eq(initialDaiWalletBalance)).to.be.true
-        expect(wethBalance.eq(0)).to.be.true
+        expectToBeEqual(daiBalance, initialDaiWalletBalance)
+        expectToBeEqual(wethBalance, 0)
       })
 
       it('should not have Asset amount left in the exchange', async () => {
         const exchangeWethBalance = await balanceOf(MAINNET_ADDRESSES.ETH, exchange.address)
-        expect(exchangeWethBalance.eq(0)).to.be.true
+        expectToBeEqual(exchangeWethBalance, 0)
       })
 
       it('should not have DAI amount left in the exchange', async () => {
         const exchangeDaiBalance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, exchange.address)
-        expect(exchangeDaiBalance.eq(0)).to.be.true
+        expectToBeEqual(exchangeDaiBalance, 0)
       })
     })
 
@@ -705,7 +694,7 @@ describe('Exchange', async () => {
 
         await WETH.connect(otherWallet).transfer(exchange.address, transferredAmount.toFixed(0))
         const exchangeWethBalance = await balanceOf(MAINNET_ADDRESSES.ETH, exchange.address)
-        expect(exchangeWethBalance.eq(transferredAmount)).to.be.true
+        expectToBeEqual(exchangeWethBalance, transferredAmount)
 
         await exchange.swapDaiForToken(
           MAINNET_ADDRESSES.ETH,
@@ -723,7 +712,7 @@ describe('Exchange', async () => {
         const expectedWethBalance = initialWethWalletBalance
           .plus(currentWethBalance)
           .plus(transferredAmount)
-        expect(wethBalance.eq(expectedWethBalance)).to.be.true
+        expectToBeEqual(wethBalance, expectedWethBalance)
       })
 
       it('should transfer everything to the caller if there is a surplus of DAI ', async () => {
@@ -743,11 +732,11 @@ describe('Exchange', async () => {
 
         const walletDaiBalance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, address)
         const otherWalletDaiBalance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, otherWalletAddress)
-        expect(amountFromWei(otherWalletDaiBalance).gte(1)).to.be.true
+        expectToBe(amountFromWei(otherWalletDaiBalance), 'gte', 1)
 
         await DAI.connect(otherWallet).transfer(exchange.address, amount.toFixed(0))
         const exchangeDaiBalance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, exchange.address)
-        expect(exchangeDaiBalance.eq(amount)).to.be.true
+        expectToBeEqual(exchangeDaiBalance, amount, 0)
 
         await exchange.swapDaiForToken(
           MAINNET_ADDRESSES.ETH,
@@ -763,7 +752,7 @@ describe('Exchange', async () => {
 
         const currentDaiBalance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, address)
         const expectedDaiBalance = walletDaiBalance.minus(amountWithFeeInWei).plus(amountToWei(1))
-        expect(currentDaiBalance.eq(expectedDaiBalance)).to.be.true
+        expectToBeEqual(currentDaiBalance, expectedDaiBalance, 0)
       })
     })
   })
@@ -782,7 +771,7 @@ describe('Exchange', async () => {
 
     afterEach(async () => {
       const wethBalance = await balanceOf(MAINNET_ADDRESSES.ETH, address)
-      expect(wethBalance.eq(balance)).to.be.true
+      expectToBeEqual(wethBalance, balance)
       await provider.send('evm_revert', [localSnapshotId])
     })
 
@@ -860,7 +849,7 @@ describe('Exchange', async () => {
         MAINNET_ADDRESSES.ETH,
         amountInWei.toFixed(0),
         exchange.address,
-        slippage.value.toString(),
+        slippage.value.toFixed(),
         ALLOWED_PROTOCOLS,
       )
 
@@ -902,7 +891,7 @@ describe('Exchange', async () => {
 
     afterEach(async () => {
       const currentDaiBalance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, address)
-      expect(currentDaiBalance.eq(daiBalance)).to.be.true
+      expectToBeEqual(currentDaiBalance, daiBalance)
       await provider.send('evm_revert', [localSnapshotId])
     })
 
@@ -975,7 +964,7 @@ describe('Exchange', async () => {
       const response = await exchangeFromDAI(
         MAINNET_ADDRESSES.ETH,
         amountInWei.toFixed(0),
-        slippage.value.toString(),
+        slippage.value.toFixed(),
         exchange.address,
         ALLOWED_PROTOCOLS,
       )
@@ -1021,7 +1010,7 @@ describe('Exchange', async () => {
         MAINNET_ADDRESSES.USDT,
         initialUSDTBalanceInWei.toFixed(0),
         exchange.address,
-        slippage.value.toString(),
+        slippage.value.toFixed(),
         ['UNISWAP_V2'],
       )
 
@@ -1055,8 +1044,8 @@ describe('Exchange', async () => {
       const currentUSDTBalance = await balanceOf(MAINNET_ADDRESSES.USDT, address)
       const currentDaiBalance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, address)
 
-      expect(currentUSDTBalance.eq(0)).to.be.true
-      expect(currentDaiBalance.gte(receiveAtLeastInWei)).to.be.true
+      expectToBeEqual(currentUSDTBalance, 0)
+      expectToBe(currentDaiBalance, 'gte', receiveAtLeastInWei)
     })
   })
 
@@ -1088,7 +1077,7 @@ describe('Exchange', async () => {
       const response = await exchangeFromDAI(
         MAINNET_ADDRESSES.USDT,
         amountInWei.toFixed(0),
-        slippage.value.toString(),
+        slippage.value.toFixed(),
         exchange.address,
         ['UNISWAP_V2'],
       )
@@ -1123,8 +1112,8 @@ describe('Exchange', async () => {
       const currentUSDTBalance = amountFromWei(await balanceOf(MAINNET_ADDRESSES.USDT, address), 6)
       const currentDaiBalance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, address)
 
-      expect(currentDaiBalance.eq(daiBalanceInWei.minus(amountWithFeeInWei))).to.be.true
-      expect(currentUSDTBalance.gte(amountFromWei(receiveAtLeastInWei, 6))).to.be.true
+      expectToBeEqual(currentDaiBalance, daiBalanceInWei.minus(amountWithFeeInWei), 0)
+      expectToBe(currentUSDTBalance, 'gte', amountFromWei(receiveAtLeastInWei, 6))
     })
   })
 })

@@ -3,7 +3,7 @@ import R from 'ramda'
 import { writeFileSync } from 'fs'
 import chalk from 'chalk'
 import BigNumber from 'bignumber.js'
-import { Contract, Signer } from 'ethers'
+import { Contract, Signer, BigNumber as EthersBN } from 'ethers'
 
 export const WETH_ADDRESS = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'
 export const ETH_ADDR = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
@@ -111,9 +111,12 @@ export async function send(tokenAddr: string, to: string, amount: BigNumber.Valu
 export async function approve(tokenAddr: string, to: string) {
   const tokenContract = await ethers.getContractAt('IERC20', tokenAddr)
 
-  const allowance = await tokenContract.allowance(await tokenContract.signer.getAddress(), to)
+  const allowance: EthersBN = await tokenContract.allowance(
+    await tokenContract.signer.getAddress(),
+    to,
+  )
 
-  if (allowance.toString() == '0') {
+  if (allowance.eq(0)) {
     await tokenContract.approve(to, MAX_UINT, { gasLimit: 1000000 })
   }
 }
