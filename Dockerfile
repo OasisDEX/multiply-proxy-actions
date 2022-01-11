@@ -7,7 +7,7 @@ WORKDIR /usr/src/mpa
 
 RUN yarn --no-progress --non-interactive --frozen-lockfile
 
-RUN yarn compile
+RUN yarn run hardhat export-abi --no-compile
 
 COPY . .
 
