@@ -9,8 +9,6 @@ RUN yarn --no-progress --non-interactive --frozen-lockfile
 
 COPY . .
 
-RUN yarn run hardhat export-abi --no-compile
-
 RUN chmod +x ./docker-scripts/init.sh
 
 CMD [ "./docker-scripts/init.sh" ]
