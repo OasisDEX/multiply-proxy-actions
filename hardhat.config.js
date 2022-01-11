@@ -86,7 +86,7 @@ task('updatevowner', 'Impersonates account and changes owner')
     console.log('Impersonation done')
   })
 
-function createHardhatNetwork(network, url, key) {
+function createHardhatNetwork(network, url, key, gasPrice) {
   if (!url) {
     return null
   }
@@ -96,7 +96,7 @@ function createHardhatNetwork(network, url, key) {
     {
       url: url,
       accounts: [key],
-      gasPrice: 40000000000,
+      gasPrice,
     },
   ]
 }
@@ -126,13 +126,24 @@ module.exports = {
       timeout: 100000,
     },
     ...[
-      createHardhatNetwork('mainnet', process.env.ALCHEMY_NODE, process.env.PRIV_KEY_MAINNET),
+      createHardhatNetwork(
+        'mainnet',
+        process.env.ALCHEMY_NODE,
+        process.env.PRIV_KEY_MAINNET,
+        40000000000,
+      ),
       createHardhatNetwork(
         'rinkeby',
         process.env.ALCHEMY_NODE_RINKEBY,
         process.env.PRIV_KEY_MAINNET,
+        40000000000,
       ),
-      createHardhatNetwork('goerli', process.env.ALCHEMY_NODE_GOERLI, process.env.PRIV_KEY_MAINNET),
+      createHardhatNetwork(
+        'goerli',
+        process.env.ALCHEMY_NODE_GOERLI,
+        process.env.PRIV_KEY_MAINNET,
+        40000000000,
+      ),
     ]
       .filter(Boolean)
       .reduce((agg, [network, config]) => {
