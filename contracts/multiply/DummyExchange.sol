@@ -81,9 +81,9 @@ contract DummyExchange {
   function swapDaiForToken(
     address asset,
     uint256 amount,
-    uint256 receiveAtLeast,
-    address callee,
-    bytes calldata withData
+    uint256,
+    address,
+    bytes calldata
   ) public {
     uint8 precision = precisions[asset];
     amount = _collectFee(DAI_ADDRESS, amount);
@@ -97,9 +97,9 @@ contract DummyExchange {
   function swapTokenForDai(
     address asset,
     uint256 amount,
-    uint256 receiveAtLeast,
-    address callee,
-    bytes calldata withData
+    uint256,
+    address,
+    bytes calldata
   ) public {
     uint8 precision = precisions[asset];
     uint256 amountOut = mul(mul(amount, 10**(18 - precision)), prices[asset]) / 10**18;

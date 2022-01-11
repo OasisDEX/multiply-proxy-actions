@@ -4,7 +4,9 @@ pragma solidity ^0.7.0;
 
 abstract contract IUniPool {
   function slot0()
-    public view virtual
+    public
+    view
+    virtual
     returns (
       uint160,
       int24,
@@ -24,7 +26,9 @@ abstract contract IUniPool {
   ) public view virtual;
 
   function positions(bytes32)
-    public view virtual
+    public
+    view
+    virtual
     returns (
       uint128,
       uint256,

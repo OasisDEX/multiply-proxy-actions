@@ -2,14 +2,14 @@
 
 pragma solidity ^0.7.0;
 
-import './DSAuth.sol';
-import './DSNote.sol';
+import "./DSAuth.sol";
+import "./DSNote.sol";
 
 abstract contract DSProxy is DSAuth, DSNote {
   DSProxyCache public cache; // global cache for contracts
 
   constructor(address _cacheAddr) {
-    require(setCache(_cacheAddr), 'Cache not set');
+    require(setCache(_cacheAddr), "Cache not set");
   }
 
   // solhint-disable-next-line no-empty-blocks

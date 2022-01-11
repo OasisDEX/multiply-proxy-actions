@@ -2,8 +2,7 @@
 
 pragma solidity ^0.7.0;
 
-
-abstract contract  IGUNIResolver {
+abstract contract IGUNIResolver {
   function getRebalanceParams(
     address pool,
     uint256 amount0In,

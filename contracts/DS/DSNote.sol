@@ -12,7 +12,7 @@ contract DSNote {
     bytes fax
   ) anonymous;
 
-  modifier note {
+  modifier note() {
     bytes32 foo;
     bytes32 bar;
 

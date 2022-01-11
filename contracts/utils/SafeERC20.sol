@@ -2,9 +2,9 @@
 
 pragma solidity >=0.7.6;
 
-import '../interfaces/IERC20.sol';
-import './Address.sol';
-import './SafeMath.sol';
+import "../interfaces/IERC20.sol";
+import "./Address.sol";
+import "./SafeMath.sol";
 
 library SafeERC20 {
   using SafeMath for uint256;
@@ -62,7 +62,7 @@ library SafeERC20 {
   ) internal {
     uint256 newAllowance = token.allowance(address(this), spender).sub(
       value,
-      'SafeERC20: decreased allowance below zero'
+      "SafeERC20: decreased allowance below zero"
     );
     _callOptionalReturn(
       token,
@@ -71,11 +71,11 @@ library SafeERC20 {
   }
 
   function _callOptionalReturn(IERC20 token, bytes memory data) private {
-    bytes memory returndata = address(token).functionCall(data, 'SafeERC20: low-level call failed');
+    bytes memory returndata = address(token).functionCall(data, "SafeERC20: low-level call failed");
     if (returndata.length > 0) {
       // Return data is optional
       // solhint-disable-next-line max-line-length
-      require(abi.decode(returndata, (bool)), 'SafeERC20: ERC20 operation did not succeed');
+      require(abi.decode(returndata, (bool)), "SafeERC20: ERC20 operation did not succeed");
     }
   }
 }

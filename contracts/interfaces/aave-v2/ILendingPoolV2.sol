@@ -2,7 +2,7 @@
 pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
-import './ILendingPoolAddressesProviderV2.sol';
+import "./ILendingPoolAddressesProviderV2.sol";
 
 library DataTypes {
   // refer to the whitepaper, section 1.1 basic concepts for a formal description of these properties.

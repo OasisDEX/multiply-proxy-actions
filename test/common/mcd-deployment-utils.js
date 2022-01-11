@@ -285,9 +285,9 @@ const loadDummyExchangeFixtures = async function (provider, signer, dummyExchang
       if (debug) {
         console.log(`${token.name} precision: ${token.precision}`)
       }
-      if(dummyExchangeInstance.setPrecision)
+      if (dummyExchangeInstance.setPrecision)
         return dummyExchangeInstance.setPrecision(token.address, token.precision)
-      else return true;
+      else return true
     }),
   )
 
@@ -301,10 +301,9 @@ const loadDummyExchangeFixtures = async function (provider, signer, dummyExchang
         if (debug) {
           console.log(`${token.name} Price: ${price.toString()} and Price(wei): ${priceInWei}`)
         }
-        if(dummyExchangeInstance.setPrice)
+        if (dummyExchangeInstance.setPrice)
           return dummyExchangeInstance.setPrice(token.address, priceInWei)
-        else return true;
-        
+        else return true
       }),
   )
 

@@ -26,13 +26,19 @@ contract GoerliDummyExchange {
     uint256 amountIn,
     uint256 amountOut
   );
-  
+
   modifier onlyAuthorized() {
     require(WHITELISTED_CALLERS[msg.sender], "Exchange / Unauthorized Caller.");
     _;
   }
 
-  constructor(address _beneficiary, uint8 _fee, uint8 _slippage, address _dai, address authorisedCaller){
+  constructor(
+    address _beneficiary,
+    uint8 _fee,
+    uint8 _slippage,
+    address _dai,
+    address authorisedCaller
+  ) {
     feeBeneficiaryAddress = _beneficiary;
     fee = _fee;
     slippage = _slippage;
@@ -40,7 +46,7 @@ contract GoerliDummyExchange {
     WHITELISTED_CALLERS[authorisedCaller] = true;
     WHITELISTED_CALLERS[_beneficiary] = true;
   }
-  
+
   event FeePaid(address indexed beneficiary, uint256 amount);
   event SlippageSaved(uint256 minimumPossible, uint256 actualAmount);
 
@@ -54,10 +60,7 @@ contract GoerliDummyExchange {
       IERC20(asset).allowance(from, address(this)) >= amount,
       "Exchange / Not enought allowance"
     );
-    require(
-      IERC20(asset).balanceOf(from)>=amount,
-      "Exchange / Could not swap"
-    );
+    require(IERC20(asset).balanceOf(from) >= amount, "Exchange / Could not swap");
     IERC20(asset).transferFrom(from, address(this), amount);
   }
 
@@ -83,13 +86,13 @@ contract GoerliDummyExchange {
     address asset,
     uint256 amount,
     uint256 receiveAtLeast,
-    address callee,
-    bytes calldata withData
-  ) public onlyAuthorized() {
-    require(WHITELISTED_CALLERS[msg.sender],"caller-illegal");
+    address, // callee
+    bytes calldata // withData
+  ) public onlyAuthorized {
+    require(WHITELISTED_CALLERS[msg.sender], "caller-illegal");
     _transferIn(msg.sender, DAI_ADDRESS, amount);
     amount = _collectFee(DAI_ADDRESS, amount);
-    uint256 amountOut = receiveAtLeast.mul(100).div(100-slippage);
+    uint256 amountOut = receiveAtLeast.mul(100).div(100 - slippage);
     emit AssetSwap(DAI_ADDRESS, asset, amount, amountOut);
     _transferOut(asset, msg.sender, amountOut);
   }
@@ -99,10 +102,10 @@ contract GoerliDummyExchange {
     address asset,
     uint256 amount,
     uint256 receiveAtLeast,
-    address callee,
-    bytes calldata withData
-  ) public onlyAuthorized() {
-    uint256 amountOut = receiveAtLeast.mul(100).div(100-slippage);
+    address, // callee
+    bytes calldata // withData
+  ) public onlyAuthorized {
+    uint256 amountOut = receiveAtLeast.mul(100).div(100 - slippage);
     amountOut = _collectFee(DAI_ADDRESS, amountOut);
     _transferIn(msg.sender, asset, amount);
     emit AssetSwap(asset, DAI_ADDRESS, amount, amountOut);
@@ -110,10 +113,8 @@ contract GoerliDummyExchange {
   }
 
   //to be able to empty exchange if necessary
-  function transferOut(
-    address asset,
-    uint256 amount) public{
-      require(WHITELISTED_CALLERS[msg.sender],"caller-illegal");
-      _transferOut(asset, msg.sender, amount);
-    }
+  function transferOut(address asset, uint256 amount) public {
+    require(WHITELISTED_CALLERS[msg.sender], "caller-illegal");
+    _transferOut(asset, msg.sender, amount);
+  }
 }

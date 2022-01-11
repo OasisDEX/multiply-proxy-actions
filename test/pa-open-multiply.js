@@ -35,7 +35,7 @@ describe('Proxy Action', async function () {
   let initialSetupSnapshotId
   let ADDRESS_REGISTRY
   const baseCollateralAmountInETH = new BigNumber(10)
-  const LENDER_FEE = 0.0000
+  const LENDER_FEE = 0.0
   const BASE_SLIPPAGE = new BigNumber(0.08)
   const OUR_FEE = 0.0003 // todo: fetch it from exchange once implemented
   let oraclePrice
