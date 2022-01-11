@@ -1,9 +1,7 @@
 import BigNumber from 'bignumber.js'
-import { BigNumber as EthersBN } from 'ethers'
+import { isError, tryF } from 'ts-try'
 import MAINNET_ADRESSES from '../../addresses/mainnet.json'
 import { one, zero, TEN, WETH_ADDRESS } from '../utils'
-
-// MAINNET_ADRESSES.WETH_ADDRESS = WETH_ADDRESS // TODO:
 
 export function addressRegistryFactory(
   multiplyProxyActionsInstanceAddress: string,
@@ -31,8 +29,8 @@ export function amountFromWei(amount: BigNumber.Value, precision = 18) {
 export function calculateParamsIncreaseMP(
   oraclePrice: BigNumber,
   marketPrice: BigNumber,
-  OF: BigNumber,
-  FF: BigNumber,
+  oasisFee: BigNumber,
+  flashLoanFee: BigNumber,
   currentColl: BigNumber,
   currentDebt: BigNumber,
   requiredCollRatio: BigNumber,
@@ -43,8 +41,8 @@ export function calculateParamsIncreaseMP(
   if (debug) {
     console.log('calculateParamsIncreaseMP.oraclePrice', oraclePrice.toFixed(2))
     console.log('calculateParamsIncreaseMP.marketPrice', marketPrice.toFixed(2))
-    console.log('calculateParamsIncreaseMP.OF', OF.toFixed(5))
-    console.log('calculateParamsIncreaseMP.FF', FF.toFixed(5))
+    console.log('calculateParamsIncreaseMP.OF', oasisFee.toFixed(5))
+    console.log('calculateParamsIncreaseMP.FF', flashLoanFee.toFixed(5))
     console.log('calculateParamsIncreaseMP.currentColl', currentColl.toFixed(2))
     console.log('calculateParamsIncreaseMP.currentDebt', currentDebt.toFixed(2))
     console.log('calculateParamsIncreaseMP.requiredCollRatio', requiredCollRatio.toFixed(2))
@@ -53,14 +51,14 @@ export function calculateParamsIncreaseMP(
   const marketPriceSlippage = marketPrice.times(one.plus(slippage))
   const debt = marketPriceSlippage
     .times(currentColl.times(oraclePrice).minus(requiredCollRatio.times(currentDebt)))
-    .plus(oraclePrice.times(depositDai).minus(oraclePrice.times(depositDai).times(OF)))
+    .plus(oraclePrice.times(depositDai).minus(oraclePrice.times(depositDai).times(oasisFee)))
     .div(
       marketPriceSlippage
         .times(requiredCollRatio)
-        .times(one.plus(FF))
-        .minus(oraclePrice.times(one.minus(OF))),
+        .times(one.plus(flashLoanFee))
+        .minus(oraclePrice.times(one.minus(oasisFee))),
     )
-  const collateral = debt.times(one.minus(OF)).div(marketPriceSlippage)
+  const collateral = debt.times(one.minus(oasisFee)).div(marketPriceSlippage)
   if (debug) {
     console.log('Computed: calculateParamsIncreaseMP.debt', debt.toFixed(2))
     console.log('Computed: calculateParamsIncreaseMP.collateral', collateral.toFixed(2))
@@ -110,130 +108,50 @@ export function calculateParamsDecreaseMP(
 
 // TODO:
 export function packMPAParams(cdpData: any, exchangeData: any, registry: any) {
-  let registryClone = { ...registry }
+  const registryClone = { ...registry }
   delete registryClone.feeRecepient
 
-  let params = [exchangeData, cdpData, registryClone]
+  const params = [exchangeData, cdpData, registryClone]
   return params
 }
 
 // TODO: remove
 export function convertToBigNumber(a: any) {
   try {
-    if (typeof a == 'number' || typeof a == 'string') {
+    if (typeof a === 'number' || typeof a === 'string') {
       a = new BigNumber(a)
     } else {
-      if (BigNumber.isBigNumber(a) == false || a.toFixed == undefined) {
+      if (!BigNumber.isBigNumber(a) || a.toFixed === undefined) {
         a = new BigNumber(a.toString())
       }
     }
   } catch (ex) {
     console.log(a)
     console.log(ex)
-    throw `Conversion for BigNumber failed`
+    throw new Error(`Conversion for BigNumber failed`)
   }
   return a
 }
 
 export function ensureWeiFormat(
-  input: any, // TODO:
+  input: BigNumber.Value, // TODO:
   interpretBigNum = true,
 ) {
-  let formated
-  input = convertToBigNumber(input)
-  try {
-    if (interpretBigNum) {
-      if (input.isLessThan(TEN.pow(9))) {
-        input = input.multipliedBy(TEN.pow(18))
-        input = input.decimalPlaces(0)
-        formated = input.toFixed(0)
-      } else {
-        input = input.decimalPlaces(0)
-        formated = input.toFixed(0)
-      }
-    } else {
-      formated = input.decimalPlaces(0)
-      formated = formated.toFixed(0)
+  const bn = new BigNumber(input)
+
+  const result = tryF(() => {
+    if (interpretBigNum && bn.lt(TEN.pow(9))) {
+      return bn.times(TEN.pow(18))
     }
-  } catch (ex) {
-    console.log(input)
-    console.log(ex)
-    throw `ensureWeiFormat, implementation bug`
-  }
-  return formated
-}
 
-// TODO: wtf
-// export function mul(a, b) {
-//   a = convertToBigNumber(a)
-//   b = convertToBigNumber(b)
-//   return a.multipliedBy(b)
-// }
+    return bn
+  })
 
-// export function div(a, b) {
-//   a = convertToBigNumber(a)
-//   b = convertToBigNumber(b)
-//   return a.dividedBy(b)
-// }
-
-// export function add(a, b) {
-//   a = convertToBigNumber(a)
-//   b = convertToBigNumber(b)
-//   return a.plus(b)
-// }
-
-// export function sub(a, b) {
-//   a = convertToBigNumber(a)
-//   b = convertToBigNumber(b)
-//   return new BigNumber(a).minus(b)
-// }
-
-export function prepareBasicParams(
-  gemAddress: string,
-  debtDelta: any, // TODO:
-  collateralDelta: any, // TODO:
-  providedCollateral: any, // TODO:
-  oneInchPayload: any, // TODO:
-  existingCDP: any, // TODO:
-  fundsReciver: string,
-  toDAI = false,
-  skipFL = false,
-) {
-  debtDelta = ensureWeiFormat(debtDelta)
-  collateralDelta = ensureWeiFormat(collateralDelta)
-  providedCollateral = ensureWeiFormat(providedCollateral)
-
-  let exchangeData = {
-    fromTokenAddress: toDAI ? gemAddress : MAINNET_ADRESSES.MCD_DAI,
-    toTokenAddress: toDAI ? MAINNET_ADRESSES.MCD_DAI : gemAddress,
-    fromTokenAmount: toDAI ? collateralDelta : debtDelta,
-    toTokenAmount: toDAI ? debtDelta : collateralDelta,
-    minToTokenAmount: toDAI ? debtDelta : collateralDelta,
-    exchangeAddress: oneInchPayload.to,
-    _exchangeCalldata: oneInchPayload.data,
+  if (isError(result)) {
+    throw Error(`Error running \`ensureWeiFormat\` with input ${input.toString()}: ${result}`)
   }
 
-  let cdpData = {
-    skipFL: skipFL,
-    gemJoin: MAINNET_ADRESSES.MCD_JOIN_ETH_A,
-    cdpId: existingCDP ? existingCDP.id : 0,
-    ilk: existingCDP
-      ? existingCDP.ilk
-      : '0x0000000000000000000000000000000000000000000000000000000000000000',
-    borrowCollateral: collateralDelta,
-    requiredDebt: debtDelta,
-    depositDai: 0,
-    depositCollateral: providedCollateral,
-    withdrawDai: 0,
-    withdrawCollateral: 0,
-    fundsReceiver: fundsReciver,
-    methodName: '0x0000000000000000000000000000000000000000000000000000000000000000',
-  }
-
-  return {
-    exchangeData,
-    cdpData,
-  }
+  return result.decimalPlaces(0).toFixed(0)
 }
 
 export function prepareMultiplyParameters(
@@ -246,7 +164,7 @@ export function prepareMultiplyParameters(
   cdpId = 0,
   skipFL = false,
 ) {
-  let exchangeData = {
+  const exchangeData = {
     fromTokenAddress: toDAI ? WETH_ADDRESS : MAINNET_ADRESSES.MCD_DAI,
     toTokenAddress: toDAI ? MAINNET_ADRESSES.MCD_DAI : WETH_ADDRESS,
     fromTokenAmount: toDAI
@@ -263,7 +181,7 @@ export function prepareMultiplyParameters(
     _exchangeCalldata: oneInchPayload.data,
   }
 
-  let cdpData = {
+  const cdpData = {
     skipFL: skipFL,
     gemJoin: MAINNET_ADRESSES.MCD_JOIN_ETH_A,
     cdpId: cdpId,
@@ -278,7 +196,7 @@ export function prepareMultiplyParameters(
     methodName: '',
   }
 
-  let params = packMPAParams(
+  const params = packMPAParams(
     cdpData,
     exchangeData,
     addressRegistryFactory(multiplyProxyActionsInstanceAddress, exchangeInstanceAddress),
@@ -301,7 +219,7 @@ export function prepareMultiplyParameters2(
   precision = 18,
   reversedSwap = false,
 ) {
-  let exchangeData = {
+  const exchangeData = {
     fromTokenAddress,
     toTokenAddress,
     fromTokenAmount: amountToWei(
@@ -320,7 +238,7 @@ export function prepareMultiplyParameters2(
     _exchangeCalldata: oneInchPayload.data,
   }
 
-  let cdpData = {
+  const cdpData = {
     skipFL,
     gemJoin: join,
     cdpId: cdpId,
@@ -339,7 +257,7 @@ export function prepareMultiplyParameters2(
     methodName: '',
   }
 
-  let params = [
+  const params = [
     exchangeData,
     cdpData,
     addressRegistryFactory(multiplyProxyActionsInstanceAddress, exchangeInstanceAddress),

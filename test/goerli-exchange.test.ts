@@ -160,7 +160,6 @@ describe('Exchange', async () => {
         await provider.send('evm_revert', [localSnapshotId])
       })
 
-      // TODO: I finished here
       it(`should receive at least amount specified in receiveAtLeast`, async () => {
         const wethBalance = await balanceOf(MAINNET_ADDRESSES.ETH, address)
         const daiBalance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, address)

@@ -36,7 +36,7 @@ import {
 import MAINNET_ADDRESSES from '../addresses/mainnet.json'
 
 import { balanceOf, TEN, WETH_ADDRESS, zero } from './utils'
-import { getVaultInfo } from './utils-mcd'
+import { getVaultInfo } from './utils/utils-mcd'
 
 const AAVE_FEE = 0.0009
 const BASE_SLIPPAGE = 0.08

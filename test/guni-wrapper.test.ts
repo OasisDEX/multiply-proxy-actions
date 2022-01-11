@@ -2,36 +2,32 @@ import BigNumber from 'bignumber.js'
 import { expect } from 'chai'
 import { ethers } from 'hardhat'
 import { JsonRpcProvider } from '@ethersproject/providers'
+import { Contract, Signer } from 'ethers'
+import wethAbi from '../abi/IWETH.json'
+import erc20Abi from '../abi/IERC20.json'
+import spotterAbi from '../abi/ISpotter.json'
+import MAINNET_ADDRESSES from '../addresses/mainnet.json'
 import {
   deploySystem,
   getOraclePrice,
   dsproxyExecuteAction,
   getLastCDP,
-  getVaultInfo,
-  balanceOf,
-  MAINNET_ADRESSES,
   findMPAEvent,
   swapTokens,
 } from './common/mcd-deployment-utils'
 import {
   amountToWei,
-  amountFromWei,
+  // amountFromWei,
   calculateParamsIncreaseMP,
   prepareMultiplyParameters,
 } from './common/params-calculation-utils'
-import { one } from './utils'
-
-import wethAbi from '../abi/IWETH.json'
-import erc20Abi from '../abi/IERC20.json'
-import spotterAbi from '../abi/ISpotter.json'
+import { balanceOf, one } from './utils'
+import { getVaultInfo } from './utils/utils-mcd'
 
 async function checkMPAPostState(tokenAddress: string, mpaAddress: string) {
-  const daiBalance = await balanceOf(MAINNET_ADRESSES.MCD_DAI, mpaAddress)
-  const collateralBalance = await balanceOf(tokenAddress, mpaAddress)
-
   return {
-    daiBalance: new BigNumber(daiBalance.toString()),
-    collateralBalance: new BigNumber(collateralBalance.toString()),
+    daiBalance: await balanceOf(MAINNET_ADDRESSES.MCD_DAI, mpaAddress),
+    collateralBalance: await balanceOf(tokenAddress, mpaAddress),
   }
 }
 
@@ -53,37 +49,41 @@ function addressRegistryFactory(
   }
 }
 
-describe('GUNI Multiply Proxy Action Wrapper with Mocked Exchange', async function () {
+describe('GUNI Multiply Proxy Action Wrapper with Mocked Exchange', async () => {
   let provider: JsonRpcProvider
-  let signer
-  let address
-  let mcdView
-  let exchange
-  let multiplyProxyActions
-  let dsProxy
-  let userProxyAddress
-  let OF
-  let FF
-  let slippage
-  let exchangeDataMock
-  let DAI
-  let WETH
-  let guni
+  let signer: Signer
+  let address: string
+  let mcdView: Contract
+  let exchange: Contract
+  let multiplyProxyActions: Contract
+  let dsProxy: Contract
+  let userProxyAddress: string
+  let oazoFee: BigNumber
+  let flashLoanFee: BigNumber
+  let slippage: BigNumber
+  let exchangeDataMock: any // TODO:
+  let DAI: Contract
+  // let WETH
+  let guni: Contract
 
-  let CDP_ID // this test suite operates on one Vault that is created in first test case
-  let CDP_ILK
-  let mat
+  // let CDP_ID // this test suite operates on one Vault that is created in first test case
+  // let CDP_ILK
+  let mat: any // TODO:
 
-  let mpParams
-  let addressRegistry
-  let marketPrice, oraclePrice, currentColl, currentDebt, requiredCollRatio
-  let guniAddressRegistry
+  let mpParams: any // TODO:
+  // let addressRegistry
+  let marketPrice: BigNumber
+  let oraclePrice: BigNumber
+  let currentColl: BigNumber
+  let currentDebt: BigNumber
+  let requiredCollRatio: BigNumber
+  let guniAddressRegistry: Record<string, string> // TODO:
 
-  this.beforeAll(async function () {
+  before(async () => {
     provider = new ethers.providers.JsonRpcProvider()
     signer = provider.getSigner(0)
-    WETH = new ethers.Contract(MAINNET_ADRESSES.ETH, wethAbi, provider).connect(signer)
-    DAI = new ethers.Contract(MAINNET_ADRESSES.MCD_DAI, erc20Abi, provider).connect(signer)
+    // WETH = new ethers.Contract(MAINNET_ADDRESSES.ETH, wethAbi, provider).connect(signer)
+    DAI = new ethers.Contract(MAINNET_ADDRESSES.MCD_DAI, erc20Abi, provider).connect(signer)
     address = await signer.getAddress()
 
     provider.send('hardhat_reset', [
@@ -95,15 +95,15 @@ describe('GUNI Multiply Proxy Action Wrapper with Mocked Exchange', async functi
       },
     ])
 
-    const spotter = new ethers.Contract(MAINNET_ADRESSES.MCD_SPOT, spotterAbi, provider).connect(
+    const spotter = new ethers.Contract(MAINNET_ADDRESSES.MCD_SPOT, spotterAbi, provider).connect(
       signer,
     )
-    const USDC = new ethers.Contract(MAINNET_ADRESSES.USDC, erc20Abi, provider).connect(signer)
-    const GUNIDAIUSDC = new ethers.Contract(
-      '0xAbDDAfB225e10B90D798bB8A886238Fb835e2053',
-      erc20Abi,
-      provider,
-    ).connect(signer)
+    const USDC = new ethers.Contract(MAINNET_ADDRESSES.USDC, erc20Abi, provider).connect(signer)
+    // const GUNIDAIUSDC = new ethers.Contract(
+    //   '0xAbDDAfB225e10B90D798bB8A886238Fb835e2053',
+    //   erc20Abi,
+    //   provider,
+    // ).connect(signer)
 
     const ilk = ethers.utils.formatBytes32String('GUNIV3DAIUSDC1-A')
     mat = await spotter.ilks(ilk)
@@ -122,9 +122,9 @@ describe('GUNI Multiply Proxy Action Wrapper with Mocked Exchange', async functi
       data: 0,
     }
 
-    const OazoFee = 2 // divided by base (10000), 1 = 0.01%;
-    OF = new BigNumber(OazoFee / 10000) // OAZO FEE
-    FF = new BigNumber(0.0009) // FLASHLOAN FEE
+    // TODO:
+    oazoFee = new BigNumber(2).div(10000) // OAZO FEE;  divided by base (10000), 1 = 0.01%;
+    flashLoanFee = new BigNumber(0.0009) // FLASHLOAN FEE
     slippage = new BigNumber(0.0001) // Percent
 
     // await exchange.setSlippage(0);
@@ -132,56 +132,59 @@ describe('GUNI Multiply Proxy Action Wrapper with Mocked Exchange', async functi
 
     await exchange.setFee(0)
 
-    const receivedUSDC = amountToWei(new BigNumber(200), 6).toFixed(0)
-    const receivedDAI = amountToWei(new BigNumber(200), 18).toFixed(0)
+    const receivedUSDC = amountToWei(200, 6)
+    const receivedDAI = amountToWei(200)
 
     await swapTokens(
-      MAINNET_ADRESSES.ETH,
-      MAINNET_ADRESSES.USDC,
-      amountToWei(new BigNumber(100), 18).toFixed(0),
-      receivedUSDC,
+      MAINNET_ADDRESSES.ETH,
+      MAINNET_ADDRESSES.USDC,
+      amountToWei(100).toFixed(0),
+      receivedUSDC.toFixed(0),
       address,
       provider,
       signer,
     )
 
     await swapTokens(
-      MAINNET_ADRESSES.ETH,
-      MAINNET_ADRESSES.MCD_DAI,
-      amountToWei(new BigNumber(100), 18).toFixed(0),
-      receivedDAI,
+      MAINNET_ADDRESSES.ETH,
+      MAINNET_ADDRESSES.MCD_DAI,
+      amountToWei(100).toFixed(0),
+      receivedDAI.toFixed(0),
       address,
       provider,
       signer,
     )
 
-    const balanceDAI = await balanceOf(MAINNET_ADRESSES.MCD_DAI, address)
-    const balanceUSDC = await balanceOf(MAINNET_ADRESSES.USDC, address)
+    const balanceDAI = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, address)
+    const balanceUSDC = await balanceOf(MAINNET_ADDRESSES.USDC, address)
 
-    await DAI.approve(userProxyAddress, balanceDAI.toString())
-    await USDC.approve(userProxyAddress, balanceUSDC.toString())
-    USDC.transfer(exchange.address, balanceUSDC)
+    await DAI.approve(userProxyAddress, balanceDAI.toFixed(0))
+    await USDC.approve(userProxyAddress, balanceUSDC.toFixed(0))
+    USDC.transfer(exchange.address, balanceUSDC.toFixed(0))
 
-    marketPrice = await new BigNumber(2380)
-    oraclePrice = await getOraclePrice(provider, MAINNET_ADRESSES.PIP_GUNIV3DAIUSDC1)
+    marketPrice = new BigNumber(2380)
+    oraclePrice = new BigNumber(
+      (await getOraclePrice(provider, MAINNET_ADDRESSES.PIP_GUNIV3DAIUSDC1)).toString(),
+    )
 
-    await exchange.setPrice(MAINNET_ADRESSES.ETH, amountToWei(marketPrice).toFixed(0))
-    await exchange.setPrice(MAINNET_ADRESSES.USDC, amountToWei(new BigNumber(1)).toFixed(0))
+    await exchange.setPrice(MAINNET_ADDRESSES.ETH, amountToWei(marketPrice).toFixed(0))
+    await exchange.setPrice(MAINNET_ADDRESSES.USDC, amountToWei(new BigNumber(1)).toFixed(0))
 
     currentColl = new BigNumber(100) // STARTING COLLATERAL AMOUNT
     currentDebt = new BigNumber(0) // STARTING VAULT DEBT
 
     requiredCollRatio = new BigNumber(3)
 
-    addressRegistry = addressRegistryFactory(multiplyProxyActions.address, exchange.address)
+    // addressRegistry = addressRegistryFactory(multiplyProxyActions.address, exchange.address)
   })
 
-  it('should open Guni multiplied vault with required collateralisation ratio', async function () {
+  it('should open Guni multiplied vault with required collateralisation ratio', async () => {
+    console.log('>>> TODO: ')
     const [requiredDebt, toBorrowCollateralAmount] = calculateParamsIncreaseMP(
       oraclePrice,
       marketPrice,
-      OF,
-      FF,
+      oazoFee,
+      flashLoanFee,
       currentColl,
       currentDebt,
       requiredCollRatio,
@@ -203,40 +206,44 @@ describe('GUNI Multiply Proxy Action Wrapper with Mocked Exchange', async functi
       address,
       false,
     )
-    const { params, exchangeData, cdpData } = mpParams
-    const divider = amountFromWei(mat[1].toString(), 27).minus(1)
+    const { exchangeData, cdpData } = mpParams
+    // const divider = amountFromWei(mat[1].toString(), 27).minus(1)
     const daiBal = new BigNumber(10000)
     const expectedCR = new BigNumber(1.05)
     const leveragedAmount = daiBal.div(expectedCR.minus(one))
     const flAmount = leveragedAmount.minus(daiBal)
 
-    const usdcAmount = await guni.getOtherTokenAmount(
-      guniDaiUsdc,
-      gUniResolver,
-      amountToWei(leveragedAmount).toFixed(0),
-      6,
-    )
+    const usdcAmount = 0 // TODO: uncomment below
+    // const usdcAmount = await guni.getOtherTokenAmount(
+    //   guniDaiUsdc,
+    //   gUniResolver,
+    //   amountToWei(leveragedAmount).toFixed(0),
+    //   6,
+    // )
 
     cdpData.gemJoin = '0xbFD445A97e7459b0eBb34cfbd3245750Dba4d7a4'
     cdpData.requiredDebt = amountToWei(flAmount).toFixed(0)
     cdpData.token0Amount = amountToWei(daiBal).toFixed(0)
 
     exchangeData.fromTokenAmount = usdcAmount.toString() // amountToWei(daiBal).toFixed(0); // assuming 1 dai = 1 usdc . TO DO: change to DAI USDC swap with slippage
-    exchangeData.fromTokenAddress = MAINNET_ADRESSES.MCD_DAI
+    exchangeData.fromTokenAddress = MAINNET_ADDRESSES.MCD_DAI
     exchangeData.minToTokenAmount = usdcAmount.toString()
-    exchangeData.toTokenAddress = MAINNET_ADRESSES.USDC
+    exchangeData.toTokenAddress = MAINNET_ADDRESSES.USDC
 
     guniAddressRegistry = {
       guni: '0xAbDDAfB225e10B90D798bB8A886238Fb835e2053',
       resolver: '0x0317650Af6f184344D7368AC8bB0bEbA5EDB214a',
       router: '0x14E6D67F824C3a7b4329d3228807f8654294e4bd',
       guniProxyActions: guni.address,
-      otherToken: MAINNET_ADRESSES.USDC,
+      otherToken: MAINNET_ADDRESSES.USDC,
       exchange: exchange.address,
       jug: '0x19c0976f590D67707E62397C87829d896Dc0f1F1',
       manager: '0x5ef30b9986345249bc32d8928B7ee64DE9435E39',
       lender: '0x1EB4CF3A948E7D72A198fe073cCb8C7a948cD853',
     }
+
+    // TODO:
+    console.log(guniAddressRegistry)
 
     const params2 = [exchangeData, cdpData, guniAddressRegistry]
 
@@ -246,15 +253,15 @@ describe('GUNI Multiply Proxy Action Wrapper with Mocked Exchange', async functi
       address,
       'openMultiplyGuniVault',
       params2,
-      0,
+      new BigNumber(0),
     )
 
-    if (status == false) {
+    if (!status) {
       throw result
     }
 
     const lastCDP = await getLastCDP(provider, signer, userProxyAddress)
-    const info = await getVaultInfo(mcdView, lastCDP.id, lastCDP.ilk)
+    const info = await getVaultInfo(mcdView, lastCDP.id, lastCDP.ilk as string) // TODO:
 
     // CDP_ID = lastCDP.id
     // CDP_ILK = lastCDP.ilk
@@ -264,45 +271,43 @@ describe('GUNI Multiply Proxy Action Wrapper with Mocked Exchange', async functi
     const currentCollRatio = new BigNumber(info.coll)
       .times(oraclePrice)
       .div(new BigNumber(info.debt))
-    const { daiBalance, collateralBalance } = await checkMPAPostState(
-      MAINNET_ADRESSES.ETH,
-      multiplyProxyActions.address,
-    )
+    // const { daiBalance, collateralBalance } =
+    await checkMPAPostState(MAINNET_ADDRESSES.ETH, multiplyProxyActions.address)
 
-    const requiredTotalCollateral = currentColl.plus(toBorrowCollateralAmount)
-    const resultTotalCollateral = new BigNumber(info.coll)
+    // const requiredTotalCollateral = currentColl.plus(toBorrowCollateralAmount)
+    // const resultTotalCollateral = new BigNumber(info.coll)
 
     expect(actionEvents[0].methodName).to.be.equal('openMultiplyGuniVault')
     expect(currentCollRatio.toFixed(2), 'coll ratio').to.be.equal('1.05')
   })
 
-  it('should close exiting Guni vault and return Dai to user', async function () {
-    const { params, exchangeData, cdpData } = mpParams
+  it('should close exiting Guni vault and return Dai to user', async () => {
+    const { exchangeData, cdpData } = mpParams
     cdpData.cdpId = 25897
 
     const params4 = [exchangeData, cdpData, guniAddressRegistry]
 
     cdpData.token0Amount = 0
 
-    const [status, result] = await dsproxyExecuteAction(
+    const [, result] = await dsproxyExecuteAction(
       guni,
       dsProxy,
       address,
       'closeGuniVaultExitDai',
       params4,
-      0,
+      new BigNumber(0),
     )
 
     const actionEvents = findMPAEvent(result)
 
     const lastCDP = await getLastCDP(provider, signer, userProxyAddress)
-    const info = await getVaultInfo(mcdView, lastCDP.id, lastCDP.ilk)
+    const info = await getVaultInfo(mcdView, lastCDP.id, lastCDP.ilk as string) // TODO:
 
-    const currentCollRatio = new BigNumber(info.coll)
-      .times(oraclePrice)
-      .div(new BigNumber(info.debt))
-    const { daiBalance, collateralBalance } = await checkMPAPostState(
-      MAINNET_ADRESSES.ETH,
+    // const currentCollRatio = new BigNumber(info.coll)
+    //   .times(oraclePrice)
+    //   .div(new BigNumber(info.debt))
+    const { daiBalance } = await checkMPAPostState(
+      MAINNET_ADDRESSES.ETH,
       multiplyProxyActions.address,
     )
     const resultTotalCollateral = new BigNumber(info.coll)

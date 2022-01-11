@@ -1,52 +1,26 @@
+import { JsonRpcProvider } from '@ethersproject/providers'
 import BigNumber from 'bignumber.js'
 import retry from 'async-retry'
 import { getPayload } from './1inch'
 
-export async function createSnapshot(provider) {
-  let id = await provider.send('evm_snapshot', [])
+export async function createSnapshot(provider: JsonRpcProvider) {
+  const id = await provider.send('evm_snapshot', [])
   // console.log('snapshot created', id, new Date())
   return id
 }
 
 // TODO:
-export const restoreSnapshot = async function (provider, id) {
-  if (this.lock) {
-    console.log('Skiping restore', this.lock)
+export const restoreSnapshot = async function (provider: JsonRpcProvider, id: string) {
+  if ((this as any).lock) {
+    console.log('Skiping restore', (this as any).lock)
     // delete restoreSnapshot.lock
-  } else {
-    await provider.send('evm_revert', [id])
-    console.log('snapshot restored', id, new Date())
+    return
   }
+
+  await provider.send('evm_revert', [id])
+  console.log('snapshot restored', id, new Date())
 }
-restoreSnapshot['lock'] = false
-
-// export function backup(el) {
-//   if (!el.__backup) {
-//     el.__backup = []
-//   }
-
-//   let tmp = JSON.stringify(el)
-//   tmp = JSON.parse(tmp) // to create a copy
-//   delete tmp.__backup // to not backup a backup
-//   el.__backup.push(JSON.stringify(tmp))
-// }
-
-// export function restore(el) {
-//   // keeps same reference, eg. in a table
-//   if (el.__backup) {
-//     let tmp = el.__backup.pop()
-//     tmp = JSON.parse(tmp)
-//     let keys = Object.keys(tmp)
-
-//     for (let i = 0; i < keys.length; i++) {
-//       if (keys[i] != '__backup') {
-//         el[keys[i]] = tmp[keys[i]]
-//       }
-//     }
-//   } else {
-//     console.warn('trying to restore, without backup')
-//   }
-// }
+restoreSnapshot.lock = false
 
 export async function fillExchangeData(
   _testParams,
@@ -56,9 +30,7 @@ export async function fillExchangeData(
   protocols = [],
   precision = 18,
 ) {
-  if (_testParams.useMockExchange == false) {
-    // if (_testParams.debug == true) {
-    // }
+  if (!_testParams.useMockExchange) {
     const oneInchPayload = await retry(
       async () =>
         await getPayload(
@@ -73,32 +45,6 @@ export async function fillExchangeData(
         retries: 5,
       },
     )
-    // let _1inchPayload = undefined
-    // let tries = 5
-    // while (_1inchPayload == undefined && tries > 0) {
-    //   try {
-    //     tries--
-    //     _1inchPayload = await getPayload(
-    //       exchangeData,
-    //       exchange.address,
-    //       _testParams.slippage,
-    //       fee,
-    //       protocols,
-    //       // precision,
-    //     )
-    //   } catch (ex) {
-    //     if (tries == 0) {
-    //       throw ex
-    //     } else {
-    //       await new Promise((res, rej) => {
-    //         setTimeout(() => {
-    //           res(true)
-    //         }, 2000)
-    //       })
-    //     }
-    //   }
-    // }
-    // TODO:
     exchangeData._exchangeCalldata = oneInchPayload.data
     exchangeData.exchangeAddress = oneInchPayload.to
   }
@@ -113,23 +59,23 @@ export function getAddressesLabels(
   const labels = {}
   let keys = Object.keys(addressRegistry)
   labels[primarySignerAddress.substr(2).toLowerCase()] = 'caller'
-  keys.forEach((x) => {
-    let adr = addressRegistry[x].substr(2).toLowerCase() //no 0x prefix
+  keys.forEach(x => {
+    const adr = addressRegistry[x].substr(2).toLowerCase() // no 0x prefix
     if (!labels[adr]) {
       labels[adr] = x.toString()
     }
   })
   keys = Object.keys(mainnet)
-  keys.forEach((x) => {
-    let adr = mainnet[x].substr(2).toLowerCase() //no 0x prefix
+  keys.forEach(x => {
+    const adr = mainnet[x].substr(2).toLowerCase() // no 0x prefix
     if (!labels[adr]) {
       labels[adr] = x.toString()
     }
   })
   keys = Object.keys(deployedContracts)
-  keys.forEach((x) => {
+  keys.forEach(x => {
     if (deployedContracts[x].address) {
-      let adr = deployedContracts[x].address.substr(2).toLowerCase() //no 0x prefix
+      const adr = deployedContracts[x].address.substr(2).toLowerCase() // no 0x prefix
       if (!labels[adr]) {
         // if address repeats in address_registry it is not taken
         labels[adr] = x.toString()
@@ -142,20 +88,20 @@ export function getAddressesLabels(
 
 export function findExchangeTransferEvent(source, dest, txResult) {
   let events = txResult.events.filter(
-    (x) => x.topics[0] == '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',
+    x => x.topics[0] === '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',
   )
 
   events = events.filter(
-    (x) =>
-      x.topics[1].toLowerCase().indexOf(source.toLowerCase().substr(2)) != -1 &&
-      x.topics[2].toLowerCase().indexOf(dest.toLowerCase().substr(2)) != -1,
+    x =>
+      x.topics[1].toLowerCase().indexOf(source.toLowerCase().substr(2)) !== -1 &&
+      x.topics[2].toLowerCase().indexOf(dest.toLowerCase().substr(2)) !== -1,
   )
   return new BigNumber(events[0].data, 16)
 }
 
 export function printAllERC20Transfers(txResult, labels) {
   function tryUseLabels(value) {
-    let toCheck = value.substr(26) // skip 24 leading 0 anx 0x
+    const toCheck = value.substr(26) // skip 24 leading 0 anx 0x
     if (labels[toCheck]) {
       return labels[toCheck]
     } else {
@@ -164,7 +110,7 @@ export function printAllERC20Transfers(txResult, labels) {
   }
 
   let events = txResult.events.filter(
-    (x) => x.topics[0] == '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',
+    x => x.topics[0] == '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',
   )
   const packedEvents = []
   for (let i = 0; i < events.length; i++) {
@@ -184,8 +130,8 @@ export function printAllERC20Transfers(txResult, labels) {
   }
 
   events = txResult.events.filter(
-    //Deposit of WETH
-    (x) => x.topics[0] == '0xe1fffcc4923d04b559f4d29a8bfc6cda04eb5b0d3c460751c2402c5c5cc9109c',
+    // Deposit of WETH
+    x => x.topics[0] == '0xe1fffcc4923d04b559f4d29a8bfc6cda04eb5b0d3c460751c2402c5c5cc9109c',
   )
 
   for (let i = 0; i < events.length; i++) {
@@ -199,8 +145,8 @@ export function printAllERC20Transfers(txResult, labels) {
     })
   }
   events = txResult.events.filter(
-    //Withdraw of WETH
-    (x) => x.topics[0] == '0x7fcf532c15f0a6db0bd6d0e038bea71d30d808c7d98cb3bf7268a95bf5081b65',
+    // Withdraw of WETH
+    x => x.topics[0] == '0x7fcf532c15f0a6db0bd6d0e038bea71d30d808c7d98cb3bf7268a95bf5081b65',
   )
 
   for (let i = 0; i < events.length; i++) {
@@ -217,13 +163,13 @@ export function printAllERC20Transfers(txResult, labels) {
   return packedEvents
 }
 
-export async function resetNetworkToBlock(provider, blockNumber) {
+export async function resetNetworkToBlock(provider: JsonRpcProvider, blockNumber: number) {
   console.log('\x1b[33m Reseting network to:\x1b[0m', blockNumber, new Date())
   provider.send('hardhat_reset', [
     {
       forking: {
         jsonRpcUrl: process.env.ALCHEMY_NODE,
-        blockNumber: blockNumber,
+        blockNumber,
       },
     },
   ])

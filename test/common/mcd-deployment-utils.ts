@@ -2,7 +2,7 @@ import BigNumber from 'bignumber.js'
 import _ from 'lodash'
 import { curry } from 'ramda'
 import { ethers } from 'hardhat'
-import { BigNumber as EthersBN, Contract, Signer } from 'ethers'
+import { BigNumber as EthersBN, Contract, ContractReceipt, Signer } from 'ethers'
 import DSProxyRegistryABI from '../../abi/external/ds-proxy-registry.json'
 import DSProxyABI from '../../abi/external/ds-proxy.json'
 import WETHABI from '../../abi/IWETH.json'
@@ -21,6 +21,7 @@ import {
   ensureWeiFormat,
 } from './params-calculation-utils'
 import { getMarketPrice } from './http-apis'
+import { CDPInfo } from './common.types'
 
 export const FEE = 20
 export const FEE_BASE = 10000
@@ -108,7 +109,7 @@ export async function dsproxyExecuteAction(
   params: any[],
   value = new BigNumber(0),
   debug = false,
-) {
+): Promise<[boolean, ContractReceipt]> {
   try {
     const calldata = proxyActions.interface.encodeFunctionData(method, params)
 
@@ -130,7 +131,7 @@ export async function dsproxyExecuteAction(
     return [true, retVal]
   } catch (ex) {
     debug && console.log(`\x1b[33m  ${method} failed  \x1b[0m`, ex, params)
-    return [false, ex]
+    return [false, ex as any] // TODO:
   }
 }
 
@@ -339,7 +340,7 @@ export async function loadDummyExchangeFixtures(
   )
 
   if (debug) {
-    tokens.map(token => {
+    tokens.forEach(token => {
       console.log(`${token.name}: ${token.address}`)
     })
   }
@@ -403,7 +404,7 @@ export async function deploySystem(
   const dummyExchange = await DummyExchange.deploy()
   const dummyExchangeInstance = await dummyExchange.deployed()
 
-  if (usingDummyExchange == false) {
+  if (!usingDummyExchange) {
     deployedContracts.exchangeInstance = exchangeInstance
   } else {
     deployedContracts.exchangeInstance = dummyExchangeInstance
@@ -451,7 +452,11 @@ export async function getOraclePrice(
   return p[1].shiftedBy(-18)
 }
 
-export async function getLastCDP(provider: JsonRpcProvider, signer: Signer, proxyAddress: string) {
+export async function getLastCDP(
+  provider: JsonRpcProvider,
+  signer: Signer,
+  proxyAddress: string,
+): Promise<CDPInfo> {
   const getCdps = new ethers.Contract(MAINNET_ADDRESSES.GET_CDPS, GetCDPsABI, provider).connect(
     signer,
   )
@@ -463,10 +468,12 @@ export async function getLastCDP(provider: JsonRpcProvider, signer: Signer, prox
       ilk: cdp[2],
     })),
   )
-  if (_.isUndefined(cdp)) {
+
+  if (!cdp) {
     throw new Error('No CDP available')
   }
-  return cdp
+
+  return cdp as CDPInfo
 }
 
 // TODO:
@@ -478,7 +485,7 @@ export function findMPAEvent(txResult: any) {
   const events = txResult.events
     // TODO:
     .filter((x: any) => {
-      return x.topics[0] == iface.getEventTopic('MultipleActionCalled')
+      return x.topics[0] === iface.getEventTopic('MultipleActionCalled')
     })
     // TODO:
     .map((x: any) => {

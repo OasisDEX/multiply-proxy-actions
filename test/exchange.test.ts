@@ -3,6 +3,9 @@ import BigNumber from 'bignumber.js'
 import { expect } from 'chai'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { Contract, Signer } from 'ethers'
+import WETHABI from '../abi/IWETH.json'
+import ERC20ABI from '../abi/IERC20.json'
+import MAINNET_ADDRESSES from '../addresses/mainnet.json'
 import { init, FEE, FEE_BASE, ONE, swapTokens } from './common/mcd-deployment-utils'
 import {
   addressRegistryFactory,
@@ -10,9 +13,6 @@ import {
   amountToWei,
 } from './common/params-calculation-utils'
 import { exchangeToDAI, exchangeFromDAI } from './common/http-apis'
-import WETHABI from '../abi/IWETH.json'
-import ERC20ABI from '../abi/IERC20.json'
-import MAINNET_ADDRESSES from '../addresses/mainnet.json'
 import { balanceOf } from './utils'
 import { asPercentageValue, expectToBe, expectToBeEqual } from './_utils'
 
@@ -27,7 +27,6 @@ describe('Exchange', async () => {
   let WETH: Contract
   let DAI: Contract
   let feeBeneficiary: string
-  // TODO:
   let slippage: ReturnType<typeof asPercentageValue>
   let fee: ReturnType<typeof asPercentageValue>
   let snapshotId: string
