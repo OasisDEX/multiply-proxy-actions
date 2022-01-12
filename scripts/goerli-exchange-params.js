@@ -3,5 +3,5 @@ module.exports = [
     20,
     80,
     "0x11fe4b6ae13d2a6055c8d9cf65c55bac32b5d844",
-    "0x62fab0FfcC439c75a7d31F94f5B34bE31F3e08E7"
+    "0xa553c3f4e65A1FC951B236142C1f69c1BcA5bF2b"
   ];

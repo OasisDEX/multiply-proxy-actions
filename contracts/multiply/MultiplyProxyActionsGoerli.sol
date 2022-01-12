@@ -67,7 +67,7 @@ contract MultiplyProxyActionsGoerli is IERC3156FlashBorrower {
   uint256 constant RAY = 10**27;
 
 // TODO: upgrade Solc to 0.8 and use immutable instead and get rid of this copy contract
-  address public constant WETH = 0xb4fbf271143f4fbf7b91a5ded31805e42b2208d6;
+  address public constant WETH = 0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6;
   address public constant DAI = 0x11fE4B6AE13d2a6055C8D9cF65c55bac32B5d844;
   address public constant DAIJOIN = 0x6a60b7070befb2bfc964F646efDF70388320f4E0;
 
