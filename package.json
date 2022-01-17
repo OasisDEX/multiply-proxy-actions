@@ -10,13 +10,13 @@
     "verify": "cmd/run_verify",
     "lint": "./node_modules/.bin/solhint -f table contracts/**/*.sol",
     "lint:fix": "./node_modules/.bin/solhint --fix constracts/**/*.sol",
-    "format": "./node_modules/.bin/prettier -c contracts/**/*.sol test/**/*.js",
-    "format:fix": "./node_modules/.bin/prettier -w contracts/**/*.sol test/**/*.js",
+    "format": "./node_modules/.bin/prettier -c contracts/**/*.sol test/**/*.ts",
+    "format:fix": "./node_modules/.bin/prettier -w contracts/**/*.sol test/**/*.ts",
     "flatten-all": "sol-merger@3.1.0 \"./contracts/*.sol\" ./build",
     "flatten": "npx sol-merger@3.1.0"
   },
   "pre-commit": [
-    "pretty"
+    "format"
   ],
   "repository": {
     "type": "git",

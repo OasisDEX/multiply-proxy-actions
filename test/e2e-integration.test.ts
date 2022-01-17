@@ -424,7 +424,6 @@ async function testCaseDefinition(testCase: any, testParam: any) {
             params,
             amountToWei(testCase.desiredCDPState.providedCollateral),
           )
-          console.log('STATUS  >>>> ', status, result)
           expect(status).to.be.true
           txResult = result
 
