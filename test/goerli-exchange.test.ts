@@ -12,16 +12,20 @@ import {
   init,
   loadDummyExchangeFixtures,
   swapTokens,
-} from './common/mcd-deployment-utils'
-import { amountFromWei, amountToWei } from './common/params-calculation-utils'
+} from './common/utils/mcd-deployment.utils'
+import { amountFromWei, amountToWei } from './common/utils/params-calculation.utils'
 import { exchangeToDAI, exchangeFromDAI } from './common/http-apis'
 import { balanceOf } from './utils'
-import { asPercentageValue, expectToBe, expectToBeEqual } from './_utils'
+import { asPercentageValue, expectToBe, expectToBeEqual } from './common/utils/test.utils'
+import { one } from './common/cosntants'
 
 const AGGREGATOR_V3_ADDRESS = '0x11111112542d85b3ef69ae05771c2dccff4faa26'
 const ALLOWED_PROTOCOLS = ['UNISWAP_V2']
 
 describe('Exchange', async () => {
+  const slippage = asPercentageValue(8, 100)
+  const fee = asPercentageValue(FEE, FEE_BASE)
+
   let provider: JsonRpcProvider
   let signer: Signer
   let address: string
@@ -29,24 +33,19 @@ describe('Exchange', async () => {
   let WETH: Contract
   let DAI: Contract
   let feeBeneficiary: string
-  let slippage: ReturnType<typeof asPercentageValue>
-  let fee: ReturnType<typeof asPercentageValue>
   let snapshotId: string
 
   before(async () => {
-    console.log('Before init')
     ;[provider, signer] = await init()
-    console.log('After init')
     address = await signer.getAddress()
 
     feeBeneficiary = await provider.getSigner(1).getAddress()
-    slippage = asPercentageValue(8, 100)
-    fee = asPercentageValue(FEE, FEE_BASE)
 
-    console.log('Fee and slippage', FEE, 8)
-
-    const GoerliDummyExchange = await ethers.getContractFactory('GoerliDummyExchange', signer)
-    exchange = await GoerliDummyExchange.deploy(
+    const goerliDummyExchangeFactory = await ethers.getContractFactory(
+      'GoerliDummyExchange',
+      signer,
+    )
+    exchange = await goerliDummyExchangeFactory.deploy(
       feeBeneficiary,
       FEE,
       8,
@@ -56,7 +55,6 @@ describe('Exchange', async () => {
     await exchange.deployed()
 
     await loadDummyExchangeFixtures(provider, signer, exchange, true)
-    console.log('After deploy', address)
 
     WETH = new ethers.Contract(MAINNET_ADDRESSES.ETH, WETHABI, provider).connect(signer)
     DAI = new ethers.Contract(MAINNET_ADDRESSES.MCD_DAI, ERC20ABI, provider).connect(signer)
@@ -90,9 +88,8 @@ describe('Exchange', async () => {
     let receiveAtLeastInWei: BigNumber
     let to: string
     let data: string
-    // let initialDaiWalletBalance: BigNumber
 
-    before(async () => {
+    beforeEach(async () => {
       const response = await exchangeToDAI(
         MAINNET_ADDRESSES.ETH,
         amountInWei.toFixed(0),
@@ -100,13 +97,12 @@ describe('Exchange', async () => {
         slippage.value.toString(),
         ALLOWED_PROTOCOLS,
       )
-      // initialDaiWalletBalance = await balanceOf(MAINNET_ADDRESSES.ETH, address)
 
       to = response.tx.to
       data = response.tx.data
 
       const receiveAtLeast = amountFromWei(response.toTokenAmount).times(
-        new BigNumber(1).minus(slippage.asDecimal),
+        one.minus(slippage.asDecimal),
       )
       receiveAtLeastInWei = amountToWei(receiveAtLeast)
     })
@@ -117,7 +113,7 @@ describe('Exchange', async () => {
 
     it('should not happen if it is triggered from unauthorized caller', async () => {
       const tx = exchange
-        .connect(provider.getSigner(1))
+        .connect(provider.getSigner(2))
         .swapTokenForDai(
           MAINNET_ADDRESSES.ETH,
           amountToWei(1).toFixed(0),
@@ -172,7 +168,7 @@ describe('Exchange', async () => {
         const beneficiaryDaiBalance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, feeBeneficiary)
 
         const expectedCollectedFee = amountFromWei(receiveAtLeastInWei)
-          .div(new BigNumber(1).minus(slippage.asDecimal))
+          .div(one.minus(slippage.asDecimal))
           .times(fee.asDecimal)
 
         expectToBeEqual(amountFromWei(beneficiaryDaiBalance), expectedCollectedFee, 6)
@@ -231,7 +227,7 @@ describe('Exchange', async () => {
 
     before(async () => {
       const amountInWei = amountToWei(1000)
-      amountWithFeeInWei = amountInWei.div(new BigNumber(1).minus(fee.asDecimal))
+      amountWithFeeInWei = amountInWei.div(one.minus(fee.asDecimal))
 
       const response = await exchangeFromDAI(
         MAINNET_ADDRESSES.ETH,
@@ -245,14 +241,14 @@ describe('Exchange', async () => {
       data = response.tx.data
 
       const receiveAtLeast = amountFromWei(response.toTokenAmount).times(
-        new BigNumber(1).minus(slippage.asDecimal),
+        one.minus(slippage.asDecimal),
       )
       receiveAtLeastInWei = amountToWei(receiveAtLeast)
     })
 
     it('should not happen if it is triggered from unauthorized caller', async () => {
       const tx = exchange
-        .connect(provider.getSigner(1))
+        .connect(provider.getSigner(2))
         .swapDaiForToken(
           MAINNET_ADDRESSES.ETH,
           amountToWei(1).toFixed(0),

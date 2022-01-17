@@ -2,7 +2,7 @@ import { network, ethers } from 'hardhat'
 import R from 'ramda'
 import { writeFileSync } from 'fs'
 import chalk from 'chalk'
-import BigNumber from 'bignumber.js'
+import { BigNumber } from 'bignumber.js'
 import { Contract, Signer, BigNumber as EthersBN } from 'ethers'
 
 export const WETH_ADDRESS = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'
@@ -41,10 +41,6 @@ export const standardAmounts = {
   GUSD: '2000',
   YFI: '0.05',
 }
-
-export const zero = new BigNumber(0)
-export const one = new BigNumber(1)
-export const TEN = new BigNumber(10)
 
 export async function fetchStandardAmounts() {
   return standardAmounts
@@ -138,6 +134,11 @@ export async function balanceOf(tokenAddr: string, addr: string) {
       ? await ethers.provider.getBalance(addr)
       : await tokenContract.balanceOf(addr)
 
+  return new BigNumber(balance.toString())
+}
+
+export async function etherBalanceOf(addr: string) {
+  const balance = await ethers.provider.getBalance(addr)
   return new BigNumber(balance.toString())
 }
 

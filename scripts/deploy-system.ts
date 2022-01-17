@@ -1,4 +1,4 @@
-import { init, deploySystem } from '../test/common/mcd-deployment-utils'
+import { init, deploySystem } from '../test/common/utils/mcd-deployment.utils'
 
 async function deploy() {
   const shouldDebug = true

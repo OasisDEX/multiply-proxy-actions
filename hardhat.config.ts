@@ -1,5 +1,6 @@
 import path from 'path'
 import { ethers, network } from 'hardhat'
+import { HardhatConfig, HardhatNetworkConfig } from 'hardhat/types'
 import { task } from 'hardhat/config'
 import '@nomiclabs/hardhat-waffle'
 import '@nomiclabs/hardhat-etherscan'
@@ -11,10 +12,11 @@ import 'solidity-coverage'
 import 'hardhat-abi-exporter'
 // import 'hardhat-gas-reporter'
 
-import { config } from 'dotenv'
-config({ path: path.resolve(__dirname, '.env') })
+import { config as env } from 'dotenv'
 
 import mainnet from './addresses/mainnet.json'
+
+env({ path: path.resolve(__dirname, '.env') })
 
 if (!process.env.PRIV_KEY_MAINNET) {
   throw new Error(`No private key provided`)
@@ -108,7 +110,8 @@ function createHardhatNetwork(network: string, node: string | undefined, key: st
   ]
 }
 
-export default {
+const config = {
+  // TODO: : HardhatConfig = {
   networks: {
     local: {
       url: 'http://127.0.0.1:8545',
@@ -116,7 +119,7 @@ export default {
     },
     hardhat: {
       forking: {
-        url: process.env.ALCHEMY_NODE,
+        url: process.env.ALCHEMY_NODE!,
         blockNumber: parseInt(blockNumber),
       },
       chainId: 2137,
@@ -125,11 +128,11 @@ export default {
       },
       hardfork: 'london',
       gas: 'auto',
-      initialBaseFeePerGas: '1000000000',
+      initialBaseFeePerGas: 1000000000,
       allowUnlimitedContractSize: true,
       timeout: 100000,
     },
-    ...(Object.fromEntries(
+    ...Object.fromEntries(
       [
         createHardhatNetwork('mainnet', process.env.ALCHEMY_NODE, process.env.PRIV_KEY_MAINNET!),
         createHardhatNetwork(
@@ -142,8 +145,8 @@ export default {
           process.env.ALCHEMY_NODE_GOERLI,
           process.env.PRIV_KEY_MAINNET!,
         ),
-      ].filter(Boolean) as any, // TODO:
-    ) as any), // TODO:
+      ].filter(Boolean) as [string, HardhatNetworkConfig][],
+    ),
   },
   solidity: {
     version: '0.7.6',
@@ -164,8 +167,8 @@ export default {
     apiKey: process.env.ETHERSCAN_API_KEY,
   },
   tenderly: {
-    username: process.env.TENDERLY_USERNAME,
-    project: process.env.TENDERLY_PROJECT,
+    username: process.env.TENDERLY_USERNAME!,
+    project: process.env.TENDERLY_PROJECT!,
     forkNetwork: '1',
   },
   mocha: {
@@ -177,5 +180,8 @@ export default {
     flat: true,
     // only: [':ERC20$'],
     spacing: 2,
+    // runOnCompile: true, // TODO:
   },
 }
+
+export default config

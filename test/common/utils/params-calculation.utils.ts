@@ -1,8 +1,11 @@
 import BigNumber from 'bignumber.js'
 import { isError, tryF } from 'ts-try'
-import MAINNET_ADRESSES from '../../addresses/mainnet.json'
-import { one, zero, TEN, WETH_ADDRESS } from '../utils'
+import MAINNET_ADRESSES from '../../../addresses/mainnet.json'
+import { WETH_ADDRESS } from '../../utils'
+import { one, ten, zero } from '../cosntants'
+import { logDebug } from './test.utils'
 
+// TODO:
 export function addressRegistryFactory(
   multiplyProxyActionsInstanceAddress: string,
   exchangeInstanceAddress: string,
@@ -29,7 +32,7 @@ export function amountFromWei(amount: BigNumber.Value, precision = 18) {
 export function calculateParamsIncreaseMP(
   oraclePrice: BigNumber,
   marketPrice: BigNumber,
-  oasisFee: BigNumber,
+  oazoFee: BigNumber,
   flashLoanFee: BigNumber,
   currentColl: BigNumber,
   currentDebt: BigNumber,
@@ -39,29 +42,38 @@ export function calculateParamsIncreaseMP(
   debug = false,
 ) {
   if (debug) {
-    console.log('calculateParamsIncreaseMP.oraclePrice', oraclePrice.toFixed(2))
-    console.log('calculateParamsIncreaseMP.marketPrice', marketPrice.toFixed(2))
-    console.log('calculateParamsIncreaseMP.OF', oasisFee.toFixed(5))
-    console.log('calculateParamsIncreaseMP.FF', flashLoanFee.toFixed(5))
-    console.log('calculateParamsIncreaseMP.currentColl', currentColl.toFixed(2))
-    console.log('calculateParamsIncreaseMP.currentDebt', currentDebt.toFixed(2))
-    console.log('calculateParamsIncreaseMP.requiredCollRatio', requiredCollRatio.toFixed(2))
-    console.log('calculateParamsIncreaseMP.slippage', slippage.toFixed(2))
+    logDebug(
+      [
+        `oraclePrice: ${oraclePrice.toFixed(2)}`,
+        `marketPrice: ${marketPrice.toFixed(2)}`,
+        `oazoFee: ${oazoFee.toFixed(5)}`,
+        `flashLoanFee: ${flashLoanFee.toFixed(5)}`,
+        `currentColl: ${currentColl.toFixed(2)}`,
+        `currentDebt: ${currentDebt.toFixed(2)}`,
+        `requiredCollRatio: ${requiredCollRatio.toFixed(2)}`,
+        `slippage: ${slippage.toFixed(2)}`,
+      ],
+      'calculateParamsIncreaseMP.',
+    )
   }
+
   const marketPriceSlippage = marketPrice.times(one.plus(slippage))
   const debt = marketPriceSlippage
     .times(currentColl.times(oraclePrice).minus(requiredCollRatio.times(currentDebt)))
-    .plus(oraclePrice.times(depositDai).minus(oraclePrice.times(depositDai).times(oasisFee)))
+    .plus(oraclePrice.times(depositDai).minus(oraclePrice.times(depositDai).times(oazoFee)))
     .div(
       marketPriceSlippage
         .times(requiredCollRatio)
         .times(one.plus(flashLoanFee))
-        .minus(oraclePrice.times(one.minus(oasisFee))),
+        .minus(oraclePrice.times(one.minus(oazoFee))),
     )
-  const collateral = debt.times(one.minus(oasisFee)).div(marketPriceSlippage)
+  const collateral = debt.times(one.minus(oazoFee)).div(marketPriceSlippage)
+
   if (debug) {
-    console.log('Computed: calculateParamsIncreaseMP.debt', debt.toFixed(2))
-    console.log('Computed: calculateParamsIncreaseMP.collateral', collateral.toFixed(2))
+    logDebug(
+      [`debt: ${debt.toFixed(2)}`, `collateral: ${collateral.toFixed(2)}`],
+      'Computed: calculateParamsIncreaseMP.',
+    )
   }
   return [debt, collateral]
 }
@@ -69,24 +81,28 @@ export function calculateParamsIncreaseMP(
 export function calculateParamsDecreaseMP(
   oraclePrice: BigNumber,
   marketPrice: BigNumber,
-  OF: BigNumber,
-  FF: BigNumber,
+  oazoFee: BigNumber,
+  flashLoanFee: BigNumber,
   currentColl: BigNumber,
   currentDebt: BigNumber,
   requiredCollRatio: BigNumber,
   slippage: BigNumber,
-  depositDai = new BigNumber(0),
   debug = false,
 ) {
   if (debug) {
-    console.log('calculateParamsDecreaseMP.oraclePrice', oraclePrice.toFixed(2))
-    console.log('calculateParamsDecreaseMP.marketPrice', marketPrice.toFixed(2))
-    console.log('calculateParamsDecreaseMP.OF', OF.toFixed(5))
-    console.log('calculateParamsDecreaseMP.FF', FF.toFixed(5))
-    console.log('calculateParamsDecreaseMP.currentColl', currentColl.toFixed(2))
-    console.log('calculateParamsDecreaseMP.currentDebt', currentDebt.toFixed(2))
-    console.log('calculateParamsDecreaseMP.requiredCollRatio', requiredCollRatio.toFixed(2))
-    console.log('calculateParamsDecreaseMP.slippage', slippage.toFixed(2))
+    logDebug(
+      [
+        `oraclePrice ${oraclePrice.toFixed(2)}`,
+        `marketPrice ${marketPrice.toFixed(2)}`,
+        `oazoFee ${oazoFee.toFixed(5)}`,
+        `flashLoanFee ${flashLoanFee.toFixed(5)}`,
+        `currentColl ${currentColl.toFixed(2)}`,
+        `currentDebt ${currentDebt.toFixed(2)}`,
+        `requiredCollRatio ${requiredCollRatio.toFixed(2)}`,
+        `slippage ${slippage.toFixed(2)}`,
+      ],
+      'calculateParamsDecreaseMP.',
+    )
   }
   const marketPriceSlippage = marketPrice.times(one.minus(slippage))
   const debt = currentColl
@@ -95,10 +111,10 @@ export function calculateParamsDecreaseMP(
     .minus(requiredCollRatio.times(currentDebt).times(marketPriceSlippage))
     .div(
       oraclePrice
-        .times(one.plus(FF).plus(OF).plus(OF.times(FF)))
+        .times(one.plus(flashLoanFee).plus(oazoFee).plus(oazoFee.times(flashLoanFee)))
         .minus(marketPriceSlippage.times(requiredCollRatio)),
     )
-  const collateral = debt.times(one.plus(OF).plus(FF)).div(marketPriceSlippage)
+  const collateral = debt.times(one.plus(oazoFee).plus(flashLoanFee)).div(marketPriceSlippage)
   if (debug) {
     console.log('Computed: calculateParamsDecreaseMP.debt', debt.toFixed(2))
     console.log('Computed: calculateParamsDecreaseMP.collateral', collateral.toFixed(2))
@@ -111,26 +127,7 @@ export function packMPAParams(cdpData: any, exchangeData: any, registry: any) {
   const registryClone = { ...registry }
   delete registryClone.feeRecepient
 
-  const params = [exchangeData, cdpData, registryClone]
-  return params
-}
-
-// TODO: remove
-export function convertToBigNumber(a: any) {
-  try {
-    if (typeof a === 'number' || typeof a === 'string') {
-      a = new BigNumber(a)
-    } else {
-      if (!BigNumber.isBigNumber(a) || a.toFixed === undefined) {
-        a = new BigNumber(a.toString())
-      }
-    }
-  } catch (ex) {
-    console.log(a)
-    console.log(ex)
-    throw new Error(`Conversion for BigNumber failed`)
-  }
-  return a
+  return [exchangeData, cdpData, registryClone]
 }
 
 export function ensureWeiFormat(
@@ -140,8 +137,8 @@ export function ensureWeiFormat(
   const bn = new BigNumber(input)
 
   const result = tryF(() => {
-    if (interpretBigNum && bn.lt(TEN.pow(9))) {
-      return bn.times(TEN.pow(18))
+    if (interpretBigNum && bn.lt(ten.pow(9))) {
+      return bn.times(ten.pow(18))
     }
 
     return bn
@@ -152,6 +149,54 @@ export function ensureWeiFormat(
   }
 
   return result.decimalPlaces(0).toFixed(0)
+}
+
+export function prepareBasicParams(
+  gemAddress,
+  debtDelta,
+  collateralDelta,
+  providedCollateral,
+  oneInchPayload,
+  existingCDP,
+  fundsReciver,
+  toDAI = false,
+  skipFL = false,
+) {
+  debtDelta = ensureWeiFormat(debtDelta)
+  collateralDelta = ensureWeiFormat(collateralDelta)
+  providedCollateral = ensureWeiFormat(providedCollateral)
+
+  const exchangeData = {
+    fromTokenAddress: toDAI ? gemAddress : MAINNET_ADRESSES.MCD_DAI,
+    toTokenAddress: toDAI ? MAINNET_ADRESSES.MCD_DAI : gemAddress,
+    fromTokenAmount: toDAI ? collateralDelta : debtDelta,
+    toTokenAmount: toDAI ? debtDelta : collateralDelta,
+    minToTokenAmount: toDAI ? debtDelta : collateralDelta,
+    exchangeAddress: oneInchPayload.to,
+    _exchangeCalldata: oneInchPayload.data,
+  }
+
+  const cdpData = {
+    skipFL: skipFL,
+    gemJoin: MAINNET_ADRESSES.MCD_JOIN_ETH_A,
+    cdpId: existingCDP ? existingCDP.id : 0,
+    ilk: existingCDP
+      ? existingCDP.ilk
+      : '0x0000000000000000000000000000000000000000000000000000000000000000',
+    borrowCollateral: collateralDelta,
+    requiredDebt: debtDelta,
+    depositDai: 0,
+    depositCollateral: providedCollateral,
+    withdrawDai: 0,
+    withdrawCollateral: 0,
+    fundsReceiver: fundsReciver,
+    methodName: '0x0000000000000000000000000000000000000000000000000000000000000000',
+  }
+
+  return {
+    exchangeData,
+    cdpData,
+  }
 }
 
 export function prepareMultiplyParameters(
@@ -184,7 +229,7 @@ export function prepareMultiplyParameters(
   const cdpData = {
     skipFL: skipFL,
     gemJoin: MAINNET_ADRESSES.MCD_JOIN_ETH_A,
-    cdpId: cdpId,
+    cdpId,
     ilk: '0x0000000000000000000000000000000000000000000000000000000000000000',
     fundsReceiver: fundsReceiver,
     borrowCollateral: amountToWei(desiredCdpState.toBorrowCollateralAmount).toFixed(0),

@@ -12,17 +12,19 @@ import {
   calculateParamsIncreaseMP,
   calculateParamsDecreaseMP,
   prepareMultiplyParameters2,
-} from './common/params-calculation-utils'
+} from './common/utils/params-calculation.utils'
 import {
   deploySystem,
   getOraclePrice,
   dsproxyExecuteAction,
   getLastCDP,
   findMPAEvent,
-} from './common/mcd-deployment-utils'
-import { balanceOf, one } from './utils'
-import { getVaultInfo } from './utils/utils-mcd'
-import { expectToBe, expectToBeEqual } from './_utils'
+  DeployedSystemInfo,
+} from './common/utils/mcd-deployment.utils'
+import { balanceOf } from './utils'
+import { getVaultInfo } from './common/utils/mcd.utils'
+import { expectToBe, expectToBeEqual } from './common/utils/test.utils'
+import { one } from './common/cosntants'
 
 async function addFundsDummyExchange(
   provider: JsonRpcProvider,
@@ -67,20 +69,16 @@ async function checkMPAPostState(tokenAddress: string, mpaAddress: string) {
 }
 
 describe('Multiply Proxy Action with Mocked Exchange', async () => {
-  const oasisFee = 2
-  const oasisFeePct = new BigNumber(oasisFee).div(10000) // oasis fee
+  const oazoFee = 2
+  const oazoFeePct = new BigNumber(oazoFee).div(10000) // oasis fee
   const flashLoanFee = new BigNumber(0) // flashloan fee
   const slippage = new BigNumber(0.001) // percentage
 
   let provider: JsonRpcProvider
   let signer: Signer
   let address: string
-  let mcdView: Contract
-  let exchange: Contract
-  let multiplyProxyActions: Contract
-  let dsProxy: Contract
-  let userProxyAddress: string
-  let exchangeDataMock: any // TODO:
+  let system: DeployedSystemInfo
+  let exchangeDataMock: { to: string; data: number } // TODO:
   let DAI: Contract
   let WETH: Contract
 
@@ -104,25 +102,17 @@ describe('Multiply Proxy Action with Mocked Exchange', async () => {
     WETH = new ethers.Contract(MAINNET_ADDRESSES.ETH, wethAbi, provider).connect(signer)
     DAI = new ethers.Contract(MAINNET_ADDRESSES.MCD_DAI, erc20Abi, provider).connect(signer)
 
-    const deployment = await deploySystem(provider, signer, true)
-
-    // ({ dsProxy, exchange, multiplyProxyActions, mcdView }) = deployment;
-    dsProxy = deployment.dsProxyInstance
-    multiplyProxyActions = deployment.multiplyProxyActionsInstance
-    mcdView = deployment.mcdViewInstance
-    userProxyAddress = deployment.userProxyAddress
+    system = await deploySystem(provider, signer, true)
 
     // Replace real Exchange contract with DummyExchange contract for testing purposes
-    exchange = deployment.exchangeInstance
-
-    await addFundsDummyExchange(provider, signer, address, WETH, DAI, exchange)
+    await addFundsDummyExchange(provider, signer, address, WETH, DAI, system.exchangeInstance)
 
     exchangeDataMock = {
-      to: exchange.address,
+      to: system.exchangeInstance.address,
       data: 0,
     }
 
-    await exchange.setFee(oasisFee)
+    await system.exchangeInstance.setFee(oazoFee)
   })
 
   describe(`opening Multiply Vault`, async () => {
@@ -134,14 +124,17 @@ describe('Multiply Proxy Action with Mocked Exchange', async () => {
 
     before(async () => {
       oraclePrice = await getOraclePrice(provider)
-      await exchange.setPrice(MAINNET_ADDRESSES.ETH, amountToWei(marketPrice).toFixed(0))
+      await system.exchangeInstance.setPrice(
+        MAINNET_ADDRESSES.ETH,
+        amountToWei(marketPrice).toFixed(0),
+      )
     })
 
     it(`should open vault with required collateralisation ratio`, async () => {
       const [requiredDebt, toBorrowCollateralAmount] = calculateParamsIncreaseMP(
         oraclePrice,
         marketPrice,
-        oasisFeePct,
+        oazoFeePct,
         flashLoanFee,
         currentColl,
         currentDebt,
@@ -162,14 +155,14 @@ describe('Multiply Proxy Action with Mocked Exchange', async () => {
         exchangeDataMock,
         '0',
         desiredCdpState,
-        multiplyProxyActions.address,
-        exchange.address,
+        system.multiplyProxyActionsInstance.address,
+        system.exchangeInstance.address,
         address,
         true,
       )
       const [status, result] = await dsproxyExecuteAction(
-        multiplyProxyActions,
-        dsProxy,
+        system.multiplyProxyActionsInstance,
+        system.dsProxyInstance,
         address,
         'openMultiplyVault',
         params,
@@ -178,15 +171,15 @@ describe('Multiply Proxy Action with Mocked Exchange', async () => {
 
       expect(status).to.be.true
 
-      const lastCDP = await getLastCDP(provider, signer, userProxyAddress)
-      const info = await getVaultInfo(mcdView, lastCDP.id, lastCDP.ilk)
+      const lastCDP = await getLastCDP(provider, signer, system.userProxyAddress)
+      const info = await getVaultInfo(system.mcdViewInstance, lastCDP.id, lastCDP.ilk)
       CDP_ID = lastCDP.id
       CDP_ILK = lastCDP.ilk as string
       const currentCollRatio = info.coll.times(oraclePrice).div(info.debt)
 
       const { daiBalance, collateralBalance } = await checkMPAPostState(
         MAINNET_ADDRESSES.ETH,
-        multiplyProxyActions.address,
+        system.multiplyProxyActionsInstance.address,
       )
 
       const requiredTotalCollateral = currentColl.plus(toBorrowCollateralAmount)
@@ -214,9 +207,12 @@ describe('Multiply Proxy Action with Mocked Exchange', async () => {
     before(async () => {
       oraclePrice = await getOraclePrice(provider)
 
-      await exchange.setPrice(MAINNET_ADDRESSES.ETH, amountToWei(marketPrice).toFixed(0))
+      await system.exchangeInstance.setPrice(
+        MAINNET_ADDRESSES.ETH,
+        amountToWei(marketPrice).toFixed(0),
+      )
 
-      const info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
+      const info = await getVaultInfo(system.mcdViewInstance, CDP_ID, CDP_ILK)
       currentColl = new BigNumber(info.coll)
       currentDebt = new BigNumber(info.debt)
     })
@@ -225,7 +221,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async () => {
       const [requiredDebt, toBorrowCollateralAmount] = calculateParamsIncreaseMP(
         oraclePrice,
         marketPrice,
-        oasisFeePct,
+        oazoFeePct,
         flashLoanFee,
         currentColl,
         currentDebt,
@@ -246,8 +242,8 @@ describe('Multiply Proxy Action with Mocked Exchange', async () => {
         exchangeDataMock,
         CDP_ID,
         desiredCdpState,
-        multiplyProxyActions.address,
-        exchange.address,
+        system.multiplyProxyActionsInstance.address,
+        system.exchangeInstance.address,
         address,
         true,
       )
@@ -255,19 +251,19 @@ describe('Multiply Proxy Action with Mocked Exchange', async () => {
       ;(params[1] as any).skipFL = true // TODO:
 
       const [status, result] = await dsproxyExecuteAction(
-        multiplyProxyActions,
-        dsProxy,
+        system.multiplyProxyActionsInstance,
+        system.dsProxyInstance,
         address,
         'increaseMultiple',
         params,
       )
       expect(status).to.be.true
 
-      const info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
+      const info = await getVaultInfo(system.mcdViewInstance, CDP_ID, CDP_ILK)
       const currentCollRatio = info.coll.times(oraclePrice).div(info.debt)
       const { daiBalance, collateralBalance } = await checkMPAPostState(
         MAINNET_ADDRESSES.ETH,
-        multiplyProxyActions.address,
+        system.multiplyProxyActionsInstance.address,
       )
 
       const actionEvents = findMPAEvent(result)
@@ -290,9 +286,12 @@ describe('Multiply Proxy Action with Mocked Exchange', async () => {
 
     before(async () => {
       oraclePrice = await getOraclePrice(provider)
-      await exchange.setPrice(MAINNET_ADDRESSES.ETH, amountToWei(marketPrice).toFixed(0))
+      await system.exchangeInstance.setPrice(
+        MAINNET_ADDRESSES.ETH,
+        amountToWei(marketPrice).toFixed(0),
+      )
 
-      const info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
+      const info = await getVaultInfo(system.mcdViewInstance, CDP_ID, CDP_ILK)
       currentColl = info.coll
       currentDebt = info.debt
     })
@@ -300,11 +299,11 @@ describe('Multiply Proxy Action with Mocked Exchange', async () => {
     it(`should increase vault's multiple to required collateralization ratio with additional Dai deposited`, async () => {
       const daiDeposit = new BigNumber(300)
 
-      await DAI.approve(userProxyAddress, amountToWei(daiDeposit).toFixed(0))
+      await DAI.approve(system.userProxyAddress, amountToWei(daiDeposit).toFixed(0))
       const [requiredDebt, toBorrowCollateralAmount] = calculateParamsIncreaseMP(
         oraclePrice,
         marketPrice,
-        oasisFeePct,
+        oazoFeePct,
         flashLoanFee,
         currentColl,
         currentDebt,
@@ -327,27 +326,27 @@ describe('Multiply Proxy Action with Mocked Exchange', async () => {
         exchangeDataMock,
         CDP_ID,
         desiredCdpState,
-        multiplyProxyActions.address,
-        exchange.address,
+        system.multiplyProxyActionsInstance.address,
+        system.exchangeInstance.address,
         address,
         true,
       )
       ;(params[1] as any).skipFL = true // TODO:
 
       const [status, result] = await dsproxyExecuteAction(
-        multiplyProxyActions,
-        dsProxy,
+        system.multiplyProxyActionsInstance,
+        system.dsProxyInstance,
         address,
         'increaseMultipleDepositDai',
         params,
       )
       expect(status).to.be.true
 
-      const info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
+      const info = await getVaultInfo(system.mcdViewInstance, CDP_ID, CDP_ILK)
       const currentCollRatio = info.coll.times(oraclePrice).div(info.debt)
       const { daiBalance, collateralBalance } = await checkMPAPostState(
         MAINNET_ADDRESSES.ETH,
-        multiplyProxyActions.address,
+        system.multiplyProxyActionsInstance.address,
       )
 
       const actionEvents = findMPAEvent(result)
@@ -371,9 +370,12 @@ describe('Multiply Proxy Action with Mocked Exchange', async () => {
     before(async () => {
       oraclePrice = await getOraclePrice(provider)
 
-      await exchange.setPrice(MAINNET_ADDRESSES.ETH, amountToWei(marketPrice).toFixed(0))
+      await system.exchangeInstance.setPrice(
+        MAINNET_ADDRESSES.ETH,
+        amountToWei(marketPrice).toFixed(0),
+      )
 
-      const info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
+      const info = await getVaultInfo(system.mcdViewInstance, CDP_ID, CDP_ILK)
       currentColl = info.coll
       currentDebt = info.debt
     })
@@ -384,7 +386,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async () => {
       const [requiredDebt, toBorrowCollateralAmount] = calculateParamsIncreaseMP(
         oraclePrice,
         marketPrice,
-        oasisFeePct,
+        oazoFeePct,
         flashLoanFee,
         currentColl.plus(collateralDeposit),
         currentDebt,
@@ -406,16 +408,16 @@ describe('Multiply Proxy Action with Mocked Exchange', async () => {
         exchangeDataMock,
         CDP_ID,
         desiredCdpState,
-        multiplyProxyActions.address,
-        exchange.address,
+        system.multiplyProxyActionsInstance.address,
+        system.exchangeInstance.address,
         address,
         true,
       )
       ;(params[1] as any).skipFL = true // TODO:
 
       const [status, result] = await dsproxyExecuteAction(
-        multiplyProxyActions,
-        dsProxy,
+        system.multiplyProxyActionsInstance,
+        system.dsProxyInstance,
         address,
         'increaseMultipleDepositCollateral',
         params,
@@ -423,11 +425,11 @@ describe('Multiply Proxy Action with Mocked Exchange', async () => {
       )
       expect(status).to.be.true
 
-      const info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
+      const info = await getVaultInfo(system.mcdViewInstance, CDP_ID, CDP_ILK)
       const currentCollRatio = info.coll.times(oraclePrice).div(info.debt)
       const { daiBalance, collateralBalance } = await checkMPAPostState(
         MAINNET_ADDRESSES.ETH,
-        multiplyProxyActions.address,
+        system.multiplyProxyActionsInstance.address,
       )
 
       const actionEvents = findMPAEvent(result)
@@ -451,9 +453,12 @@ describe('Multiply Proxy Action with Mocked Exchange', async () => {
     before(async () => {
       oraclePrice = await getOraclePrice(provider)
 
-      await exchange.setPrice(MAINNET_ADDRESSES.ETH, amountToWei(marketPrice).toFixed(0))
+      await system.exchangeInstance.setPrice(
+        MAINNET_ADDRESSES.ETH,
+        amountToWei(marketPrice).toFixed(0),
+      )
 
-      const info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
+      const info = await getVaultInfo(system.mcdViewInstance, CDP_ID, CDP_ILK)
       currentColl = info.coll
       currentDebt = info.debt
     })
@@ -462,7 +467,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async () => {
       const [requiredDebt, toBorrowCollateralAmount] = calculateParamsDecreaseMP(
         oraclePrice,
         marketPrice,
-        oasisFeePct,
+        oazoFeePct,
         flashLoanFee,
         currentColl,
         currentDebt,
@@ -483,8 +488,8 @@ describe('Multiply Proxy Action with Mocked Exchange', async () => {
         exchangeDataMock,
         CDP_ID,
         desiredCdpState,
-        multiplyProxyActions.address,
-        exchange.address,
+        system.multiplyProxyActionsInstance.address,
+        system.exchangeInstance.address,
         address,
         true,
       )
@@ -492,19 +497,19 @@ describe('Multiply Proxy Action with Mocked Exchange', async () => {
       ;(params[1] as any).skipFL = true // TODO:
 
       const [status, result] = await dsproxyExecuteAction(
-        multiplyProxyActions,
-        dsProxy,
+        system.multiplyProxyActionsInstance,
+        system.dsProxyInstance,
         address,
         'decreaseMultiple',
         params,
       )
       expect(status).to.be.true
 
-      const info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
+      const info = await getVaultInfo(system.mcdViewInstance, CDP_ID, CDP_ILK)
       const currentCollRatio = info.coll.times(oraclePrice).div(info.debt)
       const { daiBalance, collateralBalance } = await checkMPAPostState(
         MAINNET_ADDRESSES.ETH,
-        multiplyProxyActions.address,
+        system.multiplyProxyActionsInstance.address,
       )
 
       const actionEvents = findMPAEvent(result)
@@ -527,9 +532,12 @@ describe('Multiply Proxy Action with Mocked Exchange', async () => {
     before(async () => {
       oraclePrice = await getOraclePrice(provider)
 
-      await exchange.setPrice(MAINNET_ADDRESSES.ETH, amountToWei(marketPrice).toFixed(0))
+      await system.exchangeInstance.setPrice(
+        MAINNET_ADDRESSES.ETH,
+        amountToWei(marketPrice).toFixed(0),
+      )
 
-      const info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
+      const info = await getVaultInfo(system.mcdViewInstance, CDP_ID, CDP_ILK)
       currentColl = info.coll
       currentDebt = info.debt
     })
@@ -540,7 +548,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async () => {
       const [requiredDebt, toBorrowCollateralAmount] = calculateParamsDecreaseMP(
         oraclePrice,
         marketPrice,
-        oasisFeePct,
+        oazoFeePct,
         flashLoanFee,
         currentColl,
         currentDebt.plus(withdrawDai),
@@ -562,8 +570,8 @@ describe('Multiply Proxy Action with Mocked Exchange', async () => {
         exchangeDataMock,
         CDP_ID,
         desiredCdpState,
-        multiplyProxyActions.address,
-        exchange.address,
+        system.multiplyProxyActionsInstance.address,
+        system.exchangeInstance.address,
         address,
         true,
       )
@@ -571,19 +579,19 @@ describe('Multiply Proxy Action with Mocked Exchange', async () => {
       ;(params[1] as any).skipFL = true
 
       const [status, result] = await dsproxyExecuteAction(
-        multiplyProxyActions,
-        dsProxy,
+        system.multiplyProxyActionsInstance,
+        system.dsProxyInstance,
         address,
         'decreaseMultipleWithdrawDai',
         params,
       )
       expect(status).to.be.true
 
-      const info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
+      const info = await getVaultInfo(system.mcdViewInstance, CDP_ID, CDP_ILK)
       const currentCollRatio = info.coll.times(oraclePrice).div(info.debt)
       const { daiBalance, collateralBalance } = await checkMPAPostState(
         MAINNET_ADDRESSES.ETH,
-        multiplyProxyActions.address,
+        system.multiplyProxyActionsInstance.address,
       )
 
       const actionEvents = findMPAEvent(result)
@@ -607,9 +615,12 @@ describe('Multiply Proxy Action with Mocked Exchange', async () => {
     before(async () => {
       oraclePrice = await getOraclePrice(provider)
 
-      await exchange.setPrice(MAINNET_ADDRESSES.ETH, amountToWei(marketPrice).toFixed(0))
+      await system.exchangeInstance.setPrice(
+        MAINNET_ADDRESSES.ETH,
+        amountToWei(marketPrice).toFixed(0),
+      )
 
-      const info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
+      const info = await getVaultInfo(system.mcdViewInstance, CDP_ID, CDP_ILK)
       currentColl = info.coll
       currentDebt = info.debt
     })
@@ -620,7 +631,7 @@ describe('Multiply Proxy Action with Mocked Exchange', async () => {
       const [requiredDebt, toBorrowCollateralAmount] = calculateParamsDecreaseMP(
         oraclePrice,
         marketPrice,
-        oasisFeePct,
+        oazoFeePct,
         flashLoanFee,
         currentColl.minus(withdrawCollateral),
         currentDebt,
@@ -642,8 +653,8 @@ describe('Multiply Proxy Action with Mocked Exchange', async () => {
         exchangeDataMock,
         CDP_ID,
         desiredCdpState,
-        multiplyProxyActions.address,
-        exchange.address,
+        system.multiplyProxyActionsInstance.address,
+        system.exchangeInstance.address,
         address,
         true,
       )
@@ -651,19 +662,19 @@ describe('Multiply Proxy Action with Mocked Exchange', async () => {
       ;(params[1] as any).skipFL = true // TODO:
 
       const [status, result] = await dsproxyExecuteAction(
-        multiplyProxyActions,
-        dsProxy,
+        system.multiplyProxyActionsInstance,
+        system.dsProxyInstance,
         address,
         'decreaseMultipleWithdrawCollateral',
         params,
       )
       expect(status).to.be.true
 
-      const info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
+      const info = await getVaultInfo(system.mcdViewInstance, CDP_ID, CDP_ILK)
       const currentCollRatio = info.coll.times(oraclePrice).div(info.debt)
       const { daiBalance, collateralBalance } = await checkMPAPostState(
         MAINNET_ADDRESSES.ETH,
-        multiplyProxyActions.address,
+        system.multiplyProxyActionsInstance.address,
       )
 
       const actionEvents = findMPAEvent(result)
@@ -683,18 +694,24 @@ describe('Multiply Proxy Action with Mocked Exchange', async () => {
     let currentDebt: BigNumber
 
     before(async () => {
-      await exchange.setPrice(MAINNET_ADDRESSES.ETH, amountToWei(marketPrice).toFixed(0))
+      await system.exchangeInstance.setPrice(
+        MAINNET_ADDRESSES.ETH,
+        amountToWei(marketPrice).toFixed(0),
+      )
 
-      const info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
+      const info = await getVaultInfo(system.mcdViewInstance, CDP_ID, CDP_ILK)
       currentColl = info.coll
       currentDebt = info.debt
     })
 
     it(`should close vault and return  collateral`, async () => {
-      await exchange.setPrice(MAINNET_ADDRESSES.ETH, amountToWei(marketPrice).toFixed(0))
+      await system.exchangeInstance.setPrice(
+        MAINNET_ADDRESSES.ETH,
+        amountToWei(marketPrice).toFixed(0),
+      )
 
       const marketPriceSlippage = marketPrice.times(one.minus(slippage))
-      const minToTokenAmount = currentDebt.times(one.plus(oasisFeePct).plus(flashLoanFee))
+      const minToTokenAmount = currentDebt.times(one.plus(oazoFeePct).plus(flashLoanFee))
       const sellCollateralAmount = minToTokenAmount.div(marketPriceSlippage)
 
       const desiredCdpState = {
@@ -713,8 +730,8 @@ describe('Multiply Proxy Action with Mocked Exchange', async () => {
         exchangeDataMock,
         CDP_ID,
         desiredCdpState,
-        multiplyProxyActions.address,
-        exchange.address,
+        system.multiplyProxyActionsInstance.address,
+        system.exchangeInstance.address,
         address,
         true,
       )
@@ -722,18 +739,18 @@ describe('Multiply Proxy Action with Mocked Exchange', async () => {
       ;(params[1] as any).skipFL = true
 
       const [status, result] = await dsproxyExecuteAction(
-        multiplyProxyActions,
-        dsProxy,
+        system.multiplyProxyActionsInstance,
+        system.dsProxyInstance,
         address,
         'closeVaultExitCollateral',
         params,
       )
       expect(status).to.be.true
 
-      const info = await getVaultInfo(mcdView, CDP_ID, CDP_ILK)
+      const info = await getVaultInfo(system.mcdViewInstance, CDP_ID, CDP_ILK)
       const { daiBalance, collateralBalance } = await checkMPAPostState(
         MAINNET_ADDRESSES.ETH,
-        multiplyProxyActions.address,
+        system.multiplyProxyActionsInstance.address,
       )
 
       const actionEvents = findMPAEvent(result)

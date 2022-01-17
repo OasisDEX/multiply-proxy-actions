@@ -9,19 +9,21 @@ import {
   dsproxyExecuteAction,
   getLastCDP,
   FEE_BASE,
-} from './common/mcd-deployment-utils'
+  DeployedSystemInfo,
+  init,
+} from './common/utils/mcd-deployment.utils'
 import {
   calculateParamsIncreaseMP,
   amountToWei,
   prepareMultiplyParameters,
-  addressRegistryFactory,
-} from './common/params-calculation-utils'
+} from './common/utils/params-calculation.utils'
 import { getMarketPrice, exchangeFromDAI } from './common/http-apis'
-import { Contract, ContractReceipt, Signer } from 'ethers'
+import { ContractReceipt, Signer } from 'ethers'
 import { balanceOf, WETH_ADDRESS } from './utils'
-import { getVaultInfo } from './utils/utils-mcd'
-import { expectToBe, expectToBeEqual } from './_utils'
+import { getVaultInfo } from './common/utils/mcd.utils'
+import { expectToBe, expectToBeEqual } from './common/utils/test.utils'
 import { CDPInfo, OneInchSwapResponse, VaultInfo } from './common/common.types'
+import { one } from './common/cosntants'
 
 interface FlattenedEvent {
   firstTopic: string
@@ -52,17 +54,13 @@ describe('Proxy Action', async () => {
   const baseCollateralAmountInETH = new BigNumber(10)
   const LENDER_FEE = new BigNumber(0)
   const BASE_SLIPPAGE = new BigNumber(0.08)
-  const OASIS_FEE = new BigNumber(0.0003) // TODO: fetch it from exchange once implemented
+  const OAZO_FEE = new BigNumber(0.0003) // TODO: fetch it from exchange once implemented
 
   let provider: JsonRpcProvider
   let primarySigner: Signer
   let primarySignerAddress: string
-  let mcdViewInstance: Contract
-  let exchangeInstance: Contract
-  let multiplyProxyActionsInstance: Contract
-  let dsProxyInstance: Contract
-  let userProxyAddress: string
-  let ADDRESS_REGISTRY: Record<string, string> // TODO:
+  let system: DeployedSystemInfo
+  let feeRecipientAddress: string
   let initialSetupSnapshotId: string
 
   let oraclePrice: BigNumber
@@ -92,7 +90,7 @@ describe('Proxy Action', async () => {
   ]
 
   before(async () => {
-    provider = new ethers.providers.JsonRpcProvider()
+    ;[provider, primarySigner] = await init()
 
     provider.send('hardhat_reset', [
       {
@@ -103,33 +101,23 @@ describe('Proxy Action', async () => {
       },
     ])
 
-    primarySigner = provider.getSigner(0)
     primarySignerAddress = await primarySigner.getAddress()
 
-    const deployedContracts = await deploySystem(provider, primarySigner, true)
-    mcdViewInstance = deployedContracts.mcdViewInstance
-    exchangeInstance = deployedContracts.exchangeInstance
-    multiplyProxyActionsInstance = deployedContracts.multiplyProxyActionsInstance
-    dsProxyInstance = deployedContracts.dsProxyInstance
-    userProxyAddress = deployedContracts.userProxyAddress
+    system = await deploySystem(provider, primarySigner, true)
     oraclePrice = await getOraclePrice(provider)
     marketPrice = await getMarketPrice(WETH_ADDRESS, MAINNET_ADDRESSES.MCD_DAI)
-    ADDRESS_REGISTRY = addressRegistryFactory(
-      multiplyProxyActionsInstance.address,
-      exchangeInstance.address,
-    )
+    feeRecipientAddress = '0x70997970C51812dc3A010C7d01b50e0d17dc79C8'
 
-    ADDRESS_REGISTRY.feeRecepient = '0x70997970C51812dc3A010C7d01b50e0d17dc79C8'
-    exchangeInstance.setPrice(MAINNET_ADDRESSES.ETH, amountToWei(marketPrice).toFixed(0))
+    system.exchangeInstance.setPrice(MAINNET_ADDRESSES.ETH, amountToWei(marketPrice).toFixed(0))
     // the fee is set to 0.0003 and the base is 10000. Doing normal multiplication results in 2.999999999996
-    exchangeInstance.setFee(OASIS_FEE.times(FEE_BASE).toFixed(0))
+    system.exchangeInstance.setFee(OAZO_FEE.times(FEE_BASE).toFixed(0))
 
     // TODO:
     async function checkOneInch(data: TestCase) {
       const [requiredDebt, toBorrowCollateralAmount] = calculateParamsIncreaseMP(
         oraclePrice,
         marketPrice,
-        OASIS_FEE,
+        OAZO_FEE,
         LENDER_FEE,
         baseCollateralAmountInETH,
         new BigNumber(data.currentDebt),
@@ -139,9 +127,9 @@ describe('Proxy Action', async () => {
 
       const payload = await exchangeFromDAI(
         WETH_ADDRESS,
-        amountToWei(requiredDebt.times(new BigNumber(1).minus(OASIS_FEE))).toFixed(0),
+        amountToWei(requiredDebt.times(one.minus(OAZO_FEE))).toFixed(0),
         data.slippage.times(100).toFixed(),
-        exchangeInstance.address,
+        system.exchangeInstance.address,
       )
       data.oneInchPayload = payload.tx
       data.toBorrowCollateralAmount = toBorrowCollateralAmount
@@ -154,7 +142,7 @@ describe('Proxy Action', async () => {
   })
 
   describe(`opening Multiply Vault with collateralisation ratio of ${testCases[1].desiredCollRatio}`, async () => {
-    let result: ContractReceipt
+    let tsResult: ContractReceipt
     let vaultInfo: VaultInfo
     let startBalance: BigNumber
     let lastCDP: CDPInfo
@@ -166,20 +154,20 @@ describe('Proxy Action', async () => {
     })
 
     before(async () => {
-      startBalance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, ADDRESS_REGISTRY.feeRecepient)
+      startBalance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, feeRecipientAddress)
       const { params } = prepareMultiplyParameters(
         testCases[1].oneInchPayload,
         testCases[1].desiredCDPState,
-        multiplyProxyActionsInstance.address,
-        exchangeInstance.address,
+        system.multiplyProxyActionsInstance.address,
+        system.exchangeInstance.address,
         primarySignerAddress,
         false,
         0,
       )
 
-      const [status, txResult] = await dsproxyExecuteAction(
-        multiplyProxyActionsInstance,
-        dsProxyInstance,
+      const [status, result] = await dsproxyExecuteAction(
+        system.multiplyProxyActionsInstance,
+        system.dsProxyInstance,
         primarySignerAddress,
         'openMultiplyVault',
         params,
@@ -187,10 +175,10 @@ describe('Proxy Action', async () => {
       )
       expect(status).to.be.true
 
-      result = txResult
+      tsResult = result
 
-      lastCDP = await getLastCDP(provider, primarySigner, userProxyAddress)
-      vaultInfo = await getVaultInfo(mcdViewInstance, lastCDP.id, lastCDP.ilk)
+      lastCDP = await getLastCDP(provider, primarySigner, system.userProxyAddress)
+      vaultInfo = await getVaultInfo(system.mcdViewInstance, lastCDP.id, lastCDP.ilk)
     })
 
     it(`it should open vault with collateralisation Ratio of ${testCases[1].desiredCollRatio}`, async () => {
@@ -202,7 +190,7 @@ describe('Proxy Action', async () => {
     })
 
     it(`it should flash loan correct amount of DAI`, async () => {
-      const allEvents = result.events!.map(x => ({
+      const allEvents = tsResult.events!.map(x => ({
         firstTopic: x.topics[0],
         topics: x.topics,
         data: x.data,
@@ -228,7 +216,7 @@ describe('Proxy Action', async () => {
     })
 
     it('it should send fee to beneficiary', async () => {
-      const allEvents = result.events!.map(x => {
+      const allEvents = tsResult.events!.map(x => {
         return {
           firstTopic: x.topics[0],
           topics: x.topics,
@@ -243,11 +231,9 @@ describe('Proxy Action', async () => {
 
       expect(feePaidEvents.length).to.be.deep.equal(1)
       const feeAmount = new BigNumber(feePaidEvents[0].data, 16)
-      const expected = amountToWei(
-        OASIS_FEE.times((testCases[1].desiredCDPState as any).requiredDebt), // TODO:
-      )
+      const expected = amountToWei(OAZO_FEE.times(testCases[1].desiredCDPState.requiredDebt!))
 
-      const endBalance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, ADDRESS_REGISTRY.feeRecepient)
+      const endBalance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, feeRecipientAddress)
       const balanceDifference = endBalance.minus(startBalance)
 
       expectToBe(feeAmount, 'gte', expected)
@@ -256,7 +242,7 @@ describe('Proxy Action', async () => {
   })
 
   describe(`opening Multiply Vault with collateralisation ratio of ${testCases[0].desiredCollRatio}`, async () => {
-    let result: ContractReceipt
+    let tsResult: ContractReceipt
     let lastCDP: CDPInfo
     let vaultInfo: VaultInfo
     let startBalance: BigNumber
@@ -268,29 +254,29 @@ describe('Proxy Action', async () => {
     })
 
     before(async () => {
-      startBalance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, ADDRESS_REGISTRY.feeRecepient)
+      startBalance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, feeRecipientAddress)
       const { params } = prepareMultiplyParameters(
         testCases[0].oneInchPayload,
         testCases[0].desiredCDPState,
-        multiplyProxyActionsInstance.address,
-        exchangeInstance.address,
+        system.multiplyProxyActionsInstance.address,
+        system.exchangeInstance.address,
         await primarySigner.getAddress(),
         false,
         0,
       )
-      const [status, txResult] = await dsproxyExecuteAction(
-        multiplyProxyActionsInstance,
-        dsProxyInstance,
+      const [status, result] = await dsproxyExecuteAction(
+        system.multiplyProxyActionsInstance,
+        system.dsProxyInstance,
         await primarySigner.getAddress(),
         'openMultiplyVault',
         params,
         amountToWei(baseCollateralAmountInETH),
       )
       expect(status).to.be.true
-      result = txResult
+      tsResult = result
 
-      lastCDP = await getLastCDP(provider, primarySigner, userProxyAddress)
-      vaultInfo = await getVaultInfo(mcdViewInstance, lastCDP.id, lastCDP.ilk)
+      lastCDP = await getLastCDP(provider, primarySigner, system.userProxyAddress)
+      vaultInfo = await getVaultInfo(system.mcdViewInstance, lastCDP.id, lastCDP.ilk)
     })
 
     it(`it should open vault with collateralisation Ratio of ${testCases[0].desiredCollRatio}`, async () => {
@@ -302,7 +288,7 @@ describe('Proxy Action', async () => {
     })
 
     it(`it should flash loan correct amount of DAI`, async () => {
-      const allEvents = result.events!.map(x => ({
+      const allEvents = tsResult.events!.map(x => ({
         firstTopic: x.topics[0],
         topics: x.topics,
         data: x.data,
@@ -327,7 +313,7 @@ describe('Proxy Action', async () => {
     })
 
     it('it should send fee to beneficiary', async () => {
-      const allEvents = result.events!.map(x => ({
+      const allEvents = tsResult.events!.map(x => ({
         firstTopic: x.topics[0],
         topics: x.topics,
         data: x.data,
@@ -341,7 +327,7 @@ describe('Proxy Action', async () => {
 
       expect(feePaidEvents.length).to.be.equal(1)
       const feeAmount = new BigNumber(feePaidEvents[0].data, 16)
-      const endBalance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, ADDRESS_REGISTRY.feeRecepient)
+      const endBalance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, feeRecipientAddress)
       const balanceDifference = endBalance.minus(startBalance)
       expectToBeEqual(feeAmount.toFixed(0), balanceDifference)
     })

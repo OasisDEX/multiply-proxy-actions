@@ -1,46 +1,33 @@
 import { JsonRpcProvider } from '@ethersproject/providers'
 import BigNumber from 'bignumber.js'
 import retry from 'async-retry'
+import { constants, ContractReceipt } from 'ethers'
 import { getPayload } from './1inch'
+import { ten } from '../cosntants'
+import { EventHash, PackedEvent, Ticker } from '../common.types'
 
 export async function createSnapshot(provider: JsonRpcProvider) {
   const id = await provider.send('evm_snapshot', [])
-  // console.log('snapshot created', id, new Date())
+  console.log('snapshot created', id, new Date())
   return id
 }
 
-// TODO:
-export const restoreSnapshot = async function (provider: JsonRpcProvider, id: string) {
-  if ((this as any).lock) {
-    console.log('Skiping restore', (this as any).lock)
-    // delete restoreSnapshot.lock
-    return
-  }
-
+export async function restoreSnapshot(provider: JsonRpcProvider, id: string) {
   await provider.send('evm_revert', [id])
   console.log('snapshot restored', id, new Date())
 }
-restoreSnapshot.lock = false
 
 export async function fillExchangeData(
   _testParams,
   exchangeData,
   exchange,
   fee,
-  protocols = [],
-  precision = 18,
+  protocols: string[] = [],
 ) {
   if (!_testParams.useMockExchange) {
     const oneInchPayload = await retry(
       async () =>
-        await getPayload(
-          exchangeData,
-          exchange.address,
-          _testParams.slippage,
-          fee,
-          protocols,
-          // precision,
-        ),
+        await getPayload(exchangeData, exchange.address, _testParams.slippage, fee, protocols),
       {
         retries: 5,
       },
@@ -54,11 +41,11 @@ export function getAddressesLabels(
   deployedContracts,
   addressRegistry,
   mainnet,
-  primarySignerAddress,
+  primarySignerAddress: string,
 ) {
   const labels = {}
   let keys = Object.keys(addressRegistry)
-  labels[primarySignerAddress.substr(2).toLowerCase()] = 'caller'
+  labels[primarySignerAddress.substring(2).toLowerCase()] = 'caller'
   keys.forEach(x => {
     const adr = addressRegistry[x].substr(2).toLowerCase() // no 0x prefix
     if (!labels[adr]) {
@@ -86,80 +73,71 @@ export function getAddressesLabels(
   return labels
 }
 
-export function findExchangeTransferEvent(source, dest, txResult) {
-  let events = txResult.events.filter(
-    x => x.topics[0] === '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',
-  )
-
-  events = events.filter(
-    x =>
-      x.topics[1].toLowerCase().indexOf(source.toLowerCase().substr(2)) !== -1 &&
-      x.topics[2].toLowerCase().indexOf(dest.toLowerCase().substr(2)) !== -1,
-  )
-  return new BigNumber(events[0].data, 16)
+export function findExchangeTransferEvent(
+  source: string,
+  dest: string,
+  { events = [] }: ContractReceipt,
+) {
+  const exchangeTransferEvents = events
+    .filter(x => x.topics[0] === EventHash.ERC20_TRANSFER)
+    .filter(
+      x =>
+        x.topics[1].toLowerCase().includes(source.toLowerCase().substring(2)) &&
+        x.topics[2].toLowerCase().includes(dest.toLowerCase().substring(2)),
+    )
+  return new BigNumber(exchangeTransferEvents[0].data, 16)
 }
 
-export function printAllERC20Transfers(txResult, labels) {
-  function tryUseLabels(value) {
-    const toCheck = value.substr(26) // skip 24 leading 0 anx 0x
-    if (labels[toCheck]) {
-      return labels[toCheck]
-    } else {
-      return '0x' + toCheck
-    }
+export function printAllERC20Transfers({ events = [] }: ContractReceipt, labels) {
+  function tryUseLabels(value: string) {
+    // strip 24 leading 0s and 0x prefix
+    const toCheck = value.substring(26)
+    return labels[toCheck] || `0x${toCheck}`
   }
 
-  let events = txResult.events.filter(
-    x => x.topics[0] == '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',
-  )
-  const packedEvents = []
-  for (let i = 0; i < events.length; i++) {
+  const packedEvents: PackedEvent[] = []
+
+  let contractEvents = events.filter(x => x.topics[0] === EventHash.ERC20_TRANSFER)
+  for (let i = 0; i < contractEvents.length; i++) {
+    const { address } = contractEvents[i]
+    const token =
+      address === '0x6B175474E89094C44Da98b954EedeAC495271d0F' // TODO: MCD dai
+        ? Ticker.DAI
+        : address === '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2' // TODO: WETH
+        ? Ticker.WETH
+        : address
     packedEvents.push({
-      AmountAsNumber: new BigNumber(events[i].data, 16)
-        .dividedBy(new BigNumber(10).exponentiatedBy(18))
+      AmountAsNumber: new BigNumber(contractEvents[i].data, 16)
+        .dividedBy(ten.exponentiatedBy(18))
         .toFixed(5),
-      Token:
-        events[i].address == '0x6B175474E89094C44Da98b954EedeAC495271d0F'
-          ? 'DAI'
-          : events[i].address == '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'
-          ? 'WETH'
-          : events[i].address,
-      From: tryUseLabels(events[i].topics[1]),
-      To: tryUseLabels(events[i].topics[2]),
+      Token: token,
+      From: tryUseLabels(contractEvents[i].topics[1]),
+      To: tryUseLabels(contractEvents[i].topics[2]),
     })
   }
 
-  events = txResult.events.filter(
-    // Deposit of WETH
-    x => x.topics[0] == '0xe1fffcc4923d04b559f4d29a8bfc6cda04eb5b0d3c460751c2402c5c5cc9109c',
-  )
-
-  for (let i = 0; i < events.length; i++) {
+  contractEvents = events.filter(x => x.topics[0] === EventHash.WETH_DEPOSIT)
+  for (let i = 0; i < contractEvents.length; i++) {
     packedEvents.push({
-      AmountAsNumber: new BigNumber(events[i].data, 16)
-        .dividedBy(new BigNumber(10).exponentiatedBy(18))
-        .toFixed(5),
-      Token: 'WETH',
-      From: '0x0000000000000000000000000000000000000000',
-      To: tryUseLabels(events[i].topics[1]),
+      AmountAsNumber: new BigNumber(contractEvents[i].data, 16).dividedBy(ten.pow(18)).toFixed(5),
+      Token: Ticker.WETH,
+      From: constants.AddressZero,
+      To: tryUseLabels(contractEvents[i].topics[1]),
     })
   }
-  events = txResult.events.filter(
-    // Withdraw of WETH
-    x => x.topics[0] == '0x7fcf532c15f0a6db0bd6d0e038bea71d30d808c7d98cb3bf7268a95bf5081b65',
-  )
 
-  for (let i = 0; i < events.length; i++) {
+  contractEvents = events.filter(x => x.topics[0] === EventHash.WETH_WITHDRAWAL)
+  for (let i = 0; i < contractEvents.length; i++) {
     packedEvents.push({
-      AmountAsNumber: new BigNumber(events[i].data, 16)
-        .dividedBy(new BigNumber(10).exponentiatedBy(18))
-        .toFixed(5),
-      Token: 'WETH',
-      From: tryUseLabels(events[i].topics[1]),
-      To: '0x0000000000000000000000000000000000000000',
+      AmountAsNumber: new BigNumber(contractEvents[i].data, 16).dividedBy(ten.pow(18)).toFixed(5),
+      Token: Ticker.WETH,
+      From: tryUseLabels(contractEvents[i].topics[1]),
+      To: constants.AddressZero,
     })
   }
+
   console.log('All tx transfers:', packedEvents)
+
   return packedEvents
 }
 

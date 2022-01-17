@@ -2,6 +2,10 @@ import BigNumber from 'bignumber.js'
 import { expect } from 'chai'
 import { isError, tryF } from 'ts-try'
 
+export function logDebug(lines: string[], prefix = '') {
+  lines.forEach(line => console.log(`${prefix}${line}`))
+}
+
 export function asPercentageValue(value: BigNumber.Value, base: BigNumber.Value) {
   const val = new BigNumber(value)
 

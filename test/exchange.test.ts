@@ -6,15 +6,12 @@ import { Contract, Signer } from 'ethers'
 import WETHABI from '../abi/IWETH.json'
 import ERC20ABI from '../abi/IERC20.json'
 import MAINNET_ADDRESSES from '../addresses/mainnet.json'
-import { init, FEE, FEE_BASE, ONE, swapTokens } from './common/mcd-deployment-utils'
-import {
-  addressRegistryFactory,
-  amountFromWei,
-  amountToWei,
-} from './common/params-calculation-utils'
+import { init, FEE, FEE_BASE, swapTokens } from './common/utils/mcd-deployment.utils'
+import { amountFromWei, amountToWei } from './common/utils/params-calculation.utils'
 import { exchangeToDAI, exchangeFromDAI } from './common/http-apis'
 import { balanceOf } from './utils'
-import { asPercentageValue, expectToBe, expectToBeEqual } from './_utils'
+import { asPercentageValue, expectToBe, expectToBeEqual } from './common/utils/test.utils'
+import { ADDRESSES, one } from './common/cosntants'
 
 const AGGREGATOR_V3_ADDRESS = '0x11111112542d85b3ef69ae05771c2dccff4faa26'
 const ALLOWED_PROTOCOLS = ['UNISWAP_V2']
@@ -35,7 +32,7 @@ describe('Exchange', async () => {
     ;[provider, signer] = await init({ provider, signer })
     address = await signer.getAddress()
 
-    feeBeneficiary = addressRegistryFactory('', '').feeRecepient // TODO:
+    feeBeneficiary = ADDRESSES.feeRecipient
     slippage = asPercentageValue(8, 100)
     fee = asPercentageValue(FEE, FEE_BASE)
 
@@ -86,12 +83,12 @@ describe('Exchange', async () => {
   })
 
   it('should allow beneficiary to update the fee', async () => {
-    const toTransferAmount = '0x' + new BigNumber(1).shiftedBy(18).toString(16)
+    const toTransferAmount = '0x' + one.shiftedBy(18).toString(16)
     const tx0 = await signer.populateTransaction({ to: feeBeneficiary, value: toTransferAmount })
     await signer.sendTransaction(tx0)
     await provider.send('hardhat_impersonateAccount', [feeBeneficiary])
     const beneficiary = ethers.provider.getSigner(feeBeneficiary)
-    await exchange.connect(beneficiary).setFee('3') // TODO:
+    await exchange.connect(beneficiary).setFee('3')
   })
 
   describe('Asset for DAI', async () => {
@@ -116,7 +113,7 @@ describe('Exchange', async () => {
       data = response.tx.data
 
       const receiveAtLeast = amountFromWei(response.toTokenAmount).times(
-        new BigNumber(1).minus(slippage.asDecimal),
+        one.minus(slippage.asDecimal),
       )
       receiveAtLeastInWei = amountToWei(receiveAtLeast)
     })
@@ -184,11 +181,8 @@ describe('Exchange', async () => {
         const walletDaiBalance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, address)
         const beneficiaryDaiBalance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, feeBeneficiary)
 
-        // TODO:
-        console.log('>>>>>>>> ', fee.asDecimal.toFixed(), (await exchange.fee()).toString())
-
         const expectedCollectedFee = amountFromWei(walletDaiBalance)
-          .div(new BigNumber(1).minus(fee.asDecimal))
+          .div(one.minus(fee.asDecimal))
           .decimalPlaces(0)
           .times(fee.asDecimal)
 
@@ -255,7 +249,7 @@ describe('Exchange', async () => {
         const beneficiaryDaiBalance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, feeBeneficiary)
 
         const expectedCollectedFee = amountFromWei(walletDaiBalance)
-          .div(ONE.minus(fee.asDecimal))
+          .div(one.minus(fee.asDecimal))
           .times(fee.asDecimal)
         expectToBeEqual(amountFromWei(beneficiaryDaiBalance), expectedCollectedFee, 6)
       })
@@ -296,15 +290,10 @@ describe('Exchange', async () => {
           },
         )
 
-        console.log('BEFORE REVERT')
         await expect(tx).to.be.revertedWith('Exchange / Could not swap')
-        console.log('AFTER REVERT')
 
         const wethBalance = await balanceOf(MAINNET_ADDRESSES.ETH, address)
         const daiBalance = await balanceOf(MAINNET_ADDRESSES.MCD_DAI, address)
-
-        console.log('>>>>>', wethBalance.toFixed(0), initialWethWalletBalance.toFixed(0))
-        console.log('>>>>>', daiBalance.toFixed(0))
 
         expectToBeEqual(wethBalance, initialWethWalletBalance)
         expectToBeEqual(daiBalance, 0)
@@ -423,7 +412,7 @@ describe('Exchange', async () => {
 
     before(async () => {
       const amountInWei = amountToWei(1000)
-      amountWithFeeInWei = amountInWei.div(new BigNumber(1).minus(fee.asDecimal))
+      amountWithFeeInWei = amountInWei.div(one.minus(fee.asDecimal))
 
       const response = await exchangeFromDAI(
         MAINNET_ADDRESSES.ETH,
@@ -437,7 +426,7 @@ describe('Exchange', async () => {
       data = response.tx.data
 
       const receiveAtLeast = amountFromWei(response.toTokenAmount).times(
-        new BigNumber(1).minus(slippage.asDecimal),
+        one.minus(slippage.asDecimal),
       )
       receiveAtLeastInWei = amountToWei(receiveAtLeast)
     })
@@ -717,7 +706,7 @@ describe('Exchange', async () => {
       it('should transfer everything to the caller if there is a surplus of DAI ', async () => {
         const otherWallet = provider.getSigner(1)
         const otherWalletAddress = await otherWallet.getAddress()
-        const amount = amountToWei(ONE)
+        const amount = amountToWei(one)
 
         await swapTokens(
           MAINNET_ADDRESSES.ETH,
@@ -873,7 +862,7 @@ describe('Exchange', async () => {
       localSnapshotId = await provider.send('evm_snapshot', [])
 
       amountInWei = amountToWei(1000)
-      amountWithFeeInWei = amountInWei.div(new BigNumber(1).minus(fee.asDecimal))
+      amountWithFeeInWei = amountInWei.div(one.minus(fee.asDecimal))
 
       await swapTokens(
         MAINNET_ADDRESSES.ETH,
@@ -1016,9 +1005,8 @@ describe('Exchange', async () => {
       to = response.tx.to
       data = response.tx.data
 
-      // TODO: fix shit like this
       const receiveAtLeast = amountFromWei(response.toTokenAmount).times(
-        new BigNumber(1).minus(slippage.asDecimal),
+        one.minus(slippage.asDecimal),
       )
       receiveAtLeastInWei = amountToWei(receiveAtLeast)
     })
@@ -1059,7 +1047,7 @@ describe('Exchange', async () => {
     before(async () => {
       localSnapshotId = await provider.send('evm_snapshot', [])
       const amountInWei = amountToWei(1000)
-      amountWithFeeInWei = amountInWei.div(new BigNumber(1).minus(fee.asDecimal))
+      amountWithFeeInWei = amountInWei.div(one.minus(fee.asDecimal))
 
       await swapTokens(
         MAINNET_ADDRESSES.ETH,
@@ -1085,7 +1073,7 @@ describe('Exchange', async () => {
       data = response.tx.data
 
       const receiveAtLeast = amountFromWei(response.toTokenAmount, 6).times(
-        new BigNumber(1).minus(slippage.asDecimal),
+        one.minus(slippage.asDecimal),
       )
       receiveAtLeastInWei = amountToWei(receiveAtLeast, 6)
     })
