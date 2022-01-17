@@ -23,7 +23,7 @@
     "url": "git+https://github.com/OasisDEX/multiply-proxy-actions"
   },
   "engines": {
-    "node": ">=12"
+    "node": ">=14.17"
   },
   "author": "",
   "license": "MIT",

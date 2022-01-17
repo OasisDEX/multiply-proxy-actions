@@ -29,7 +29,12 @@ if (!/^\d+$/.test(blockNumber)) {
 
 console.log(`Forking from block number: ${blockNumber}`)
 
-function createHardhatNetwork(network: string, node: string | undefined, key: string | undefined) {
+function createHardhatNetwork(
+  network: string,
+  node: string | undefined,
+  key: string | undefined,
+  gasPrice: number,
+) {
   if (!node) {
     return null
   }
@@ -39,7 +44,7 @@ function createHardhatNetwork(network: string, node: string | undefined, key: st
     {
       url: node,
       accounts: [key],
-      gasPrice: 40000000000,
+      gasPrice,
     },
   ]
 }
@@ -67,16 +72,23 @@ const config = {
     },
     ...Object.fromEntries(
       [
-        createHardhatNetwork('mainnet', process.env.ALCHEMY_NODE, process.env.PRIV_KEY_MAINNET!),
+        createHardhatNetwork(
+          'mainnet',
+          process.env.ALCHEMY_NODE,
+          process.env.PRIV_KEY_MAINNET!,
+          40000000000,
+        ),
         createHardhatNetwork(
           'rinkeby',
           process.env.ALCHEMY_NODE_RINKEBY,
           process.env.PRIV_KEY_MAINNET!,
+          40000000000,
         ),
         createHardhatNetwork(
           'goerli',
           process.env.ALCHEMY_NODE_GOERLI,
           process.env.PRIV_KEY_MAINNET!,
+          40000000000,
         ),
       ].filter(Boolean) as [string, HardhatNetworkConfig][],
     ),
