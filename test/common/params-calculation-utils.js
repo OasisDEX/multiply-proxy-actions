@@ -256,7 +256,6 @@ const prepareMultiplyParameters = function (
     minToTokenAmount: toDAI
       ? amountToWei(desiredCdpState.requiredDebt).toFixed(0)
       : amountToWei(desiredCdpState.toBorrowCollateralAmount).toFixed(0),
-    expectedFee: 0,
     exchangeAddress: oneInchPayload.to,
     _exchangeCalldata: oneInchPayload.data,
   }
