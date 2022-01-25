@@ -353,6 +353,9 @@ export interface DeployedSystemInfo {
     wethTokenInstance: Contract
   }
   guni: Contract
+  actionOpenVault: Contract
+  operationRunner: Contract
+  serviceRegistry: Contract
 }
 
 export async function deploySystem(
@@ -416,6 +419,23 @@ export async function deploySystem(
       `MCDView address: ${deployedContracts.mcdViewInstance.address}`,
     ])
   }
+
+
+  // ACTIONS POC deployed contracts
+
+  const ActionOpenVault = await ethers.getContractFactory('OpenVault', signer)
+  const actionOpenVault = await ActionOpenVault.deploy()
+  deployedContracts.actionOpenVault = await actionOpenVault.deployed()
+
+
+  const OperationRunner = await ethers.getContractFactory('OperationRunner', signer)
+  const operationRunner = await OperationRunner.deploy()
+  deployedContracts.operationRunner = await operationRunner.deployed()
+
+  const ServiceRegistry = await ethers.getContractFactory('ServiceRegistry', signer)
+  const serviceRegistry = await ServiceRegistry.deploy([0])
+  deployedContracts.serviceRegistry = await serviceRegistry.deployed()
+
 
   return deployedContracts as DeployedSystemInfo
 }
