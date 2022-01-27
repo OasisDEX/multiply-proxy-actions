@@ -31,7 +31,7 @@ contract DummyExchange {
   event FeePaid(address indexed beneficiary, uint256 amount);
   event SlippageSaved(uint256 minimumPossible, uint256 actualAmount);
 
-  constructor(address _dai){
+  constructor(address _dai) {
     DAI_ADDRESS = _dai;
   }
 

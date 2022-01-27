@@ -1,5 +1,3 @@
-
-
 ## Documentation
 [Multiply Smart Contracts Documentation](https://docs.google.com/document/d/1hCYIiWDc_Zm4oJasRfSZqiTk2xXpt1k7OXa52Lqd45I/edit)
 ## To install
@@ -26,6 +24,7 @@ block number the fork starts from. If it starts from an old state some tests mig
 3. After that you can run the tests, for example:
 
 `npx hardhat test --network local test/mocked-exchange-tests.js`
+
 ## Common commands
 
 `npm run compile` -  compile all the contracts

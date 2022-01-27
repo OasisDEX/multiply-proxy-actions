@@ -27,7 +27,7 @@ contract Exchange {
   using SafeMath for uint256;
   using SafeERC20 for IERC20;
 
-  address public immutable DAI_ADDRESS ;
+  address public immutable DAI_ADDRESS;
   address public feeBeneficiaryAddress;
   mapping(address => bool) public WHITELISTED_CALLERS;
   uint8 public fee;
