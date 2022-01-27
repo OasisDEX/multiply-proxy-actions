@@ -70,15 +70,15 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
   address public immutable DAI;
   address public immutable DAIJOIN;
 
-
   constructor(
     address _weth,
     address _dai,
-    address _daiJoin){
-      WETH = _weth;
-      DAI = _dai;
-      DAIJOIN = _daiJoin;
-    }
+    address _daiJoin
+  ) {
+    WETH = _weth;
+    DAI = _dai;
+    DAIJOIN = _daiJoin;
+  }
 
   modifier logMethodName(
     string memory name,
@@ -819,6 +819,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     uint256 collateralLeft,
     uint256 daiLeft
   );
-//TODO: Test with receive
+
+  //TODO: Test with receive
   fallback() external payable {}
 }
