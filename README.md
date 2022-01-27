@@ -1,5 +1,3 @@
-
-
 ## Documentation
 [Multiply Smart Contracts Documentation](https://docs.google.com/document/d/1hCYIiWDc_Zm4oJasRfSZqiTk2xXpt1k7OXa52Lqd45I/edit)
 ## To install
