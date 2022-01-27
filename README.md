@@ -24,6 +24,7 @@ block number the fork starts from. If it starts from an old state some tests mig
 3. After that you can run the tests, for example:
 
 `npx hardhat test --network local test/mocked-exchange-tests.js`
+
 ## Common commands
 
 `npm run compile` -  compile all the contracts
