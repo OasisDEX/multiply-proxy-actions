@@ -19,6 +19,15 @@ jobs:
     -
       name: Checkout
       uses: actions/checkout@v2
+
+    - 
+      name: lint
+      run: yarn lint
+
+    - 
+      name: format
+      run: yarn format
+
     -
       name: Login into Dockerhub
       uses: docker/login-action@v1
