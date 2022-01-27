@@ -1,0 +1,29 @@
+on:
+  pull_request:
+    branches: [ dev, main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+          # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      - name: Cache YARN dependencies
+        uses: actions/cache@v1
+          
+        with:
+          path: node_modules
+          key: ${{ runner.OS }}-yarn-cache-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.OS }}-yarn-cache-
+              
+      - name: install
+        run: yarn
+
+      - name: lint
+        run: yarn lint
+
+      - name: format
+        run: yarn format
