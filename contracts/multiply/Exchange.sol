@@ -17,7 +17,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-pragma solidity >=0.7.6;
+pragma solidity ^0.8.1;
 import "../interfaces/IERC20.sol";
 import "../utils/SafeMath.sol";
 import "../utils/SafeERC20.sol";
@@ -27,7 +27,7 @@ contract Exchange {
   using SafeMath for uint256;
   using SafeERC20 for IERC20;
 
-  address constant DAI_ADDRESS = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+  address public immutable DAI_ADDRESS ;
   address public feeBeneficiaryAddress;
   mapping(address => bool) public WHITELISTED_CALLERS;
   uint8 public fee;
@@ -36,12 +36,14 @@ contract Exchange {
   constructor(
     address authorisedCaller,
     address feeBeneficiary,
-    uint8 _fee
+    uint8 _fee,
+    address _dai
   ) {
     WHITELISTED_CALLERS[authorisedCaller] = true;
     feeBeneficiaryAddress = feeBeneficiary;
     WHITELISTED_CALLERS[feeBeneficiary] = true;
     fee = _fee;
+    DAI_ADDRESS = _dai;
   }
 
   event AssetSwap(

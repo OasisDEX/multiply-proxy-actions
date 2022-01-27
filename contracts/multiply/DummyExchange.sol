@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-pragma solidity >=0.7.6;
+pragma solidity ^0.8.1;
 import "../interfaces/IERC20.sol";
 import "../utils/SafeMath.sol";
 import "../utils/SafeERC20.sol";
@@ -10,7 +10,7 @@ contract DummyExchange {
   using SafeMath for uint256;
   using SafeERC20 for IERC20;
 
-  address DAI_ADDRESS = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+  address immutable DAI_ADDRESS;
 
   uint256 price;
 
@@ -30,6 +30,10 @@ contract DummyExchange {
   );
   event FeePaid(address indexed beneficiary, uint256 amount);
   event SlippageSaved(uint256 minimumPossible, uint256 actualAmount);
+
+  constructor(address _dai){
+    DAI_ADDRESS = _dai;
+  }
 
   function mul(uint256 x, uint256 y) internal pure returns (uint256 z) {
     require(y == 0 || (z = x * y) / y == x, "mul-overflow");

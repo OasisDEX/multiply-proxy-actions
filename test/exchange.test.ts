@@ -37,7 +37,7 @@ describe('Exchange', async () => {
     fee = asPercentageValue(FEE, FEE_BASE)
 
     const exchangeFactory = await ethers.getContractFactory('Exchange', signer)
-    exchange = await exchangeFactory.deploy(address, feeBeneficiary, fee.value.toFixed())
+    exchange = await exchangeFactory.deploy(address, feeBeneficiary, fee.value.toFixed(), ADDRESSES.dai)
 
     await exchange.deployed()
 
