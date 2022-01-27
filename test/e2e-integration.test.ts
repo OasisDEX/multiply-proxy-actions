@@ -173,7 +173,7 @@ async function testCaseDefinition(testCase: any, testParam: any) {
   return new Promise(resolve => {
     // to run several in runner, one after another
 
-    describe(`Proxy Action: oracleDivergence=${
+    describe.skip(`Proxy Action: oracleDivergence=${
       testParam.useMockExchange ? testParam.oraclePriceDivergence * 100 : 0
     }%; slippage=${testParam.slippage}; skipFL=${testParam.skipFL}`, async () => {
       after(

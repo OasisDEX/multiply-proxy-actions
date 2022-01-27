@@ -31,7 +31,7 @@ import "./ExchangeData.sol";
 import "../flash-mint/interface/IERC3156FlashBorrower.sol";
 import "../flash-mint/interface/IERC3156FlashLender.sol";
 
-pragma solidity >=0.7.6;
+pragma solidity ^0.8.1;
 pragma abicoder v2;
 
 struct CdpData {
@@ -66,9 +66,19 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
 
   uint256 constant RAY = 10**27;
 
-  address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-  address public constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
-  address public constant DAIJOIN = 0x9759A6Ac90977b93B58547b4A71c78317f391A28;
+  address public immutable WETH;
+  address public immutable DAI;
+  address public immutable DAIJOIN;
+
+
+  constructor(
+    address _weth,
+    address _dai,
+    address _daiJoin){
+      WETH = _weth;
+      DAI = _dai;
+      DAIJOIN = _daiJoin;
+    }
 
   modifier logMethodName(
     string memory name,
@@ -112,7 +122,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     require(y >= 0, "int256-overflow");
   }
 
-  function convertTo18(address gemJoin, uint256 amt) internal returns (uint256 wad) {
+  function convertTo18(address gemJoin, uint256 amt) internal view returns (uint256 wad) {
     // For those collaterals that have less than 18 decimals precision we need to do the conversion before passing to frob function
     // Adapters will automatically handle the difference of precision
     wad = amt.mul(10**(18 - IJoin(gemJoin).dec()));
@@ -809,6 +819,6 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     uint256 collateralLeft,
     uint256 daiLeft
   );
-
+//TODO: Test with receive
   fallback() external payable {}
 }

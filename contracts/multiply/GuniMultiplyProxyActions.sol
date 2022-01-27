@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-pragma solidity >=0.7.6;
+pragma solidity ^0.8.1;
 pragma abicoder v2;
 import "../interfaces/IERC20.sol";
 import "../utils/SafeMath.sol";
@@ -335,7 +335,7 @@ contract GuniMultiplyProxyActions is IERC3156FlashBorrower {
     IJoin(gemJoin).exit(address(this), collateralDraw);
   }
 
-  function convertTo18(address gemJoin, uint256 amt) internal returns (uint256 wad) {
+  function convertTo18(address gemJoin, uint256 amt) internal view returns (uint256 wad) {
     // For those collaterals that have less than 18 decimals precision we need to do the conversion before passing to frob function
     // Adapters will automatically handle the difference of precision
     wad = amt.mul(10**(18 - IJoin(gemJoin).dec()));
