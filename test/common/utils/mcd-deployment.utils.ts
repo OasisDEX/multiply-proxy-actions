@@ -354,6 +354,8 @@ export interface DeployedSystemInfo {
   }
   guni: Contract
   actionOpenVault: Contract
+  actionDeposit: Contract
+  actionFlashLoan: Contract
   operationRunner: Contract
   serviceRegistry: Contract
 }
@@ -436,6 +438,13 @@ export async function deploySystem(
   const serviceRegistry = await ServiceRegistry.deploy([0])
   deployedContracts.serviceRegistry = await serviceRegistry.deployed()
 
+  const ActionFlashLoan = await ethers.getContractFactory('FlashLoan', signer)
+  const actionFlashLoan = await ActionFlashLoan.deploy()
+  deployedContracts.actionFlashLoan = await actionFlashLoan.deployed()
+
+  const ActionDeposit = await ethers.getContractFactory('Deposit', signer)
+  const actionDeposit = await ActionDeposit.deploy()
+  deployedContracts.actionDeposit = await actionDeposit.deployed()
 
   return deployedContracts as DeployedSystemInfo
 }

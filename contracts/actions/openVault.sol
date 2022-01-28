@@ -9,12 +9,9 @@ import "hardhat/console.sol";
 
 contract OpenVault is ActionBase {
   function executeAction(bytes[] memory _callData) public payable override returns (bytes32) {
-    // (address joinAddr, address mcdManager) = parseInputs(_callData);
+    (address joinAddr, address mcdManager) = parseInputs(_callData);
 
-    address joinAddr = 0x2F0b23f53734252Bda2277357e97e1517d6B042A;
-    address mcdManager = 0x5ef30b9986345249bc32d8928B7ee64DE9435E39;
-
-    uint256 newVaultId = _mcdOpen(joinAddr, mcdManager);
+    uint256 newVaultId = _openVault(joinAddr, mcdManager);
 
     return bytes32(newVaultId);
   }
@@ -23,14 +20,13 @@ contract OpenVault is ActionBase {
     return uint8(ActionType.DEFAULT);
   }
 
-  function _mcdOpen(address _joinAddr, address _mcdManager) internal returns (uint256 vaultId) {
+  function _openVault(address _joinAddr, address _mcdManager) internal returns (uint256 vaultId) {
     bytes32 ilk = IJoin(_joinAddr).ilk();
     vaultId = IManager(_mcdManager).open(ilk, address(this));
   }
 
   function parseInputs(bytes[] memory _callData)
     internal
-    pure
     returns (address joinAddr, address mcdManager)
   {
     joinAddr = abi.decode(_callData[0], (address));
