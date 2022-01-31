@@ -79,6 +79,12 @@ contract Runner {
         flashLoanProvider = FlashLoanProvider(_flProvider);
     }
 
+    /*
+    actionName - key for stored in serviceRegistry address of action implementation, for example MCLOSE_TO_DAI, GCLOSE_TO_DAI
+    actionData - abi.encode(flashLoanData, mainData)
+      where flashLoanData are information for flash loan about asset and amount to borrow
+      where mainData is action-specific bytes used in beforeFlashLoan, main, afterFlashLoan that then Adtion internally decodes to whatever it uses
+    */
     function executeAction(string calldata actionName, bytes calldata actionData) external{
         BaseAction action = BaseAction(registry.getRegisteredService(actionName));
 
