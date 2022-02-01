@@ -401,7 +401,6 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     return ink;
   }
 
-
   function _getWipeAllWad(
     address vat,
     address usr,
@@ -422,7 +421,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     wad = wad.mul(RAY) < rad ? wad + 1 : wad;
   }
 
-    function _getWipeDart(
+  function _getWipeDart(
     address vat,
     uint256 dai,
     address urn,

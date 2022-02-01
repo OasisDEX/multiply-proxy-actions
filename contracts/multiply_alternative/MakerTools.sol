@@ -9,18 +9,16 @@ import "./../interfaces/mcd/IJoin.sol";
 import "./../../contracts/interfaces/exchange/IExchange.sol";
 
 //TODO:This eventually should be library not inheritance
-contract MakerTools{
-
+contract MakerTools {
   address public immutable daijoin;
   IERC20 public immutable DAI;
   uint256 constant RAY = 10**27;
   using SafeMath for uint256;
 
-   constructor (address _daiJoin, address _dai){
-       daijoin = _daiJoin;
-        DAI = IERC20(_dai);
-    }
-
+  constructor(address _daiJoin, address _dai) {
+    daijoin = _daiJoin;
+    DAI = IERC20(_dai);
+  }
 
   function _getWipeDart(
     address vat,
@@ -38,7 +36,7 @@ contract MakerTools{
     // Checks the calculated dart is not higher than urn.art (total debt), otherwise uses its value
     dart = uint256(dart) <= art ? -dart : -toInt256(art);
   }
-  
+
   function toInt256(uint256 x) internal pure returns (int256 y) {
     y = int256(x);
     require(y >= 0, "int256-overflow");
@@ -71,7 +69,7 @@ contract MakerTools{
     // Adapters will automatically handle the difference of precision
     wad = amt.mul(10**(18 - IJoin(gemJoin).dec()));
   }
-  
+
   /**
   TODO: This is great candidate for operation or some library
    */
@@ -94,6 +92,4 @@ contract MakerTools{
     // If the rad precision has some dust, it will need to request for 1 extra wad wei
     wad = wad.mul(RAY) < rad ? wad + 1 : wad;
   }
-
-
 }

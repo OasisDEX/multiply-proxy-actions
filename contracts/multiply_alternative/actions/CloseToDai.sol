@@ -51,7 +51,7 @@ contract CloseToDai is BaseAction, MakerTools  {/* MakerTools inheritance should
     uint256 borrowedDaiAmount,
     uint256 ink
   ) private {
-    IExchange exchange = IExchange(exchange);
+    IExchange exchangeInstance = IExchange(exchange);
     address gemAddress = address(IJoin(cdpData.gemJoin).gem());
 
     wipeAndFreeGem(manager, cdpData.gemJoin, cdpData.cdpId, cdpData.requiredDebt, ink);
@@ -64,7 +64,7 @@ contract CloseToDai is BaseAction, MakerTools  {/* MakerTools inheritance should
       "MPA / Could not approve Exchange for Token"
     );
 
-    exchange.swapTokenForDai(
+    exchangeInstance.swapTokenForDai(
       exchangeData.fromTokenAddress,
       ink,
       exchangeData.minToTokenAmount,
