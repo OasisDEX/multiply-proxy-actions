@@ -38,7 +38,6 @@ abstract contract IJoin {
   function exit(address, uint256) public virtual;
 }
 
-
 abstract contract IManager {
   function last(address) public virtual returns (uint256);
 
@@ -101,10 +100,10 @@ abstract contract IManager {
 }
 
 abstract contract ServiceRegistryLike {
-    function isTrusted(address testedAddress) external virtual view returns (bool);
-    function getRegisteredService(string memory serviceName) external virtual view returns (address) ;
-}
+  function isTrusted(address testedAddress) external view virtual returns (bool);
 
+  function getRegisteredService(string memory serviceName) external view virtual returns (address);
+}
 
 abstract contract IVat {
   struct Urn {
