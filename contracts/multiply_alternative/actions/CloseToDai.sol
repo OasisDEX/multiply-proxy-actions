@@ -1,48 +1,29 @@
 pragma solidity ^0.8.1;
 import "./../interfaces/ExternalInterfaces.sol";
 import "./../ActionsRunner.sol";
+import "./../MakerTools.sol";
+import "../../multiply/ExchangeData.sol";
+import "../../multiply/CdpData.sol";
 
-struct ExchangeData {
-  address fromTokenAddress;
-  address toTokenAddress;
-  uint256 fromTokenAmount;
-  uint256 toTokenAmount;
-  uint256 minToTokenAmount;
-  address exchangeAddress;
-  bytes _exchangeCalldata;
-}
-
-struct CdpData {
-  address gemJoin;
-  address payable fundsReceiver;
-  uint256 cdpId;
-  bytes32 ilk;
-  uint256 requiredDebt;
-  uint256 borrowCollateral;
-  uint256 withdrawCollateral;
-  uint256 withdrawDai;
-  uint256 depositDai;
-  uint256 depositCollateral;
-  bool skipFL;
-  string methodName;
-}
-
-contract CloseToDai is BaseAction {
+contract CloseToDai is BaseAction, MakerTools  {/* MakerTools inheritance should be removed and functionality should be abstracted or as library or as operations  */
   address public immutable manager;
   address public immutable exchange;
   ServiceRegistryLike public immutable registry;
+  using SafeMath for uint256;
 
   constructor(
     address _reg,
     address _manager,
-    address _exchange
-  ) {
+    address _exchange,
+    address _dai,
+    address _dajJoin
+  ) MakerTools(_dajJoin, _dai){
     manager = _manager;
     exchange = _exchange;
-    registry = _reg;
+    registry = ServiceRegistryLike(_reg);
   }
 
-  function main(bytes calldata) external override {
+  function main(bytes calldata params, FlashLoanExecutionData memory executionData) external override {
     (ExchangeData memory exchangeData, CdpData memory cdpData) = abi.decode(
       params,
       (ExchangeData, CdpData)
@@ -53,13 +34,13 @@ contract CloseToDai is BaseAction {
       "mpa-untrusted-lender"
     );
 
-    uint256 borrowedDaiAmount = amount.add(fee);
-    emit FLData(IERC20(DAI).balanceOf(address(this)).sub(cdpData.depositDai), borrowedDaiAmount);
+    uint256 borrowedDaiAmount = executionData.amount.add(executionData.fee);
+    emit FLData(DAI.balanceOf(address(this)).sub(cdpData.depositDai), borrowedDaiAmount);
 
     _closeWithdrawDai(exchangeData, cdpData, borrowedDaiAmount, cdpData.borrowCollateral);
 
     require(
-      cdpData.requiredDebt.add(cdpData.depositDai) <= IERC20(DAI).balanceOf(address(this)),
+      cdpData.requiredDebt.add(cdpData.depositDai) <= DAI.balanceOf(address(this)),
       "mpa-receive-requested-amount-mismatch"
     );
   }
@@ -67,7 +48,6 @@ contract CloseToDai is BaseAction {
   function _closeWithdrawDai(
     ExchangeData memory exchangeData,
     CdpData memory cdpData,
-    AddressRegistry memory addressRegistry,
     uint256 borrowedDaiAmount,
     uint256 ink
   ) private {
@@ -112,32 +92,7 @@ contract CloseToDai is BaseAction {
     );
   }
 
-  uint256 constant RAY = 10**27;
-
-  /**
-  TODO: This is great candidate for operation or some library
-   */
-  function _getWipeAllWad(
-    address vat,
-    address usr,
-    address urn,
-    bytes32 ilk
-  ) internal view returns (uint256 wad) {
-    // Gets actual rate from the vat
-    (, uint256 rate, , , ) = IVat(vat).ilks(ilk);
-    // Gets actual art value of the urn
-    (, uint256 art) = IVat(vat).urns(ilk, urn);
-    // Gets actual dai amount in the urn
-    uint256 dai = IVat(vat).dai(usr);
-
-    uint256 rad = art.mul(rate).sub(dai);
-    wad = rad / RAY;
-
-    // If the rad precision has some dust, it will need to request for 1 extra wad wei
-    wad = wad.mul(RAY) < rad ? wad + 1 : wad;
-  }
-
-  function beforeFlashLoan(bytes calldata data) external override returns (bytes) {
+  function beforeFlashLoan(bytes calldata data) external override returns (bytes memory) {
     (ExchangeData memory exchangeData, CdpData memory cdpData) = abi.decode(
       data,
       (ExchangeData, CdpData)

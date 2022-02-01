@@ -1,23 +1,30 @@
 pragma solidity ^0.8.1;
-import "./interfaces/ServiceRegistryLike.sol";
+import "./interfaces/ExternalInterfaces.sol";
 import "./../flash-mint/interface/IERC3156FlashBorrower.sol";
 import "./../flash-mint/interface/IERC3156FlashLender.sol";
-
-
-abstract contract BaseAction {
-    function main(bytes calldata data) virtual external;
-
-    function beforeFlashLoan(bytes calldata data) virtual external returns(bytes);
-
-    function afterFlashLoan(bytes calldata data) virtual external;
-    
-    function isFlashLoanRequired() virtual external returns(bool);
-}
 
 
 struct FlashLoanData{
     address lendedTokenAddress;
     uint256 lendedTokenAmount;
+}
+
+struct FlashLoanExecutionData {
+    address caller;
+    address token;
+    uint256 amount;
+    uint256 fee;
+}
+
+
+abstract contract BaseAction {
+    function main(bytes calldata data, FlashLoanExecutionData memory executionData) virtual external;
+
+    function beforeFlashLoan(bytes calldata data) virtual external returns(bytes memory);
+
+    function afterFlashLoan(bytes calldata data) virtual external;
+    
+    function isFlashLoanRequired() virtual external returns(bool);
 }
 
 contract FlashLoanProvider is IERC3156FlashBorrower{
@@ -31,7 +38,7 @@ contract FlashLoanProvider is IERC3156FlashBorrower{
     }
 
   function onFlashLoan(
-    address,
+    address caller,
     address token,
     uint256 amount,
     uint256 fee,
@@ -41,7 +48,7 @@ contract FlashLoanProvider is IERC3156FlashBorrower{
         address action,
         bytes memory mainData
       ) = abi.decode(params, (address,  bytes ));
-      BaseAction(action).main(mainData);//here we do not mind  change context since we changed it anyway
+      BaseAction(action).main(mainData, FlashLoanExecutionData(caller, token, amount, fee));//here we do not mind  change context since we changed it anyway
   }
 
 

@@ -27,27 +27,13 @@ import "../interfaces/mcd/IJug.sol";
 import "../interfaces/mcd/IDaiJoin.sol";
 import "../interfaces/exchange/IExchange.sol";
 import "./ExchangeData.sol";
+import "./CdpData.sol";
 
 import "../flash-mint/interface/IERC3156FlashBorrower.sol";
 import "../flash-mint/interface/IERC3156FlashLender.sol";
 
 pragma solidity ^0.8.1;
 pragma abicoder v2;
-
-struct CdpData {
-  address gemJoin;
-  address payable fundsReceiver;
-  uint256 cdpId;
-  bytes32 ilk;
-  uint256 requiredDebt;
-  uint256 borrowCollateral;
-  uint256 withdrawCollateral;
-  uint256 withdrawDai;
-  uint256 depositDai;
-  uint256 depositCollateral;
-  bool skipFL;
-  string methodName;
-}
 
 struct AddressRegistry {
   address jug;
@@ -415,22 +401,6 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     return ink;
   }
 
-  function _getWipeDart(
-    address vat,
-    uint256 dai,
-    address urn,
-    bytes32 ilk
-  ) internal view returns (int256 dart) {
-    // Gets actual rate from the vat
-    (, uint256 rate, , , ) = IVat(vat).ilks(ilk);
-    // Gets actual art value of the urn
-    (, uint256 art) = IVat(vat).urns(ilk, urn);
-
-    // Uses the whole dai balance in the vat to reduce the debt
-    dart = toInt256(dai / rate);
-    // Checks the calculated dart is not higher than urn.art (total debt), otherwise uses its value
-    dart = uint256(dart) <= art ? -dart : -toInt256(art);
-  }
 
   function _getWipeAllWad(
     address vat,
@@ -450,6 +420,23 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
 
     // If the rad precision has some dust, it will need to request for 1 extra wad wei
     wad = wad.mul(RAY) < rad ? wad + 1 : wad;
+  }
+
+    function _getWipeDart(
+    address vat,
+    uint256 dai,
+    address urn,
+    bytes32 ilk
+  ) internal view returns (int256 dart) {
+    // Gets actual rate from the vat
+    (, uint256 rate, , , ) = IVat(vat).ilks(ilk);
+    // Gets actual art value of the urn
+    (, uint256 art) = IVat(vat).urns(ilk, urn);
+
+    // Uses the whole dai balance in the vat to reduce the debt
+    dart = toInt256(dai / rate);
+    // Checks the calculated dart is not higher than urn.art (total debt), otherwise uses its value
+    dart = uint256(dart) <= art ? -dart : -toInt256(art);
   }
 
   function wipeAndFreeGem(
