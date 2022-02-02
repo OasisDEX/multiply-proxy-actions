@@ -5,12 +5,11 @@ import "./../interfaces/mcd/IVat.sol";
 import "./../interfaces/mcd/IManager.sol";
 import "./../interfaces/mcd/IJoin.sol";
 
-
 //TODO: This should be library "using MakerMath for uint256"
-//TODO: Get rid of SafeMath since new compiler do safeMath out of the box 
+//TODO: Get rid of SafeMath since new compiler do safeMath out of the box
 contract MakerMath {
   using SafeMath for uint256;
-  
+
   function convertTo18(address gemJoin, uint256 amt) internal view returns (uint256 wad) {
     // For those collaterals that have less than 18 decimals precision we need to do the conversion before passing to frob function
     // Adapters will automatically handle the difference of precision
@@ -64,6 +63,4 @@ contract MakerCalculations is MakerMath {
     // If the rad precision has some dust, it will need to request for 1 extra wad wei
     wad = wad.mul(RAY) < rad ? wad + 1 : wad;
   }
-
-
 }

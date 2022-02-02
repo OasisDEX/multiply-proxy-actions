@@ -41,5 +41,4 @@ contract MakerTools is MakerCalculations {
     IManager(manager).flux(cdp, address(this), wadC);
     IJoin(gemJoin).exit(address(this), collateralDraw);
   }
-
 }

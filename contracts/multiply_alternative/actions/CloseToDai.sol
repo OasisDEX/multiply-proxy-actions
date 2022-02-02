@@ -5,7 +5,10 @@ import "./../MakerTools.sol";
 import "../../multiply/ExchangeData.sol";
 import "../../multiply/CdpData.sol";
 
-contract CloseToDai is BaseAction, MakerTools  {/* MakerTools inheritance should be removed and functionality should be abstracted or as library or as operations  */
+contract CloseToDai is
+  BaseAction,
+  MakerTools /* MakerTools inheritance should be removed and functionality should be abstracted or as library or as operations  */
+{
   address public immutable manager;
   address public immutable exchange;
   ServiceRegistryLike public immutable registry;
@@ -17,13 +20,16 @@ contract CloseToDai is BaseAction, MakerTools  {/* MakerTools inheritance should
     address _exchange,
     address _dai,
     address _dajJoin
-  ) MakerTools(_dajJoin, _dai){
+  ) MakerTools(_dajJoin, _dai) {
     manager = _manager;
     exchange = _exchange;
     registry = ServiceRegistryLike(_reg);
   }
 
-  function main(bytes calldata params, FlashLoanExecutionData memory executionData) external override {
+  function main(bytes calldata params, FlashLoanExecutionData memory executionData)
+    external
+    override
+  {
     (ExchangeData memory exchangeData, CdpData memory cdpData) = abi.decode(
       params,
       (ExchangeData, CdpData)
