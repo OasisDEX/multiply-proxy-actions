@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-
 pragma solidity ^0.8.1;
 pragma abicoder v2;
+
 import "../interfaces/IERC20.sol";
 import "../utils/SafeMath.sol";
 import "../interfaces/mcd/IJoin.sol";
@@ -186,9 +186,12 @@ contract GuniMultiplyProxyActions is IERC3156FlashBorrower {
 
     if (daiLeft > 0) {
       IERC20(DAI).transfer(cdpData.fundsReceiver, daiLeft);
+      emit GUNIReimbursement(cdpData.fundsReceiver, DAI, daiLeft);
     }
+
     if (otherTokenLeft > 0) {
       otherToken.transfer(cdpData.fundsReceiver, otherTokenLeft);
+      emit GUNIReimbursement(cdpData.fundsReceiver, address(otherToken), otherTokenLeft);
     }
   }
 
@@ -446,4 +449,5 @@ contract GuniMultiplyProxyActions is IERC3156FlashBorrower {
     uint256 collateralLeft,
     uint256 daiLeft
   );
+  event GUNIReimbursement(address receiver, address asset, uint256 amount);
 }
