@@ -4,7 +4,6 @@ pragma solidity >=0.7.6;
 import "../interfaces/IERC20.sol";
 import "../utils/SafeMath.sol";
 import "../utils/SafeERC20.sol";
-import "hardhat/console.sol";
 
 contract GoerliDummyExchange {
   using SafeMath for uint256;
@@ -55,7 +54,6 @@ contract GoerliDummyExchange {
     address asset,
     uint256 amount
   ) internal {
-    console.log("TRANSFER IN", asset, amount);
     require(
       IERC20(asset).allowance(from, address(this)) >= amount,
       "Exchange / Not enought allowance"
@@ -71,7 +69,6 @@ contract GoerliDummyExchange {
   ) internal {
     IERC20(asset).safeTransfer(to, amount);
     emit SlippageSaved(amount, amount);
-    console.log("TRANSFER OUT", asset, amount);
   }
 
   function _collectFee(address asset, uint256 fromAmount) public returns (uint256) {
