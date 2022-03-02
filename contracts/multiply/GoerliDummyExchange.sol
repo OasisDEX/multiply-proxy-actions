@@ -12,7 +12,7 @@ contract GoerliDummyExchange {
   address DAI_ADDRESS = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
   mapping(address => bool) public WHITELISTED_CALLERS;
 
-  uint8 slippage;
+  uint8 public slippage;
 
   uint8 public fee = 0;
   uint256 public feeBase = 10000;
