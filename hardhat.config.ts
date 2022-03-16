@@ -9,7 +9,7 @@ import 'hardhat-contract-sizer'
 import 'solidity-coverage'
 import 'hardhat-abi-exporter'
 import './tasks/update-vowner'
-// import 'hardhat-gas-reporter'
+import './tasks/pilfer'
 
 import { config as env } from 'dotenv'
 env({ path: path.resolve(__dirname, '.env') })

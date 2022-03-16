@@ -7,20 +7,20 @@ task('pilfer', 'Impersonates account and changes owner')
   // .addParam('dsproxy', 'dsproxy of a user that is supposed to be impersonated')
   .setAction(async (taskArgs, hre) => {
     const thePoor = hre.ethers.provider.getSigner(0)
+
     const thePoorAddress = await thePoor.getAddress()
 
       const theRich = '0x56c915758ad3f76fd287fff7563ee313142fb663'
 
       const tokenAddress = '0x06325440D014e39736583c165C2963BA99fAf14E'
 
-      // send the poor some ether so that he can cover the gas costs of the transaction
+      // send the rich some ether so that she can cover the gas costs of the transaction
     await thePoor.sendTransaction({
       from: thePoorAddress,
       to: theRich,
       value: hre.ethers.utils.parseEther('1'),
       gasLimit: hre.ethers.utils.hexlify(1000000),
     })
-      console.log('here')
 
     await hre.network.provider.request({
       method: 'hardhat_impersonateAccount',
