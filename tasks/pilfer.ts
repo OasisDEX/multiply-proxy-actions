@@ -1,20 +1,32 @@
 import { task } from 'hardhat/config'
 import erc20abi from '../abi/IERC20.json'
 
-task('pilfer', 'Transfers funds from the provided address to your wallet.  Mainnet not supported :(')
-  .addParam('theRich', 'Address of the wallet that we are transferring tokens from (robbing the rich)')
-  .addParam('thePoor', 'Address of the wallet that we are transferring tokens to (to feed the poor)')
-  .addParam('tokenAddress', 'The address of the token that we want to transfer')
+task(
+  'pilfer',
+  'Transfers funds from the provided address to your wallet.  Mainnet not supported :(',
+)
+  .addParam(
+    'theRich',
+    'Address of the wallet that we are transferring tokens from (robbing the rich)',
+  )
+  .addParam(
+    'thePoor',
+    'Address of the wallet that we are transferring tokens to (to feed the poor)',
+  )
+  .addParam(
+    'tokenAddress',
+    'The address of the token that we want to transfer.  The entire balance at theRich address will be transferred to thePoor.',
+  )
   .setAction(async (taskArgs, hre) => {
-    const thePoorSigner = hre.ethers.provider.getSigner(0)
+    const theRichAddress = await taskArgs.theRich
+    const theRichSigner = await hre.ethers.getSigner(theRichAddress)
 
-    const thePoorAddress = await thePoorSigner.getAddress()
+    const thePoorAddress = await taskArgs.thePoor
+    const thePoorSigner = await hre.ethers.getSigner(thePoorAddress)
 
-    const theRichAddress = '0x56c915758ad3f76fd287fff7563ee313142fb663'
+    const tokenAddress = await taskArgs.tokenAddress
 
-    const tokenAddress = '0x06325440D014e39736583c165C2963BA99fAf14E'
-
-    // send the rich some ether so that she can cover the gas costs of the transaction
+    // send the rich some eth so that she can cover the gas costs of the transaction
     await thePoorSigner.sendTransaction({
       from: thePoorAddress,
       to: theRichAddress,
@@ -22,25 +34,35 @@ task('pilfer', 'Transfers funds from the provided address to your wallet.  Mainn
       gasLimit: hre.ethers.utils.hexlify(1000000),
     })
 
-    await hre.network.provider.request({
-      method: 'hardhat_impersonateAccount',
-      params: [theRichAddress],
-    })
+    console.log(`
+    the rich  = ${theRichAddress}
+    the poor  = ${thePoorAddress}
+    the token = ${tokenAddress}
+    `)
 
-    const theRichSigner = await hre.ethers.getSigner(theRichAddress)
+    console.log(' ----------------------------- ')
+    console.log('| starting balances for token |')
+    console.log(' ----------------------------- ')
+    const theRichTokenContract = new hre.ethers.Contract(tokenAddress, erc20abi, theRichSigner)
+    let theRichTokenBalanace = await theRichTokenContract.balanceOf(theRichAddress)
+    console.log(`the rich: ${theRichTokenBalanace}`)
 
-    console.log(`the rich=${theRichSigner.address} the poor=${thePoorAddress}`)
+    const thePoorTokenContract = new hre.ethers.Contract(tokenAddress, erc20abi, thePoorSigner)
+    let thePoorTokenBalance = await thePoorTokenContract.balanceOf(thePoorAddress)
+    console.log(`the poor: ${thePoorTokenBalance}`)
 
-    console.log(hre.ethers)
+    await theRichTokenContract.transfer(thePoorAddress, theRichTokenBalanace.toString())
 
-    const tokenContract = new hre.ethers.Contract(tokenAddress, erc20abi, theRichSigner)
+    console.log(' --------------------------- ')
+    console.log('| ending balances for token |')
+    console.log(' --------------------------- ')
+    theRichTokenBalanace = await theRichTokenContract.balanceOf(theRichAddress)
+    console.log(`the rich: ${theRichTokenBalanace}`)
+    thePoorTokenBalance = await thePoorTokenContract.balanceOf(thePoorAddress)
+    console.log(`the poor: ${thePoorTokenBalance}`)
 
-    const tokenBalanace = await tokenContract.balanceOf(theRichAddress)
-
-    await tokenContract.transfer(thePoorAddress, tokenBalanace.toString())
-
-    console.log(tokenBalanace)
-    console.log('Impersonation done')
+    console.log(' --------------------------- ')
+    console.log('done')
   })
 
 export {}
