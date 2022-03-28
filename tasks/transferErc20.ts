@@ -33,24 +33,29 @@ task('transferErc20', 'Transfers erc20 funds between two addresses.  Mainnet not
     token = ${tokenAddress}
     `)
 
+    await hre.network.provider.request({
+      method: 'hardhat_impersonateAccount',
+      params: [fromAddress],
+    })
+
     console.log(' ----------------------------- ')
     console.log('| starting balances for token |')
     console.log(' ----------------------------- ')
     const fromTokenContract = new hre.ethers.Contract(tokenAddress, erc20abi, fromSigner)
-    let fromTokenBalanace = await fromTokenContract.balanceOf(fromAddress)
-    console.log(`from: ${fromTokenBalanace}`)
+    let fromTokenBalance = await fromTokenContract.balanceOf(fromAddress)
+    console.log(`from: ${fromTokenBalance}`)
 
     const toTokenContract = new hre.ethers.Contract(tokenAddress, erc20abi, toSigner)
     let toTokenBalance = await toTokenContract.balanceOf(toAddress)
     console.log(`to  : ${toTokenBalance}`)
 
-    await fromTokenContract.transfer(toAddress, fromTokenBalanace.toString())
+    await fromTokenContract.transfer(toAddress, fromTokenBalance.toString())
 
     console.log(' --------------------------- ')
     console.log('| ending balances for token |')
     console.log(' --------------------------- ')
-    fromTokenBalanace = await fromTokenContract.balanceOf(fromAddress)
-    console.log(`from: ${fromTokenBalanace}`)
+    fromTokenBalance = await fromTokenContract.balanceOf(fromAddress)
+    console.log(`from: ${fromTokenBalance}`)
     toTokenBalance = await toTokenContract.balanceOf(toAddress)
     console.log(`to  : ${toTokenBalance}`)
 
