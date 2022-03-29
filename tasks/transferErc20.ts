@@ -2,11 +2,11 @@ import { task } from 'hardhat/config'
 import erc20abi from '../abi/IERC20.json'
 
 task('transferErc20', 'Transfers erc20 funds between two addresses.  Mainnet not supported :(')
-  .addParam('from', 'Address of the wallet that we are transferring tokens from (robbing the rich)')
-  .addParam('to', 'Address of the wallet that we are transferring tokens to (to feed the poor)')
+  .addParam('from', 'Address of the wallet that we are transferring tokens from.')
+  .addParam('to', 'Address of the wallet that we are transferring tokens to.')
   .addParam(
     'token',
-    'The address of the token that we want to transfer.  The entire balance at theRich address will be transferred to thePoor.',
+    'The address of the token that we want to transfer.  The entire token balance will be transfered.',
   )
   .setAction(async (taskArgs, hre) => {
     const fromAddress = await taskArgs.from
