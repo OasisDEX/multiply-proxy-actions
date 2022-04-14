@@ -1,10 +1,30 @@
 import { task } from 'hardhat/config'
-import { ethers } from 'ethers'
+import { ethers, Signer } from 'ethers'
 
 import mainnet from '../addresses/mainnet.json'
+import { HardhatRuntimeEnvironment } from 'hardhat/types'
 
 function getStorageSlotForMapping(slot: Number, key: string) {
   return ethers.BigNumber.from(ethers.utils.solidityKeccak256(['uint256','uint256'],[key,slot]))
+}
+
+async function impersonate(hre: HardhatRuntimeEnvironment, toImpersonate: string, action: (signer: Signer) => Promise<void>) {
+  await hre.network.provider.request({
+    method: 'hardhat_impersonateAccount',
+    params: [toImpersonate],
+  })
+  await hre.network.provider.send("hardhat_setBalance", [
+    toImpersonate,
+    "0x1000",
+  ]);
+  const impersonatedSigner = await hre.ethers.getSigner(toImpersonate)
+
+  await action(impersonatedSigner)
+
+  await hre.network.provider.request({
+    method: "hardhat_stopImpersonatingAccount",
+    params: [toImpersonate],
+  });
 }
 
 task('get-proxy', 'Impersonates account and take their proxy')
@@ -21,6 +41,8 @@ task('get-proxy', 'Impersonates account and take their proxy')
 
     const signer = hre.ethers.provider.getSigner(0)
     const newProxyOwner = taskArgs.to || await signer.getAddress()
+
+    console.log(`Proxy address:     ${taskArgs.proxy}`)
     console.log(`New owner address: ${newProxyOwner}`)
     
     const dssProxy = new hre.ethers.Contract(taskArgs.proxy, dssProxyInterface, signer)
@@ -28,56 +50,22 @@ task('get-proxy', 'Impersonates account and take their proxy')
 
     const newOwnerExistingProxy = await proxyRegistry.proxies(newProxyOwner)
 
-    if (newOwnerExistingProxy !== hre.ethers.constants.AddressZero) {
-      console.log(`User already has a proxy, removing old proxy: ${newOwnerExistingProxy}`)
-      await hre.network.provider.request({
-        method: 'hardhat_impersonateAccount',
-        params: [newProxyOwner],
-      })
-      await signer.sendTransaction({
-        from: signer.getAddress(),
-        to: newProxyOwner,
-        value: hre.ethers.utils.parseEther('1'),
-        gasLimit: hre.ethers.utils.hexlify(1000000),
-      })
-      const newProxyOwnerSigner = await hre.ethers.getSigner(newProxyOwner)
-      const existingProxy = new hre.ethers.Contract(newOwnerExistingProxy, dssProxyInterface, newProxyOwnerSigner)
-      await existingProxy.setOwner(hre.ethers.constants.AddressZero)
-
-      await hre.network.provider.request({
-        method: "hardhat_stopImpersonatingAccount",
-        params: [newProxyOwner],
-      });
+    if (newOwnerExistingProxy === taskArgs.proxy) {
+      console.log(`User is already a owner of the proxy`)
+      return
     }
-
 
     const proxyOwner = await dssProxy.owner()
 
-    // Send some Eth to proxyOwner so they have some Eth to cover transfer costs
-    await signer.sendTransaction({
-      from: signer.getAddress(),
-      to: proxyOwner,
-      value: hre.ethers.utils.parseEther('1'),
-      gasLimit: hre.ethers.utils.hexlify(1000000),
-    })
-    
-
-    await hre.network.provider.request({
-      method: 'hardhat_impersonateAccount',
-      params: [proxyOwner],
+    impersonate(hre, proxyOwner, async (proxyOwnerSigner) => {
+      const dssProxyImpersonated= new hre.ethers.Contract(taskArgs.proxy, dssProxyInterface, proxyOwnerSigner)
+      await dssProxyImpersonated.setOwner(newProxyOwner)
+      console.log(`Proxy transferred to ${await dssProxyImpersonated.owner()}`)
     })
 
-    const proxyOwnerSigner = await hre.ethers.getSigner(proxyOwner)
-
-    const dssProxyImpersonated= new hre.ethers.Contract(taskArgs.proxy, dssProxyInterface, proxyOwnerSigner)
-    
-    await dssProxyImpersonated.setOwner(newProxyOwner)
-
-    console.log(`Proxy transferred to ${await dssProxyImpersonated.owner()}`)
     console.log('Updating proxy registry...')
   
     const storageSlot = getStorageSlotForMapping(0, newProxyOwner)
-
     await hre.network.provider.send("hardhat_setStorageAt", [
       mainnet.PROXY_REGISTRY,
       storageSlot.toHexString(),
