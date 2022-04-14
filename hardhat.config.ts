@@ -10,6 +10,7 @@ import 'solidity-coverage'
 import 'hardhat-abi-exporter'
 import './tasks/update-vowner'
 import './tasks/transferErc20'
+import './tasks/get-proxy'
 
 import { config as env } from 'dotenv'
 

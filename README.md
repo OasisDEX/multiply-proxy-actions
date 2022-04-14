@@ -34,3 +34,19 @@ block number the fork starts from. If it starts from an old state some tests mig
 `npm run test [network] [test-file]` - run a test to the specified network by calling the script from the `/test` folder
 
 `npm run verify [network] [contract-name]` - verify contract based on address and arguments from `/deployments` folder
+
+## Tasks 
+
+To run a task `npx hardhat <task name> <params> --network local`
+Before running a task run fork blockchain in separate process. (`npx hardhat node ...` see above) 
+
+### `get-proxy`
+
+#### params: 
+
+- proxy - a DsProxy that you want to transfer to your wallet
+- to - [Optional] an address of a new owner for given proxy (default address zero from hardhat test accounts) 
+
+#### example
+
+`npx hardhat --proxy 0x429D8e38DD28e81EB4eFEe97D33fd08fC333A58e --to 0x34314adbfBb5d239bb67f0265c9c45EB8b834412 --network local`
