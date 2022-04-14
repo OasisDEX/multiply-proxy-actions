@@ -57,7 +57,7 @@ task('get-proxy', 'Impersonates account and take their proxy')
 
     const proxyOwner = await dssProxy.owner()
 
-    impersonate(hre, proxyOwner, async (proxyOwnerSigner) => {
+    await impersonate(hre, proxyOwner, async (proxyOwnerSigner) => {
       const dssProxyImpersonated= new hre.ethers.Contract(taskArgs.proxy, dssProxyInterface, proxyOwnerSigner)
       await dssProxyImpersonated.setOwner(newProxyOwner)
       console.log(`Proxy transferred to ${await dssProxyImpersonated.owner()}`)
