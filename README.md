@@ -37,4 +37,4 @@ block number the fork starts from. If it starts from an old state some tests mig
 
 ## Remarks
 
-- `Exchange.sol` in the `_swap` function we are calling low level function `call` with arbitrary address and call data, which may impose some security threads, however by design the `Exchange` contract does not hold any founds and is used only as proxy to Exchange (1inch) and collecting fees. Thus calling `call` in our case is safe and does not expose us or our users to theft of founds. 
+- `Exchange.sol` in the `_swap` function we are calling low level function `call` with arbitrary address and call data, which may impose some security threads, however by design the `Exchange` contract does not hold any founds and is used only as proxy to Exchange (1inch) and collecting fees. Thus calling `call` in our case is safe and does not expose us or our users to theft of funds. 
