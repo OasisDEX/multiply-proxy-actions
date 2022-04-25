@@ -34,3 +34,7 @@ block number the fork starts from. If it starts from an old state some tests mig
 `npm run test [network] [test-file]` - run a test to the specified network by calling the script from the `/test` folder
 
 `npm run verify [network] [contract-name]` - verify contract based on address and arguments from `/deployments` folder
+
+## Remarks
+
+- `Exchange.sol` in the `_swap` function we are calling low level function `call` with arbitrary address and call data, which may impose some security threats, however by design the `Exchange` contract does not hold any founds and is used only as proxy to Exchange (1inch) and collecting fees. Thus calling `call` in our case is safe and does not expose us or our users to theft of funds. 

@@ -85,6 +85,8 @@ contract Exchange {
     bytes calldata withData
   ) internal returns (uint256) {
     IERC20(fromAsset).safeApprove(callee, amount);
+    // In general we shouldn't call arbitrary address with arbitrary data. This would be a security risk,
+    // However in this case by design the Exchange contract does not hold any funds, so there is nothing to be stolen.
     (bool success, ) = callee.call(withData);
     require(success, "Exchange / Could not swap");
     uint256 balance = IERC20(toAsset).balanceOf(address(this));
