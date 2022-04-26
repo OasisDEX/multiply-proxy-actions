@@ -1,12 +1,12 @@
 import { task } from 'hardhat/config'
 import erc20abi from '../abi/external/IERC20.json'
 
-task('transferErc20', 'Transfers erc20 funds between two addresses.  Mainnet not supported :(')
+task('transfer-erc20', 'Transfers erc20 funds between two addresses.  Mainnet not supported :(')
   .addParam('from', 'Address of the wallet that we are transferring tokens from.')
   .addParam('to', 'Address of the wallet that we are transferring tokens to.')
   .addParam(
     'token',
-    'The address of the token that we want to transfer.  The entire token balance will be transfered.',
+    'The address of the token that we want to transfer.  The entire token balance will be transferred.',
   )
   .setAction(async (taskArgs, hre) => {
     const fromAddress = await taskArgs.from
