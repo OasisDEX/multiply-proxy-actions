@@ -64,7 +64,8 @@ const config = {
       },
       chainId: 2137,
       mining: {
-        auto: true,
+        auto: false,
+        interval: 5000
       },
       hardfork: 'london',
       gas: 'auto',
