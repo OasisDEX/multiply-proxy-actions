@@ -11,7 +11,7 @@ import 'hardhat-abi-exporter'
 import './tasks/update-vowner'
 import './tasks/transfer-erc20'
 import './tasks/get-proxy'
-
+import './tasks/get-tokens'
 import { config as env } from 'dotenv'
 
 env({ path: path.resolve(__dirname, '.env') })
