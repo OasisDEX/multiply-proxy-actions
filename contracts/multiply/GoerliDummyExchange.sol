@@ -103,7 +103,7 @@ contract GoerliDummyExchange {
   ) public onlyAuthorized {
     changeWhitelistedCallerStatus(caller, true);
   }
-  
+
   function removeWhitelistedCaller(
     address caller // new caller
   ) public onlyAuthorized {
