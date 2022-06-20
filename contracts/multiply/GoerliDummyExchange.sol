@@ -98,6 +98,27 @@ contract GoerliDummyExchange {
   }
 
   // uses the same interface as default Exchange contract
+  function addWhitelistedCaller(
+    address caller // new caller
+  ) public onlyAuthorized {
+    changeWhitelistedCallerStatus(caller, true);
+  }
+
+  function removeWhitelistedCaller(
+    address caller // new caller
+  ) public onlyAuthorized {
+    changeWhitelistedCallerStatus(caller, false);
+  }
+
+  // uses the same interface as default Exchange contract
+  function changeWhitelistedCallerStatus(
+    address caller, // new caller
+    bool newStatus
+  ) internal {
+    WHITELISTED_CALLERS[caller] = newStatus;
+  }
+
+  // uses the same interface as default Exchange contract
   function swapTokenForDai(
     address asset,
     uint256 amount,
