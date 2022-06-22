@@ -9,6 +9,7 @@ async function deploy() {
   const provider = ethers.provider
   const signer = provider.getSigner(0)
 
+  const deployerAddress = await signer.getAddress()
   console.log('Deployer address:', await signer.getAddress())
   console.log('---Deploying the system---')
 
@@ -21,9 +22,9 @@ async function deploy() {
   const Exchange = await ethers.getContractFactory('GoerliDummyExchange', signer)
   console.log('---Deploying Exchange---')
   const exchange = await Exchange.deploy(
-    '0x59A5aC4033dB403587e8BEAb8996EDe2F170413a',
+    deployerAddress,
     20,
-    80,
+    0,
     '0x11fe4b6ae13d2a6055c8d9cf65c55bac32b5d844',
     mpa.address,
   )
