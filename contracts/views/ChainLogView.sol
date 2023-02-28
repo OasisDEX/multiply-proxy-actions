@@ -14,6 +14,22 @@ contract ChainLogView {
     chainlogAddress = _chainlogAddress;
   }
 
+  function bytes32ToString(bytes32 _bytes32) public pure returns (string memory) {
+    uint8 i = 0;
+    while (i < 32 && _bytes32[i] != 0) {
+      i++;
+    }
+    bytes memory bytesArray = new bytes(i);
+    for (i = 0; i < 32 && _bytes32[i] != 0; i++) {
+      if (_bytes32[i] == bytes1("-")) {
+        bytesArray[i] = bytes1("_");
+      } else {
+        bytesArray[i] = _bytes32[i];
+      }
+    }
+    return string(bytesArray);
+  }
+
   /**
    * @notice Gets the address of a service by its name
    * @param serviceName The name of the service
@@ -41,6 +57,7 @@ contract ChainLogView {
    * @return The address of the join adapter
    */
   function getIlkJoinAddressByHash(bytes32 ilkHash) public view returns (address) {
-    return IChainLog(chainlogAddress).getAddress(ilkHash);
+    bytes32 newIlkHash = bytes32(abi.encodePacked("MCD_JOIN_", bytes32ToString(ilkHash)));
+    return IChainLog(chainlogAddress).getAddress(newIlkHash);
   }
 }
