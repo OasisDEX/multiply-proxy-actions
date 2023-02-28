@@ -97,7 +97,7 @@ const config = {
     ),
   },
   solidity: {
-    version: '0.8.1',
+    version: '0.8.14',
     settings: {
       optimizer: {
         enabled: true,

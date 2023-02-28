@@ -23,7 +23,7 @@ import { balanceOf, WETH_ADDRESS } from './utils'
 import { getVaultInfo } from './common/utils/mcd.utils'
 import { expectToBe, expectToBeEqual } from './common/utils/test.utils'
 import { CDPInfo, OneInchSwapResponse, VaultInfo } from './common/common.types'
-import { one } from './common/cosntants'
+import { ADDRESSES, one } from './common/cosntants'
 
 interface FlattenedEvent {
   firstTopic: string
@@ -159,7 +159,7 @@ describe('Proxy Action', async () => {
         testCases[1].oneInchPayload,
         testCases[1].desiredCDPState,
         system.multiplyProxyActionsInstance.address,
-        system.exchangeInstance.address,
+        ADDRESSES.exchange,
         primarySignerAddress,
         false,
         0,
@@ -259,7 +259,7 @@ describe('Proxy Action', async () => {
         testCases[0].oneInchPayload,
         testCases[0].desiredCDPState,
         system.multiplyProxyActionsInstance.address,
-        system.exchangeInstance.address,
+        ADDRESSES.exchange,
         await primarySigner.getAddress(),
         false,
         0,

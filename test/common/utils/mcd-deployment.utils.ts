@@ -353,6 +353,7 @@ export interface DeployedSystemInfo {
     wethTokenInstance: Contract
   }
   guni: Contract
+  chainLogViewInstance: Contract
 }
 
 export async function deploySystem(
@@ -378,8 +379,17 @@ export async function deploySystem(
   const guni = await GUni.deploy()
   deployedContracts.guni = await guni.deployed()
 
+  const chainLogViewFactory = await ethers.getContractFactory('ChainLogView', signer)
+  const chainLogView = await chainLogViewFactory.deploy(ADDRESSES.chainlog)
+  deployedContracts.chainLogViewInstance = await chainLogView.deployed()
+
   const mpActionFactory = await ethers.getContractFactory('MultiplyProxyActions', signer)
-  const multiplyProxyActions = await mpActionFactory.deploy(ADDRESSES.weth, ADDRESSES.dai, ADDRESSES.daijoin);
+  const multiplyProxyActions = await mpActionFactory.deploy(
+    ADDRESSES.weth,
+    ADDRESSES.dai,
+    ADDRESSES.daijoin,
+    deployedContracts.chainLogViewInstance.address,
+  )
   deployedContracts.multiplyProxyActionsInstance = await multiplyProxyActions.deployed()
 
   const mcdViewFactory = await ethers.getContractFactory('McdView', signer)
@@ -391,7 +401,7 @@ export async function deploySystem(
     multiplyProxyActions.address,
     ADDRESSES.feeRecipient,
     FEE,
-    ADDRESSES.dai
+    ADDRESSES.dai,
   )
   const exchangeInstance = await exchange.deployed()
 
