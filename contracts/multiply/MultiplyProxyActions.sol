@@ -139,7 +139,8 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     IManager(addressRegistry.manager).cdpAllow(
       cdpData.cdpId,
       addressRegistry.multiplyProxyActions,
-      0);
+      0
+    );
   }
 
   function toInt256(uint256 x) internal pure returns (int256 y) {
@@ -179,7 +180,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
-  ) 
+  )
     public
     payable
     logMethodName("openMultiplyVault", cdpData, addressRegistry.multiplyProxyActions)
@@ -194,9 +195,14 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
-  ) public
+  )
+    public
     payable
-    logMethodName("increaseMultipleDepositCollateral", cdpData, addressRegistry.multiplyProxyActions)
+    logMethodName(
+      "increaseMultipleDepositCollateral",
+      cdpData,
+      addressRegistry.multiplyProxyActions
+    )
   {
     validateAndCorrectInputData(cdpData, addressRegistry);
     IGem gem = IJoin(cdpData.gemJoin).gem();
@@ -213,7 +219,10 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
           addressRegistry.multiplyProxyActions, 
           cdpData.depositCollateral);
       } else {
-        gem.transferFrom(msg.sender, address(this), cdpData.depositCollateral);
+        gem.transferFrom(
+          msg.sender,
+          address(this),
+          cdpData.depositCollateral);
       }
     }
     increaseMultipleInternal(exchangeData, cdpData, addressRegistry);
@@ -231,8 +240,8 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     address urn = IManager(addressRegistry.manager).urns(cdpData.cdpId);
     address vat = IManager(addressRegistry.manager).vat();
     IManager(addressRegistry.manager).frob(
-      cdpData.cdpId, 
-      0, 
+      cdpData.cdpId,
+      0,
       _getDrawDart(vat, addressRegistry.jug, urn, cdpData.ilk, amount)
     );
     IManager(addressRegistry.manager).move(cdpData.cdpId, address(this), toRad(amount));
@@ -247,7 +256,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
-  ) 
+  )
     public
     logMethodName("increaseMultipleDepositDai", cdpData, addressRegistry.multiplyProxyActions)
   {
@@ -255,7 +264,10 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     if (cdpData.skipFL) {
       IERC20(DAI).transferFrom(msg.sender, address(this), cdpData.depositDai);
     } else {
-      IERC20(DAI).transferFrom(msg.sender, addressRegistry.multiplyProxyActions, cdpData.depositDai);
+      IERC20(DAI).transferFrom(
+        msg.sender,
+        addressRegistry.multiplyProxyActions,
+        cdpData.depositDai);
     }
     increaseMultipleInternal(exchangeData, cdpData, addressRegistry);
   }
@@ -288,7 +300,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
       if (collBalance > 0) {
         //if someone provided some collateral during increase
         //add it to vault and draw DAI
-        joinDrawDebt(cdpData, cdpData.requiredDebt, CDP_MANAGER, JUG);
+        joinDrawDebt(cdpData, cdpData.requiredDebt, addressRegistry.manager, addressRegistry.jug);
       } else {
         //just draw DAI
         drawDaiDebt(cdpData, addressRegistry, cdpData.requiredDebt);
