@@ -214,15 +214,9 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
       }
     } else {
       if (cdpData.skipFL == false) {
-        gem.transferFrom(
-          msg.sender, 
-          addressRegistry.multiplyProxyActions, 
-          cdpData.depositCollateral);
+        gem.transferFrom(msg.sender, address(this), cdpData.depositCollateral);
       } else {
-        gem.transferFrom(
-          msg.sender,
-          address(this),
-          cdpData.depositCollateral);
+        gem.transferFrom(msg.sender, address(this), cdpData.depositCollateral);
       }
     }
     increaseMultipleInternal(exchangeData, cdpData, addressRegistry);
@@ -267,7 +261,8 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
       IERC20(DAI).transferFrom(
         msg.sender,
         addressRegistry.multiplyProxyActions,
-        cdpData.depositDai);
+        cdpData.depositDai
+      );
     }
     increaseMultipleInternal(exchangeData, cdpData, addressRegistry);
   }
@@ -276,10 +271,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
-  ) 
-    public
-    logMethodName("increaseMultiple", cdpData, addressRegistry.multiplyProxyActions)
-  {
+  ) public logMethodName("increaseMultiple", cdpData, addressRegistry.multiplyProxyActions) {
     validateAndCorrectInputData(cdpData, addressRegistry);
     increaseMultipleInternal(exchangeData, cdpData, addressRegistry);
   }
