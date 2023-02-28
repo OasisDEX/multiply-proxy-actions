@@ -221,7 +221,7 @@ export function prepareMultiplyParameters(
     minToTokenAmount: toDAI
       ? amountToWei(desiredCdpState.requiredDebt).toFixed(0)
       : amountToWei(desiredCdpState.toBorrowCollateralAmount).toFixed(0),
-    expectedFee: 0,
+    expectedFee: 20,
     exchangeAddress: oneInchPayload.to,
     _exchangeCalldata: oneInchPayload.data,
   }
