@@ -638,12 +638,12 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     address gemAddress = address(IJoin(cdpData.gemJoin).gem());
 
     wipeAndFreeGem(
-        addressRegistry.manager,
-        cdpData.gemJoin,
-        cdpData.cdpId,
-        0,
-        exchangeData.fromTokenAmount
-      );
+      addressRegistry.manager,
+      cdpData.gemJoin,
+      cdpData.cdpId,
+      0,
+      exchangeData.fromTokenAmount
+    );
     require(
       IERC20(exchangeData.fromTokenAddress).approve(address(exchange), ink),
       "MPA / Could not approve Exchange for Token"
