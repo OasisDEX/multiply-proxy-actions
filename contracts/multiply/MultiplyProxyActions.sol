@@ -112,7 +112,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     cdpData.gemJoin = IChainLogView(MakerChangeLog).getIlkJoinAddressByHash(cdpData.ilk);
     addressRegistry.jug = JUG;
     addressRegistry.manager = CDP_MANAGER;
-    addressRegistry.multiplyProxyActions = addressRegistry.multiplyProxyActions;
+    addressRegistry.multiplyProxyActions = SELF;
     addressRegistry.lender = IChainLogView(MakerChangeLog).getServiceAddress("MCD_FLASH");
     addressRegistry.exchange = EXCHANGE;
     require(cdpData.fundsReceiver == cdpOwner, "mpa-fundsReceiver-not-owner");
