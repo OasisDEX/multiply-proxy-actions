@@ -124,8 +124,8 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     bytes memory paramsData
   ) internal {
     IManager(addressRegistry.manager).cdpAllow(
-      cdpData.cdpId, 
-      addressRegistry.multiplyProxyActions, 
+      cdpData.cdpId,
+      addressRegistry.multiplyProxyActions,
       1
     );
     // TODO: lender should be read from maker registry
@@ -214,7 +214,8 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
       }
     } else {
       if (cdpData.skipFL == false) {
-        gem.transferFrom(msg.sender,
+        gem.transferFrom(
+          msg.sender,
           address(this),
           cdpData.depositCollateral
         );
@@ -350,7 +351,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
-  ) 
+  )
     public
     logMethodName("decreaseMultipleWithdrawDai", cdpData, addressRegistry.multiplyProxyActions)
   {
@@ -405,8 +406,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
-  ) public logMethodName("closeVaultExitDai", cdpData, addressRegistry.multiplyProxyActions)
-  {
+  ) public logMethodName("closeVaultExitDai", cdpData, addressRegistry.multiplyProxyActions) {
     validateAndCorrectInputData(cdpData, addressRegistry);
     require(cdpData.skipFL == false, "cannot close to DAI if FL not used");
     closeVaultExitGeneric(exchangeData, cdpData, addressRegistry, 3);
@@ -637,7 +637,13 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     IExchange exchange = IExchange(addressRegistry.exchange);
     address gemAddress = address(IJoin(cdpData.gemJoin).gem());
 
-    wipeAndFreeGem(addressRegistry.manager, cdpData.gemJoin, cdpData.cdpId, 0, exchangeData.fromTokenAmount);
+    wipeAndFreeGem(
+        addressRegistry.manager,
+        cdpData.gemJoin,
+        cdpData.cdpId,
+        0,
+        exchangeData.fromTokenAmount
+      );
     require(
       IERC20(exchangeData.fromTokenAddress).approve(address(exchange), ink),
       "MPA / Could not approve Exchange for Token"
