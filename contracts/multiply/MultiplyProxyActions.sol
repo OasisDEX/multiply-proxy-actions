@@ -27,6 +27,7 @@ import "../interfaces/mcd/IJug.sol";
 import "../interfaces/mcd/IDaiJoin.sol";
 import "../interfaces/exchange/IExchange.sol";
 import "../interfaces/misc/IProxy.sol";
+import "../interfaces/misc/IChainLogView.sol";
 import "./ExchangeData.sol";
 
 import "../flash-mint/interface/IERC3156FlashBorrower.sol";
@@ -74,11 +75,13 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
   address public immutable JUG;
   address public immutable EXCHANGE;
   address public immutable SELF;
+  IChainLogView public immutable CHAIN_LOG_VIEW;
 
   constructor(
     address _weth,
     address _dai,
-    address _daiJoin
+    address _daiJoin,
+    address _chainLogView
   ) {
     WETH = _weth;
     DAI = _dai;
@@ -87,6 +90,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     JUG = 0x19c0976f590D67707E62397C87829d896Dc0f1F1;
     CDP_MANAGER = 0x5ef30b9986345249bc32d8928B7ee64DE9435E39;
     EXCHANGE = 0xb5eB8cB6cED6b6f8E13bcD502fb489Db4a726C7B;
+    CHAIN_LOG_VIEW = IChainLogView(_chainLogView);
   }
 
   modifier logMethodName(
@@ -149,6 +153,14 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
       // This is neeeded due lack of precision. It might need to sum an extra dart wei (for the given DAI wad amount)
       dart = uint256(dart).mul(rate) < wad.mul(RAY) ? dart + 1 : dart;
     }
+  }
+
+  //TODO : use where it applies:
+  // address gemJoin = CHAIN_LOG_VIEW.getIlkJoinAddressByHash(cdpData.ilk);
+  // TODO use `validateCdpData` where needed
+  function validateCdpData(CdpData memory cdpData) public {
+    address cdpOwner = IProxy(IManager(CDP_MANAGER).owns(cdpData.cdpId)).owner();
+    require(cdpData.fundsReceiver == cdpOwner, "mpa-fundsReceiver-not-owner");
   }
 
   function openMultiplyVault(
@@ -624,7 +636,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     uint256 borrowedDaiAmount,
     uint256 ink
   ) private {
-    // TODO: 
+    // TODO:
     IExchange exchange = IExchange(EXCHANGE);
     address gemAddress = address(IJoin(cdpData.gemJoin).gem());
 
