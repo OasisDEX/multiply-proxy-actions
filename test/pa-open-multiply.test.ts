@@ -3,6 +3,7 @@ import { ethers } from 'hardhat'
 import { expect } from 'chai'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import MAINNET_ADDRESSES from '../addresses/mainnet.json'
+import { utils } from 'ethers'
 import {
   deploySystem,
   getOraclePrice,
@@ -23,7 +24,7 @@ import { balanceOf, WETH_ADDRESS } from './utils'
 import { getVaultInfo } from './common/utils/mcd.utils'
 import { expectToBe, expectToBeEqual } from './common/utils/test.utils'
 import { CDPInfo, OneInchSwapResponse, VaultInfo } from './common/common.types'
-import { ADDRESSES, one } from './common/cosntants'
+import { ADDRESSES, one, ten } from './common/cosntants'
 
 interface FlattenedEvent {
   firstTopic: string
@@ -48,6 +49,14 @@ interface TestCase {
 
 function lookupEventByHash(events: FlattenedEvent[], eventHash: string) {
   return events.filter(x => x.firstTopic === eventHash)
+}
+
+function forgeUnoswapCalldata(fromToken: string, fromAmount: string, toAmount: string, toDai = true): string {
+  const iface = new utils.Interface([
+      'function unoswap(address srcToken, uint256 amount, uint256 minReturn, bytes32[] calldata pools) public payable returns(uint256 returnAmount)',
+  ])
+  const pool = `0x${toDai ? '8' : '0'}0000000000000003b6d0340a478c2975ab1ea89e8196811f51a7b7ade33eb11`
+  return iface.encodeFunctionData('unoswap', [fromToken, fromAmount, toAmount, [pool]])
 }
 
 describe('Proxy Action', async () => {
@@ -124,13 +133,22 @@ describe('Proxy Action', async () => {
         new BigNumber(data.desiredCollRatio),
         data.slippage,
       )
-
+      console.log("toBorrowCollateralAmount.toString()",toBorrowCollateralAmount.multipliedBy(ten.pow(18)).toFixed(0))
+      const unoswapPayload = forgeUnoswapCalldata(
+        WETH_ADDRESS,
+        amountToWei(requiredDebt.times(one.minus(OAZO_FEE))).toFixed(0),
+        toBorrowCollateralAmount.multipliedBy(ten.pow(18)).toFixed(0),
+        false
+      )
       const payload = await exchangeFromDAI(
         WETH_ADDRESS,
         amountToWei(requiredDebt.times(one.minus(OAZO_FEE))).toFixed(0),
         data.slippage.times(100).toFixed(),
         system.exchangeInstance.address,
       )
+
+      payload.tx.data = unoswapPayload;
+
       data.oneInchPayload = payload.tx
       data.toBorrowCollateralAmount = toBorrowCollateralAmount
       data.desiredCDPState.requiredDebt = requiredDebt

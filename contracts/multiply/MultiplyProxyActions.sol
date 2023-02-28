@@ -106,18 +106,18 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     data.methodName = "";
   }
 
-  function validateAndCorrectInputData(CdpData memory cdpData, AddressRegistry memory addressRegistry) public { 
-    addressRegistry.jug = JUG;
-    addressRegistry.manager = CDP_MANAGER;
-    addressRegistry.multiplyProxyActions = SELF;
-    addressRegistry.lender = IChainLogView(MakerChangeLog).getServiceAddress("MCD_FLASH");
-    addressRegistry.exchange = EXCHANGE;
+  function validateAndCorrectInputData(CdpData memory cdpData, AddressRegistry memory addressRegistry) public view{ 
+    require(addressRegistry.jug == JUG, "mpa-jug-invalid");
+    require(addressRegistry.manager == CDP_MANAGER, "mpa-manager-invalid");
+    require(addressRegistry.multiplyProxyActions == SELF, "mpa-self-invalid");
+    require(addressRegistry.lender == IChainLogView(MakerChangeLog).getServiceAddress("MCD_FLASH"), "mpa-FL-invalid");
+    require(addressRegistry.exchange == EXCHANGE, "mpa-exchange-invalid");
     address cdpOwner = IProxy(IManager(CDP_MANAGER).owns(cdpData.cdpId)).owner();
     //address cdpOwner = IProxy(IManager(addressRegistry.manager).owns(cdpData.cdpId)).owner();
     bytes32 ilk = IJoin(cdpData.gemJoin).ilk();
     cdpData.ilk = ilk;
-    cdpData.gemJoin = IChainLogView(MakerChangeLog).getIlkJoinAddressByHash(cdpData.ilk);    
     require(cdpData.fundsReceiver == cdpOwner, "mpa-fundsReceiver-not-owner");
+    require(cdpData.gemJoin == IChainLogView(MakerChangeLog).getIlkJoinAddressByHash(cdpData.ilk), "mpa-wrong-gemJoin");
   }
 
   function takeAFlashLoan(
@@ -539,6 +539,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
       IERC20(DAI).approve(address(exchange), exchangeData.fromTokenAmount.add(cdpData.depositDai)),
       "MPA / Could not approve Exchange for DAI"
     );
+    console.log("exchange", address(exchange));
     console.log("before swap");
     console.logBytes(exchangeData._exchangeCalldata);
     exchange.swapDaiForToken(
