@@ -159,6 +159,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
   // address gemJoin = CHAIN_LOG_VIEW.getIlkJoinAddressByHash(cdpData.ilk);
   // TODO use `validateCdpData` where needed
   function validateCdpData(CdpData memory cdpData) public view {
+    require(cdpData.fundsReceiver == IProxy(address(this)).owner(), "mpa-fundsReceiver-not-owner");
     address cdpOwner = IProxy(IManager(CDP_MANAGER).owns(cdpData.cdpId)).owner();
     require(
       cdpData.gemJoin == CHAIN_LOG_VIEW.getIlkJoinAddressByHash(cdpData.ilk),
@@ -172,7 +173,6 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
   ) public payable logMethodName("openMultiplyVault", cdpData, SELF) {
-    require(cdpData.fundsReceiver == IProxy(address(this)).owner(), "mpa-fundsReceiver-not-owner");
     cdpData.ilk = IJoin(cdpData.gemJoin).ilk();
     cdpData.cdpId = IManager(CDP_MANAGER).open(cdpData.ilk, address(this));
     validateCdpData(cdpData);
