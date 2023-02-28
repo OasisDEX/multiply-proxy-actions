@@ -128,7 +128,6 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
       addressRegistry.multiplyProxyActions,
       1
     );
-    // TODO: lender should be read from maker registry
     IERC3156FlashLender(addressRegistry.lender).flashLoan(
       IERC3156FlashBorrower(addressRegistry.multiplyProxyActions),
       DAI,
@@ -216,7 +215,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
       if (cdpData.skipFL == false) {
         gem.transferFrom(
           msg.sender,
-          address(this),
+          addressRegistry.multiplyProxyActions,
           cdpData.depositCollateral
         );
       } else {
@@ -698,7 +697,13 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     IExchange exchange = IExchange(addressRegistry.exchange);
     address gemAddress = address(IJoin(cdpData.gemJoin).gem());
 
-    wipeAndFreeGem(addressRegistry.manager, cdpData.gemJoin, cdpData.cdpId, cdpData.requiredDebt, ink);
+    wipeAndFreeGem(
+      addressRegistry.manager,
+      cdpData.gemJoin,
+      cdpData.cdpId,
+      cdpData.requiredDebt,
+      ink
+    );
 
     require(
       IERC20(exchangeData.fromTokenAddress).approve(address(exchange), ink),
@@ -741,7 +746,13 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     IExchange exchange = IExchange(addressRegistry.exchange);
     address gemAddress = address(IJoin(cdpData.gemJoin).gem());
 
-    wipeAndFreeGem(addressRegistry.manager, cdpData.gemJoin, cdpData.cdpId, cdpData.requiredDebt, ink);
+    wipeAndFreeGem(
+      addressRegistry.manager,
+      cdpData.gemJoin,
+      cdpData.cdpId,
+      cdpData.requiredDebt,
+      ink
+    );
 
     require(
       IERC20(exchangeData.fromTokenAddress).approve(
@@ -791,7 +802,6 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
       CdpData memory cdpData,
       AddressRegistry memory addressRegistry
     ) = abi.decode(params, (uint8, ExchangeData, CdpData, AddressRegistry));
-    // TODO: lender should be read from maker registry
     require(msg.sender == address(addressRegistry.lender), "mpa-untrusted-lender");
 
     uint256 borrowedDaiAmount = amount.add(fee);
@@ -826,7 +836,6 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
         cdpData.borrowCollateral
       );
     }
-    // TODO: lender should be read from maker registry
     IERC20(token).approve(addressRegistry.lender, borrowedDaiAmount);
 
     return keccak256("ERC3156FlashBorrower.onFlashLoan");
