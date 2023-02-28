@@ -106,7 +106,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
   }
 
   function validateAndCorrectInputData(CdpData memory cdpData, AddressRegistry memory addressRegistry) public{
-    address cdpOwner = IProxy(IManager(CDP_MANAGER).owns(cdpData.cdpId)).owner();
+    address cdpOwner = IProxy(IManager(addressRegistry.manager).owns(cdpData.cdpId)).owner();
     bytes32 ilk = IJoin(cdpData.gemJoin).ilk();
     cdpData.ilk = ilk;
     cdpData.gemJoin = IChainLogView(MakerChangeLog).getIlkJoinAddressByHash(cdpData.ilk);
@@ -214,7 +214,10 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
       }
     } else {
       if (cdpData.skipFL == false) {
-        gem.transferFrom(msg.sender, address(this), cdpData.depositCollateral);
+        gem.transferFrom(msg.sender,
+          address(this),
+          cdpData.depositCollateral
+        );
       } else {
         gem.transferFrom(msg.sender, address(this), cdpData.depositCollateral);
       }
@@ -307,10 +310,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
-  ) 
-    public
-    logMethodName("decreaseMultiple", cdpData, addressRegistry.multiplyProxyActions)
-  {
+  ) public logMethodName("decreaseMultiple", cdpData, addressRegistry.multiplyProxyActions) {
     validateAndCorrectInputData(cdpData, addressRegistry);
     decreaseMultipleInternal(exchangeData, cdpData, addressRegistry);
   }
@@ -335,9 +335,12 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
-  ) 
+  )
     public
-    logMethodName("decreaseMultipleWithdrawCollateral", cdpData, addressRegistry.multiplyProxyActions)
+    logMethodName(
+      "decreaseMultipleWithdrawCollateral",
+      cdpData,
+      addressRegistry.multiplyProxyActions)
   {
     validateAndCorrectInputData(cdpData, addressRegistry);
     decreaseMultipleInternal(exchangeData, cdpData, addressRegistry);
@@ -363,8 +366,8 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
   ) private {
     cdpData.ilk = IJoin(cdpData.gemJoin).ilk();
 
-    address urn = IManager(CDP_MANAGER).urns(cdpData.cdpId);
-    address vat = IManager(CDP_MANAGER).vat();
+    address urn = IManager(addressRegistry.manager).urns(cdpData.cdpId);
+    address vat = IManager(addressRegistry.manager).vat();
 
     uint256 wadD = _getWipeAllWad(vat, urn, urn, cdpData.ilk);
     cdpData.requiredDebt = wadD;
@@ -391,7 +394,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
-  ) 
+  )
     public
     logMethodName("closeVaultExitCollateral", cdpData, addressRegistry.multiplyProxyActions)
   {
@@ -402,9 +405,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
     AddressRegistry calldata addressRegistry
-  ) 
-    public
-    logMethodName("closeVaultExitDai", cdpData, addressRegistry.multiplyProxyActions)
+  ) public logMethodName("closeVaultExitDai", cdpData, addressRegistry.multiplyProxyActions)
   {
     validateAndCorrectInputData(cdpData, addressRegistry);
     require(cdpData.skipFL == false, "cannot close to DAI if FL not used");
@@ -544,7 +545,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
       exchangeData._exchangeCalldata
     );
     //here we add collateral we got from exchange, if skipFL then borrowedDai = 0
-    joinDrawDebt(cdpData, borrowedDai, CDP_MANAGER, JUG);
+    joinDrawDebt(cdpData, borrowedDai, addressRegistry.manager, addressRegistry.jug);
     //if some DAI are left after exchange return them to the user
     uint256 daiLeft = IERC20(DAI).balanceOf(address(this)).sub(borrowedDai);
     emit MultipleActionCalled(
@@ -572,7 +573,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     uint256 debtToBeWiped = cdpData.skipFL ? 0 : cdpData.requiredDebt.sub(cdpData.withdrawDai);
 
     wipeAndFreeGem(
-      CDP_MANAGER,
+      addressRegistry.manager,
       cdpData.gemJoin,
       cdpData.cdpId,
       debtToBeWiped,
@@ -600,7 +601,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     uint256 daiLeft = 0;
     if (cdpData.skipFL) {
       wipeAndFreeGem(
-        CDP_MANAGER,
+        addressRegistry.manager,
         cdpData.gemJoin,
         cdpData.cdpId,
         IERC20(DAI).balanceOf(address(this)).sub(cdpData.withdrawDai),
@@ -636,7 +637,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     IExchange exchange = IExchange(addressRegistry.exchange);
     address gemAddress = address(IJoin(cdpData.gemJoin).gem());
 
-    wipeAndFreeGem(CDP_MANAGER, cdpData.gemJoin, cdpData.cdpId, 0, exchangeData.fromTokenAmount);
+    wipeAndFreeGem(addressRegistry.manager, cdpData.gemJoin, cdpData.cdpId, 0, exchangeData.fromTokenAmount);
     require(
       IERC20(exchangeData.fromTokenAddress).approve(address(exchange), ink),
       "MPA / Could not approve Exchange for Token"
@@ -654,7 +655,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     require(cdpData.requiredDebt <= daiLeft, "cannot repay all debt");
 
     wipeAndFreeGem(
-      CDP_MANAGER,
+      addressRegistry.manager,
       cdpData.gemJoin,
       cdpData.cdpId,
       cdpData.requiredDebt,
@@ -691,7 +692,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     IExchange exchange = IExchange(addressRegistry.exchange);
     address gemAddress = address(IJoin(cdpData.gemJoin).gem());
 
-    wipeAndFreeGem(CDP_MANAGER, cdpData.gemJoin, cdpData.cdpId, cdpData.requiredDebt, ink);
+    wipeAndFreeGem(addressRegistry.manager, cdpData.gemJoin, cdpData.cdpId, cdpData.requiredDebt, ink);
 
     require(
       IERC20(exchangeData.fromTokenAddress).approve(address(exchange), ink),
@@ -734,7 +735,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     IExchange exchange = IExchange(addressRegistry.exchange);
     address gemAddress = address(IJoin(cdpData.gemJoin).gem());
 
-    wipeAndFreeGem(CDP_MANAGER, cdpData.gemJoin, cdpData.cdpId, cdpData.requiredDebt, ink);
+    wipeAndFreeGem(addressRegistry.manager, cdpData.gemJoin, cdpData.cdpId, cdpData.requiredDebt, ink);
 
     require(
       IERC20(exchangeData.fromTokenAddress).approve(
