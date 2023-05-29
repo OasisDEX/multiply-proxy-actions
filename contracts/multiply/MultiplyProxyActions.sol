@@ -26,10 +26,13 @@ import "../interfaces/mcd/IVat.sol";
 import "../interfaces/mcd/IJug.sol";
 import "../interfaces/mcd/IDaiJoin.sol";
 import "../interfaces/exchange/IExchange.sol";
+import "../interfaces/misc/IProxy.sol";
+import "../interfaces/misc/IChainLogView.sol";
 import "./ExchangeData.sol";
 
 import "../flash-mint/interface/IERC3156FlashBorrower.sol";
 import "../flash-mint/interface/IERC3156FlashLender.sol";
+import {console} from "hardhat/console.sol";
 
 pragma solidity ^0.8.1;
 pragma abicoder v2;
@@ -69,15 +72,26 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
   address public immutable WETH;
   address public immutable DAI;
   address public immutable DAIJOIN;
+  address public immutable CDP_MANAGER;
+  address public immutable JUG;
+  address public immutable EXCHANGE;
+  address public immutable SELF;
+  address public immutable MakerChangeLog  ;
 
   constructor(
     address _weth,
     address _dai,
-    address _daiJoin
+    address _daiJoin,
+    address _makerChangeLog
   ) {
     WETH = _weth;
     DAI = _dai;
     DAIJOIN = _daiJoin;
+    MakerChangeLog = _makerChangeLog;
+    SELF = address(this);
+    JUG = 0x19c0976f590D67707E62397C87829d896Dc0f1F1;
+    CDP_MANAGER = 0x5ef30b9986345249bc32d8928B7ee64DE9435E39;
+    EXCHANGE = 0xb5eB8cB6cED6b6f8E13bcD502fb489Db4a726C7B;
   }
 
   modifier logMethodName(
@@ -92,6 +106,20 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     data.methodName = "";
   }
 
+  function validateAndCorrectInputData(CdpData memory cdpData, AddressRegistry memory addressRegistry) public view{ 
+    require(addressRegistry.jug == JUG, "mpa-jug-invalid");
+    require(addressRegistry.manager == CDP_MANAGER, "mpa-manager-invalid");
+    require(addressRegistry.multiplyProxyActions == SELF, "mpa-self-invalid");
+    require(addressRegistry.lender == IChainLogView(MakerChangeLog).getServiceAddress("MCD_FLASH"), "mpa-FL-invalid");
+    require(addressRegistry.exchange == EXCHANGE, "mpa-exchange-invalid");
+    address cdpOwner = IProxy(IManager(CDP_MANAGER).owns(cdpData.cdpId)).owner();
+    //address cdpOwner = IProxy(IManager(addressRegistry.manager).owns(cdpData.cdpId)).owner();
+    bytes32 ilk = IJoin(cdpData.gemJoin).ilk();
+    cdpData.ilk = ilk;
+    require(cdpData.fundsReceiver == cdpOwner, "mpa-fundsReceiver-not-owner");
+    require(cdpData.gemJoin == IChainLogView(MakerChangeLog).getIlkJoinAddressByHash(cdpData.ilk), "mpa-wrong-gemJoin");
+  }
+
   function takeAFlashLoan(
     AddressRegistry memory addressRegistry,
     CdpData memory cdpData,
@@ -102,7 +130,6 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
       addressRegistry.multiplyProxyActions,
       1
     );
-
     IERC3156FlashLender(addressRegistry.lender).flashLoan(
       IERC3156FlashBorrower(addressRegistry.multiplyProxyActions),
       DAI,
@@ -153,21 +180,23 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
   function openMultiplyVault(
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
-    AddressRegistry calldata addressRegistry
+    AddressRegistry memory addressRegistry
   )
     public
     payable
     logMethodName("openMultiplyVault", cdpData, addressRegistry.multiplyProxyActions)
   {
+   
     cdpData.ilk = IJoin(cdpData.gemJoin).ilk();
     cdpData.cdpId = IManager(addressRegistry.manager).open(cdpData.ilk, address(this));
+    validateAndCorrectInputData(cdpData, addressRegistry);
     increaseMultipleDepositCollateral(exchangeData, cdpData, addressRegistry);
   }
 
   function increaseMultipleDepositCollateral(
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
-    AddressRegistry calldata addressRegistry
+    AddressRegistry memory addressRegistry
   )
     public
     payable
@@ -177,6 +206,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
       addressRegistry.multiplyProxyActions
     )
   {
+    validateAndCorrectInputData(cdpData, addressRegistry);
     IGem gem = IJoin(cdpData.gemJoin).gem();
 
     if (address(gem) == WETH) {
@@ -204,7 +234,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
 
   function drawDaiDebt(
     CdpData memory cdpData,
-    AddressRegistry calldata addressRegistry,
+    AddressRegistry memory addressRegistry,
     uint256 amount
   ) internal {
     address urn = IManager(addressRegistry.manager).urns(cdpData.cdpId);
@@ -225,11 +255,12 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
   function increaseMultipleDepositDai(
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
-    AddressRegistry calldata addressRegistry
+    AddressRegistry memory addressRegistry
   )
     public
     logMethodName("increaseMultipleDepositDai", cdpData, addressRegistry.multiplyProxyActions)
   {
+    validateAndCorrectInputData(cdpData, addressRegistry);
     if (cdpData.skipFL) {
       IERC20(DAI).transferFrom(msg.sender, address(this), cdpData.depositDai);
     } else {
@@ -245,15 +276,16 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
   function increaseMultiple(
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
-    AddressRegistry calldata addressRegistry
+    AddressRegistry memory addressRegistry
   ) public logMethodName("increaseMultiple", cdpData, addressRegistry.multiplyProxyActions) {
+    validateAndCorrectInputData(cdpData, addressRegistry);
     increaseMultipleInternal(exchangeData, cdpData, addressRegistry);
   }
 
   function increaseMultipleInternal(
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
-    AddressRegistry calldata addressRegistry
+    AddressRegistry memory addressRegistry
   ) internal {
     cdpData.ilk = IJoin(cdpData.gemJoin).ilk();
 
@@ -280,15 +312,16 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
   function decreaseMultiple(
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
-    AddressRegistry calldata addressRegistry
+    AddressRegistry memory addressRegistry
   ) public logMethodName("decreaseMultiple", cdpData, addressRegistry.multiplyProxyActions) {
+    validateAndCorrectInputData(cdpData, addressRegistry);
     decreaseMultipleInternal(exchangeData, cdpData, addressRegistry);
   }
 
   function decreaseMultipleInternal(
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
-    AddressRegistry calldata addressRegistry
+    AddressRegistry memory addressRegistry
   ) internal {
     cdpData.ilk = IJoin(cdpData.gemJoin).ilk();
 
@@ -304,33 +337,34 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
   function decreaseMultipleWithdrawCollateral(
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
-    AddressRegistry calldata addressRegistry
+    AddressRegistry memory addressRegistry
   )
     public
     logMethodName(
       "decreaseMultipleWithdrawCollateral",
       cdpData,
-      addressRegistry.multiplyProxyActions
-    )
+      addressRegistry.multiplyProxyActions)
   {
+    validateAndCorrectInputData(cdpData, addressRegistry);
     decreaseMultipleInternal(exchangeData, cdpData, addressRegistry);
   }
 
   function decreaseMultipleWithdrawDai(
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
-    AddressRegistry calldata addressRegistry
+    AddressRegistry memory addressRegistry
   )
     public
     logMethodName("decreaseMultipleWithdrawDai", cdpData, addressRegistry.multiplyProxyActions)
   {
+    validateAndCorrectInputData(cdpData, addressRegistry);
     decreaseMultipleInternal(exchangeData, cdpData, addressRegistry);
   }
 
   function closeVaultExitGeneric(
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
-    AddressRegistry calldata addressRegistry,
+    AddressRegistry memory addressRegistry,
     uint8 mode
   ) private {
     cdpData.ilk = IJoin(cdpData.gemJoin).ilk();
@@ -362,7 +396,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
   function closeVaultExitCollateral(
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
-    AddressRegistry calldata addressRegistry
+    AddressRegistry memory addressRegistry
   )
     public
     logMethodName("closeVaultExitCollateral", cdpData, addressRegistry.multiplyProxyActions)
@@ -373,8 +407,9 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
   function closeVaultExitDai(
     ExchangeData calldata exchangeData,
     CdpData memory cdpData,
-    AddressRegistry calldata addressRegistry
+    AddressRegistry memory addressRegistry
   ) public logMethodName("closeVaultExitDai", cdpData, addressRegistry.multiplyProxyActions) {
+    validateAndCorrectInputData(cdpData, addressRegistry);
     require(cdpData.skipFL == false, "cannot close to DAI if FL not used");
     closeVaultExitGeneric(exchangeData, cdpData, addressRegistry, 3);
   }
@@ -504,6 +539,9 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
       IERC20(DAI).approve(address(exchange), exchangeData.fromTokenAmount.add(cdpData.depositDai)),
       "MPA / Could not approve Exchange for DAI"
     );
+    console.log("exchange", address(exchange));
+    console.log("before swap");
+    console.logBytes(exchangeData._exchangeCalldata);
     exchange.swapDaiForToken(
       exchangeData.toTokenAddress,
       exchangeData.fromTokenAmount.add(cdpData.depositDai),
@@ -511,6 +549,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
       exchangeData.exchangeAddress,
       exchangeData._exchangeCalldata
     );
+        console.log("after swap");
     //here we add collateral we got from exchange, if skipFL then borrowedDai = 0
     joinDrawDebt(cdpData, borrowedDai, addressRegistry.manager, addressRegistry.jug);
     //if some DAI are left after exchange return them to the user
@@ -661,6 +700,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     uint256 borrowedDaiAmount,
     uint256 ink
   ) private {
+    // TODO: 
     IExchange exchange = IExchange(addressRegistry.exchange);
     address gemAddress = address(IJoin(cdpData.gemJoin).gem());
 
@@ -769,7 +809,6 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
       CdpData memory cdpData,
       AddressRegistry memory addressRegistry
     ) = abi.decode(params, (uint8, ExchangeData, CdpData, AddressRegistry));
-
     require(msg.sender == address(addressRegistry.lender), "mpa-untrusted-lender");
 
     uint256 borrowedDaiAmount = amount.add(fee);
@@ -804,7 +843,6 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
         cdpData.borrowCollateral
       );
     }
-
     IERC20(token).approve(addressRegistry.lender, borrowedDaiAmount);
 
     return keccak256("ERC3156FlashBorrower.onFlashLoan");
