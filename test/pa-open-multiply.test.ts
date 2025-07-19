@@ -23,7 +23,7 @@ import { balanceOf, WETH_ADDRESS } from './utils'
 import { getVaultInfo } from './common/utils/mcd.utils'
 import { expectToBe, expectToBeEqual } from './common/utils/test.utils'
 import { CDPInfo, OneInchSwapResponse, VaultInfo } from './common/common.types'
-import { one } from './common/cosntants'
+import {  one } from './common/cosntants'
 
 interface FlattenedEvent {
   firstTopic: string
