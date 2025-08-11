@@ -132,7 +132,7 @@ describe('GUNI Multiply Proxy Action Wrapper with Mocked Exchange', async () => 
       router: '0x14E6D67F824C3a7b4329d3228807f8654294e4bd',
       jug: '0x19c0976f590D67707E62397C87829d896Dc0f1F1',
       manager: '0x5ef30b9986345249bc32d8928B7ee64DE9435E39',
-      lender: '0x1EB4CF3A948E7D72A198fe073cCb8C7a948cD853',
+      lender: '0x60744434d6339a6B27d73d9Eda62b6F66a0a04FA',
       guniProxyActions: system.guni.address,
       otherToken: MAINNET_ADDRESSES.USDC,
       exchange: system.exchangeInstance.address,
